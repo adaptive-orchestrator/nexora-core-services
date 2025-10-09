@@ -1,0 +1,58 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./platform/api-gateway"
+    },
+    {
+      "path": "./platform/llm-orchestrator"
+    },
+    {
+      "path": "./platform/rl-scheduler"
+    },
+    {
+      "path": "./customer/customer-svc"
+    },
+    {
+      "path": "./customer/crm-orchestrator"
+    },
+    {
+      "path": "./product/catalogue-svc"
+    },
+    {
+      "path": "./product/promotion-svc"
+    },
+    {
+      "path": "./product/pricing-engine"
+    },
+    {
+      "path": "./order/order-svc"
+    },
+    {
+      "path": "./order/subscription-svc"
+    },
+    {
+      "path": "./order/inventory-svc"
+    },
+    {
+      "path": "./finance/billing-svc"
+    },
+    {
+      "path": "./finance/payment-svc"
+    },
+    {
+      "path": "./common"
+    },
+    {
+      "path": "./db"
+    },
+    {
+      "path": "./events"
+    },
+    {
+      "path": "./auth"
+    }
+  ]
+}
