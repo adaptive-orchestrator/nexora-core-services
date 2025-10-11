@@ -12,21 +12,120 @@ export interface BaseEvent {
 /**
  * Customer Events
  */
+/**
+ * Customer Events
+ */
 export interface CustomerCreatedEvent extends BaseEvent {
   eventType: 'customer.created';
   data: {
-    customerId: string;
-    email: string;
+    id: number;
     name: string;
-    phone?: string;
+    email: string;
+    createdAt: Date;
   };
 }
 
 export interface CustomerUpdatedEvent extends BaseEvent {
   eventType: 'customer.updated';
   data: {
-    customerId: string;
+    customerId: number;
     changes: Record<string, any>;
+  };
+}
+
+export interface SegmentChangedEvent extends BaseEvent {
+  eventType: 'segment.changed';
+  data: {
+    customerId: number;
+    segment: string;
+  };
+}
+
+/**
+ * Product Events
+ */
+export interface ProductCreatedEvent extends BaseEvent {
+  eventType: 'product.created';
+  data: {
+    id: number;
+    name: string;
+    price: number;
+    sku: string;
+    category: string;
+    createdAt: Date;
+  };
+}
+
+export interface ProductUpdatedEvent extends BaseEvent {
+  eventType: 'product.updated';
+  data: {
+    productId: number;
+    changes: Record<string, any>;
+  };
+}
+
+export interface ProductDeletedEvent extends BaseEvent {
+  eventType: 'product.deleted';
+  data: {
+    productId: number;
+  };
+}
+
+/**
+ * Plan Events
+ */
+export interface PlanCreatedEvent extends BaseEvent {
+  eventType: 'plan.created';
+  data: {
+    id: number;
+    name: string;
+    price: number;
+    billingCycle: 'monthly' | 'yearly';
+    featureIds: number[];
+    createdAt: Date;
+  };
+}
+
+export interface PlanUpdatedEvent extends BaseEvent {
+  eventType: 'plan.updated';
+  data: {
+    planId: number;
+    changes: Record<string, any>;
+  };
+}
+
+export interface PlanDeletedEvent extends BaseEvent {
+  eventType: 'plan.deleted';
+  data: {
+    planId: number;
+  };
+}
+
+/**
+ * Feature Events
+ */
+export interface FeatureCreatedEvent extends BaseEvent {
+  eventType: 'feature.created';
+  data: {
+    id: number;
+    name: string;
+    code: string;
+    createdAt: Date;
+  };
+}
+
+export interface FeatureUpdatedEvent extends BaseEvent {
+  eventType: 'feature.updated';
+  data: {
+    featureId: number;
+    changes: Record<string, any>;
+  };
+}
+
+export interface FeatureDeletedEvent extends BaseEvent {
+  eventType: 'feature.deleted';
+  data: {
+    featureId: number;
   };
 }
 
@@ -37,9 +136,9 @@ export interface OrderCreatedEvent extends BaseEvent {
   eventType: 'order.created';
   data: {
     orderId: string;
-    customerId: string;
+    customerId: number;
     items: Array<{
-      productId: string;
+      productId: number;
       quantity: number;
       price: number;
     }>;
@@ -51,21 +150,8 @@ export interface OrderCompletedEvent extends BaseEvent {
   eventType: 'order.completed';
   data: {
     orderId: string;
-    customerId: string;
+    customerId: number;
     completedAt: Date;
-  };
-}
-
-/**
- * Product Events
- */
-export interface ProductStockChangedEvent extends BaseEvent {
-  eventType: 'product.stock.changed';
-  data: {
-    productId: string;
-    previousStock: number;
-    currentStock: number;
-    changeReason: 'sale' | 'restock' | 'adjustment';
   };
 }
 
