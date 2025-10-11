@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@bmms/auth(|/.*)$": "<rootDir>/../libs/auth/src/$1",
+    "^@bmms/common(|/.*)$": "<rootDir>/../libs/common/src/$1",
+    "^@bmms/db(|/.*)$": "<rootDir>/../libs/db/src/$1",
+    "^@bmms/event(|/.*)$": "<rootDir>/../libs/event/src/$1"
+  }
+}
