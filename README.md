@@ -19,4 +19,8 @@ apps/
 └─ finance/ 
   ├─ billing-svc/ 
   └─ payment-svc/ 
-  Auth Db Event Common
+libs/
+├─ Auth 
+├─ Db 
+├─ Event 
+├─ Common
