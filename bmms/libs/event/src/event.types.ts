@@ -12,9 +12,7 @@ export interface BaseEvent {
 /**
  * Customer Events
  */
-/**
- * Customer Events
- */
+
 export interface CustomerCreatedEvent extends BaseEvent {
   eventType: 'customer.created';
   data: {
@@ -130,6 +128,60 @@ export interface FeatureDeletedEvent extends BaseEvent {
 }
 
 /**
+ * Inventory Events
+ */
+export interface InventoryCreatedEvent extends BaseEvent {
+  eventType: 'inventory.created';
+  data: {
+    id: number;
+    productId: number;
+    quantity: number;
+    createdAt: Date;
+  };
+}
+
+export interface InventoryAdjustedEvent extends BaseEvent {
+  eventType: 'inventory.adjusted';
+  data: {
+    productId: number;
+    previousQuantity: number;
+    currentQuantity: number;
+    adjustment: number;
+    reason: 'restock' | 'damage' | 'loss' | 'adjustment' | 'correction';
+  };
+}
+
+export interface InventoryReservedEvent extends BaseEvent {
+  eventType: 'inventory.reserved';
+  data: {
+    reservationId: number;
+    productId: number;
+    quantity: number;
+    orderId: string;
+    customerId: number;
+  };
+}
+
+export interface InventoryReleasedEvent extends BaseEvent {
+  eventType: 'inventory.released';
+  data: {
+    productId: number;
+    quantity: number;
+    orderId: string;
+    reason: 'order_cancelled' | 'order_completed' | 'manual_release';
+  };
+}
+
+export interface InventoryLowStockEvent extends BaseEvent {
+  eventType: 'inventory.low_stock';
+  data: {
+    productId: number;
+    currentQuantity: number;
+    reorderLevel: number;
+  };
+}
+
+/**
  * Order Events
  */
 export interface OrderCreatedEvent extends BaseEvent {
@@ -146,12 +198,34 @@ export interface OrderCreatedEvent extends BaseEvent {
   };
 }
 
+export interface OrderUpdatedEvent extends BaseEvent {
+  eventType: 'order.updated';
+  data: {
+    orderId: number;
+    orderNumber: string;
+    customerId: number;
+    previousStatus: string;
+    newStatus: string;
+    updatedAt: Date;
+  };
+}
+
 export interface OrderCompletedEvent extends BaseEvent {
   eventType: 'order.completed';
   data: {
     orderId: string;
     customerId: number;
     completedAt: Date;
+  };
+}
+
+
+export interface OrderCancelledEvent extends BaseEvent {
+  eventType: 'order.cancelled';
+  data: {
+    orderId: string;
+    customerId: number;
+    reason: string;
   };
 }
 

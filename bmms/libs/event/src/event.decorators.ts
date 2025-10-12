@@ -44,6 +44,9 @@ export const EventTopics = {
   PAYMENT_FAILED: 'payment.failed',
 
   // Inventory events
+  INVENTORY_CREATED: 'inventory.created',
+  INVENTORY_ADJUSTED: 'inventory.adjusted',
   INVENTORY_RESERVED: 'inventory.reserved',
   INVENTORY_RELEASED: 'inventory.released',
+  INVENTORY_LOW_STOCK: 'inventory.low_stock',
 } as const;
