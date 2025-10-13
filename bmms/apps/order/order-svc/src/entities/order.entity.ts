@@ -63,8 +63,14 @@ export class Order {
 
   // Helper methods
   calculateTotal(): number {
-    return this.subtotal + this.tax + this.shippingCost - this.discount;
-  }
+  const subtotal = Number(this.subtotal) || 0;
+  const tax = Number(this.tax) || 0;
+  const shipping = Number(this.shippingCost) || 0;
+  const discount = Number(this.discount) || 0;
+
+  return subtotal + tax + shipping - discount;
+}
+
 
   getItemCount(): number {
     return this.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;

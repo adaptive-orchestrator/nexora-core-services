@@ -1,9 +1,8 @@
 import { Controller } from '@nestjs/common';
-import { Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import * as event from '@bmms/event';
 import { OrderSvcService } from './order-svc.service';
 import { CustomerSvcService } from 'apps/customer/customer-svc/src/customer-svc.service';
-import * as event_1 from '@bmms/event';
 
 
 @Controller()
@@ -15,7 +14,7 @@ export class OrderEventListener {
 
   /** ------------------- Customer Events ------------------- */
 
-  @event.OnEvent(event.EventTopics.CUSTOMER_CREATED)
+  @EventPattern(event.EventTopics.CUSTOMER_CREATED)
   async handleCustomerCreated(@Payload() event: event.CustomerCreatedEvent) {
     try {
       this.logEvent(event);
@@ -30,7 +29,7 @@ export class OrderEventListener {
     }
   }
 
-  @event.OnEvent(event.EventTopics.CUSTOMER_UPDATED)
+  @EventPattern(event.EventTopics.CUSTOMER_UPDATED)
   async handleCustomerUpdated(@Payload() event: event.CustomerUpdatedEvent) {
     try {
       this.logEvent(event);
@@ -46,7 +45,7 @@ export class OrderEventListener {
 
   /** -------- Inventory Events -------- */
 
-  @event.OnEvent(event.EventTopics.INVENTORY_RESERVED)
+  @EventPattern(event.EventTopics.INVENTORY_RESERVED)
   async handleInventoryReserved(@Payload() event: any) {
     try {
       this.logEvent(event);
@@ -58,8 +57,8 @@ export class OrderEventListener {
     }
   }
 
-  @event.OnEvent(event.EventTopics.INVENTORY_RELEASED)
-  async handleInventoryReleased(@Payload() event: event_1.InventoryReleasedEvent) {
+  @EventPattern(event.EventTopics.INVENTORY_RELEASED)
+  async handleInventoryReleased(@Payload() event: event.InventoryReleasedEvent) {
     try {
       this.logEvent(event);
       const { orderId, reason } = event.data;
@@ -75,7 +74,7 @@ export class OrderEventListener {
 
   /** ------------------- Payment Events ------------------- */
 
-  @event.OnEvent(event.EventTopics.PAYMENT_SUCCESS)
+  @EventPattern(event.EventTopics.PAYMENT_SUCCESS)
   async handlePaymentSuccess(@Payload() event: event.PaymentSuccessEvent) {
     try {
       this.logEvent(event);
@@ -91,8 +90,8 @@ export class OrderEventListener {
       console.error('Error handling PAYMENT_SUCCESS event:', error);
     }
   }
-  @event.OnEvent(event.EventTopics.PAYMENT_FAILED)
-  async handlePaymentFailed(@Payload() event: event.PaymentFailedEvent) {
+  @EventPattern(event.EventTopics.PAYMENT_FAILED)
+  async handlePaymentFailed(@Payload() event:event.PaymentFailedEvent) {
     try {
       this.logEvent(event);
       const { orderId, reason } = event.data;

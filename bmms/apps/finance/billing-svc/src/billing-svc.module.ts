@@ -9,6 +9,7 @@ import { InvoiceItem } from './entities/invoice-item.entity';
 import { DbModule } from '@bmms/db';
 import { EventModule } from '@bmms/event';
 import { PaymentRecord } from './entities/payment-record.entity';
+import { BillingEventListener } from './billing.event-listener';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { PaymentRecord } from './entities/payment-record.entity';
         consumerGroupId: 'billing-group',
       }),
     ],
-  controllers: [BillingController],
+  controllers: [BillingController,BillingEventListener],
   providers: [BillingService],
 })
 export class BillingSvcModule {}

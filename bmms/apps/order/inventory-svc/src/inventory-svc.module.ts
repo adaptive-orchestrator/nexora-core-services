@@ -8,6 +8,7 @@ import { EventModule } from '@bmms/event';
 import { Inventory } from './entities/inventory.entity';
 import { InventoryReservation } from './entities/inventory-reservation.entity';
 import { InventoryHistory } from './entities/inventory-history.entity';
+import { InventoryEventListener } from './inventory.event-listener';
 
 @Module({
   imports: [
@@ -23,6 +24,6 @@ import { InventoryHistory } from './entities/inventory-history.entity';
         }),
   ],
   controllers: [InventoryController],
-  providers: [InventoryService],
+  providers: [InventoryService,InventoryEventListener],
 })
 export class InventorySvcModule {}

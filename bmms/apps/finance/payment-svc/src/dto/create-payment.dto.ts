@@ -1,0 +1,31 @@
+
+import { IsNumber, IsString, IsOptional } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class CreatePaymentDto {
+  @ApiProperty({ example: 1, description: 'Invoice ID' })
+  @IsNumber()
+  invoiceId: number;
+
+  @ApiProperty({ example: 'INV-2025-10-00001', description: 'Invoice Number' })
+  @IsString()
+  invoiceNumber: string;
+
+  @ApiProperty({ example: 1, description: 'Customer ID' })
+  @IsNumber()
+  customerId: number;
+
+  @ApiProperty({ example: 100000, description: 'Payment amount' })
+  @IsNumber()
+  amount: number;
+
+  @ApiProperty({ example: 'credit_card', description: 'Payment method', required: false })
+  @IsString()
+  @IsOptional()
+  method?: string;
+
+  @ApiProperty({ example: 'Payment for invoice', description: 'Payment description', required: false })
+  @IsString()
+  @IsOptional()
+  description?: string;
+}

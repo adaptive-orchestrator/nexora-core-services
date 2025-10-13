@@ -100,6 +100,8 @@ export class BillingService {
       }),
     );
 
+     console.log('📤 Emitting INVOICE_CREATED event...');
+  
     this.kafka.emit(EventTopics.INVOICE_CREATED, {
       eventId: crypto.randomUUID(),
       eventType: EventTopics.INVOICE_CREATED,
@@ -118,6 +120,14 @@ export class BillingService {
       },
     });
 
+
+  console.log('✅ INVOICE_CREATED event emitted successfully');
+  console.log('📋 Event data:', {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    orderId: invoice.orderId,
+  });
+  
     return invoice;
   }
 

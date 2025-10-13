@@ -24,7 +24,7 @@ import { CustomerSvcModule } from 'apps/customer/customer-svc/src/customer-svc.m
     }),
     CustomerSvcModule,
   ],
-  controllers: [OrderSvcController],
-  providers: [OrderSvcService, OrderEventListener],
+  controllers: [OrderSvcController, OrderEventListener],
+  providers: [OrderSvcService],
 })
 export class OrderSvcModule {}

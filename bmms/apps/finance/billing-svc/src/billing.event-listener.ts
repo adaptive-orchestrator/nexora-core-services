@@ -1,40 +1,44 @@
 import { Controller } from '@nestjs/common';
-import { Payload } from '@nestjs/microservices';
-import * as event_1 from '@bmms/event';
+import { EventPattern, Payload } from '@nestjs/microservices';
+
 import { BillingService } from './billing-svc.service';
+import * as event from '@bmms/event';
+
 
 @Controller()
 export class BillingEventListener {
   constructor(
     private readonly billingService: BillingService,
     //private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   /** -------- Order Events -------- */
-
-  @event_1.OnEvent(event_1.EventTopics.ORDER_CREATED)
-  async handleOrderCreated(@Payload() event: event_1.OrderCreatedEvent) {
+  @EventPattern(event.EventTopics.ORDER_CREATED) // ← EventTopics.ORDER_CREATED = 'order.created'
+  async handleOrderCreated(@Payload() event: event.OrderCreatedEvent) {
     try {
+      console.log('📥 [billing-group] Received ORDER_CREATED event');
+      console.log('📦 Order ID:', event.data.orderId);
+
       this.logEvent(event);
-      const { orderId, customerId, items, totalAmount } = event.data;
+     const { orderId, orderNumber, customerId, items, totalAmount } = event.data;
 
       // Auto-create invoice from order
-      // await this.billingService.create({
-      //   orderId,
-      //   orderNumber,
-      //   customerId,
-      //   items: items.map(item => ({
-      //     productId: item.productId,
-      //     description: `Product ${item.productId}`,
-      //     quantity: item.quantity,
-      //     unitPrice: item.price,
-      //     totalPrice: item.quantity * item.price,
-      //   })),
-      //   subtotal: totalAmount,
-      //   tax: 0,
-      //   totalAmount,
-      //   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      // });
+      await this.billingService.create({
+        orderId,
+        orderNumber,
+        customerId,
+        items: items.map(item => ({
+          productId: item.productId,
+          description: `Product ${item.productId}`,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          totalPrice: item.quantity * item.price,
+        })),
+        subtotal: totalAmount,
+        tax: 0,
+        totalAmount,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      });
 
       console.log(`✅ Invoice created for order ${orderId}`);
     } catch (error) {
@@ -44,11 +48,11 @@ export class BillingEventListener {
 
   /** -------- Payment Events -------- */
 
-  @event_1.OnEvent(event_1.EventTopics.PAYMENT_SUCCESS)
-  async handlePaymentSuccess(@Payload() event: event_1.PaymentSuccessEvent) {
+  @EventPattern(event.EventTopics.PAYMENT_SUCCESS)
+  async handlePaymentSuccess(@Payload() event: event.PaymentSuccessEvent) {
     try {
       this.logEvent(event);
-      const {  amount } = event.data;
+      const { amount } = event.data;
 
       // Send payment receipt to customer
       // await this.notificationService.sendPaymentReceipt(customerId, invoiceNumber, amount);
@@ -59,8 +63,8 @@ export class BillingEventListener {
     }
   }
 
-  @event_1.OnEvent(event_1.EventTopics.PAYMENT_FAILED)
-  async handlePaymentFailed(@Payload() event: event_1.PaymentFailedEvent) {
+  @EventPattern(event.EventTopics.PAYMENT_FAILED)
+  async handlePaymentFailed(@Payload() event: event.PaymentFailedEvent) {
     try {
       this.logEvent(event);
       const { orderId, reason } = event.data;
@@ -74,7 +78,7 @@ export class BillingEventListener {
     }
   }
 
-  @event_1.OnEvent(event_1.EventTopics.INVOICE_OVERDUE)
+  @EventPattern(event.EventTopics.INVOICE_OVERDUE)
   async handleInvoiceOverdue(@Payload() event: any) {
     try {
       this.logEvent(event);
@@ -90,9 +94,14 @@ export class BillingEventListener {
   }
 
   /** -------- Helper Methods -------- */
-  private logEvent<T extends { eventType: string; timestamp: Date }>(event: T) {
+  /** -------- Helper Methods -------- */
+  private logEvent<T extends { eventType: string; timestamp: Date | string }>(event: T) {
+    const timestamp = typeof event.timestamp === 'string'
+      ? new Date(event.timestamp).toISOString()
+      : event.timestamp.toISOString();
+
     console.log(
-      `📥 [BILLING] Received event [${event.eventType}] at ${event.timestamp.toISOString()}`,
+      `🔥 [BILLING] Received event [${event.eventType}] at ${timestamp}`,
     );
   }
 }

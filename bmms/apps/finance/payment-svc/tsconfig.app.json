@@ -1,9 +1,17 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "declaration": false,
-    "outDir": "../../dist/apps/finance/payment-svc"
+    "outDir": "../../../dist/out-tsc",
+    "rootDir": "../../../",          // 👈 Quan trọng: để bao hết cả libs/
+    "baseUrl": "../../../",
+    "paths": {
+      "@bmms/*": ["libs/*/src"]      // 👈 Giúp Nest hiểu alias @bmms/*
+    },
+    "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../../libs/**/*"             // 👈 Thêm libs vào vùng biên dịch
+  ],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

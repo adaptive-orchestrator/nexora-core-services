@@ -187,7 +187,8 @@ export interface InventoryLowStockEvent extends BaseEvent {
 export interface OrderCreatedEvent extends BaseEvent {
   eventType: 'order.created';
   data: {
-    orderId: string;
+    orderId: number;
+    orderNumber: string; 
     customerId: number;
     items: Array<{
       productId: number;
@@ -236,6 +237,7 @@ export interface PaymentSuccessEvent extends BaseEvent {
   eventType: 'payment.success';
   data: {
     paymentId: string;
+     invoiceId: string;
     orderId: string;
     amount: number;
     method: string;
@@ -247,6 +249,7 @@ export interface PaymentFailedEvent extends BaseEvent {
   eventType: 'payment.failed';
   data: {
     paymentId: string;
+     invoiceId: string;
     orderId: string;
     amount: number;
     reason: string;
