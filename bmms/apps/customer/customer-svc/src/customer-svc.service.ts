@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 import { CreateCustomerDto } from '../dto/create-customer.dto';
 import { UpdateCustomerDto } from '../dto/update-customer.dto';
+import { createBaseEvent, CustomerCreatedEvent, SegmentChangedEvent } from '@bmms/event';
 
 @Injectable()
 export class CustomerSvcService {
@@ -19,13 +20,20 @@ export class CustomerSvcService {
   async create(dto: CreateCustomerDto): Promise<Customer> {
     const customer = await this.repo.save(this.repo.create(dto));
 
-    // 👇 Emit event customer.created
-    this.kafka.emit('customer.created', {
-      id: customer.id,
-      name: customer.name,
-      email: customer.email,
-      createdAt: customer.createdAt,
-    });
+    // ✅ Emit event customer.created với đúng structure
+    const event: CustomerCreatedEvent = {
+      ...createBaseEvent('customer.created', 'customer-service'),
+      eventType: 'customer.created',
+      data: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        createdAt: customer.createdAt,
+      },
+    };
+
+    console.log('🚀 Emitting customer.created event:', event);
+    this.kafka.emit('customer.created', event);
 
     return customer;
   }
@@ -55,11 +63,18 @@ export class CustomerSvcService {
     customer.segment = segment;
     const saved = await this.repo.save(customer);
 
-    // 👇 Emit event segment.changed
-    this.kafka.emit('segment.changed', {
-      customerId: saved.id,
-      segment: saved.segment,
-    });
+    // ✅ Emit event segment.changed với đúng structure
+    const event: SegmentChangedEvent = {
+      ...createBaseEvent('segment.changed', 'customer-service'),
+      eventType: 'segment.changed',
+      data: {
+        customerId: saved.id,
+        segment: saved.segment,
+      },
+    };
+
+    console.log('🚀 Emitting segment.changed event:', event);
+    this.kafka.emit('segment.changed', event);
 
     return saved;
   }

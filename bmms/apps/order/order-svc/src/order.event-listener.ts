@@ -15,9 +15,10 @@ export class OrderEventListener {
   /** ------------------- Customer Events ------------------- */
 
   @EventPattern(event.EventTopics.CUSTOMER_CREATED)
-  async handleCustomerCreated(@Payload() event: event.CustomerCreatedEvent) {
+  async handleCustomerCreated(@Payload() event: any) {
     try {
       this.logEvent(event);
+         console.log('📨 RAW EVENT RECEIVED:', JSON.stringify(event, null, 2));
 
       // TODO: Implement business logic
       // e.g., create welcome voucher, send welcome email
