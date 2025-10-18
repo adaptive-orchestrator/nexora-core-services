@@ -1,7 +1,7 @@
 # repo-root
 :D
 
-
+```
 apps/ 
 ├─ platform/ 
 │ ├─ api-gateway/
@@ -26,3 +26,4 @@ libs/
 ├─ Db 
 ├─ Event 
 ├─ Common
+```
