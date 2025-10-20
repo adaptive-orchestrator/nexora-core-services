@@ -1,0 +1,32 @@
+{
+  "id": "chg-auto-20250917175200",
+  "intent": "change_product_subscription",
+  "timestamp": "2025-09-17T17:52:00.380876+00:00",
+  "request_context": {
+    "tenant_id": "tenant-demo",
+    "requested_by": "llm",
+    "role": "admin"
+  },
+  "changes": [
+    {
+      "action": "update",
+      "service": "catalogue",
+      "config": {
+        "product_group": "A",
+        "subscription_type": "monthly"
+      }
+    }
+  ],
+  "impacted_services": [
+    "billing",
+    "product_catalog"
+  ],
+  "metadata": {
+    "intent_type": "change_product_subscription",
+    "confidence": 0.9,
+    "risk": "low",
+    "source": "llm",
+    "validator_status": "pending",
+    "notes": "Chuyển nhóm sản phẩm A sang subscription theo tháng"
+  }
+}

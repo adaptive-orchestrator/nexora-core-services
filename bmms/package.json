@@ -7,10 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-  
     "start": "nest start",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
-
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:customer": "nest start customer-svc",
@@ -31,6 +29,7 @@
     "test:e2e": "jest --config ./apps/bmms/test/jest-e2e.json"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@grpc/grpc-js": "^1.14.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^11.1.6",
@@ -48,7 +47,8 @@
     "kafkajs": "^2.2.4",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

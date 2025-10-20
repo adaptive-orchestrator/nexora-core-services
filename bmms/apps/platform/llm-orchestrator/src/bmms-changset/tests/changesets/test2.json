@@ -1,0 +1,57 @@
+{
+  "id": "chg-auto-20250927120000",
+  "intent": "update_multi_services",
+  "timestamp": "2025-09-27T12:00:00.000000+00:00",
+  "request_context": {
+    "tenant_id": "tenant-demo",
+    "requested_by": "llm",
+    "role": "admin"
+  },
+  "changes": [
+    {
+      "action": "update",
+      "service": "catalogue",
+      "config": {
+        "product_group": "B",
+        "subscription_type": "yearly"
+      }
+    },
+    {
+      "action": "update",
+      "service": "billing",
+      "config": {
+        "payment_model": "prepaid"
+      }
+    },
+    {
+      "action": "update",
+      "service": "order",
+      "config": {
+        "instance_count": 3,
+        "order_timeout": 120
+      }
+    },
+    {
+      "action": "update",
+      "service": "subscription",
+      "config": {
+        "plan_id": "premium",
+        "addons": ["support", "analytics"]
+      }
+    }
+  ],
+  "impacted_services": [
+    "catalogue",
+    "billing",
+    "order",
+    "subscription"
+  ],
+  "metadata": {
+    "intent_type": "multi_update",
+    "confidence": 0.95,
+    "risk": "low",
+    "source": "llm",
+    "validator_status": "pending",
+    "notes": "Update catalogue, billing, order, and subscription configs"
+  }
+}

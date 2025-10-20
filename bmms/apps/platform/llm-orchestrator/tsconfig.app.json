@@ -1,9 +1,22 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "declaration": false,
-    "outDir": "../../dist/apps/platform/llm-orchestrator"
+    "outDir": "../../../dist/out-tsc",
+    "rootDir": "../../../",          // 👈 Quan trọng: để bao hết cả libs/
+    "baseUrl": "../../../",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "useDefineForClassFields": false,
+    "paths": {
+      "@bmms/*": ["libs/*/src"]      // 👈 Giúp Nest hiểu alias @bmms/*
+    },
+    "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../../libs/**/*"             // 👈 Thêm libs vào vùng biên dịch
+  ],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

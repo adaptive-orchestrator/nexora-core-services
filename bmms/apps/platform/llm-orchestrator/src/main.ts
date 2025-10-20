@@ -1,8 +1,26 @@
 import { NestFactory } from '@nestjs/core';
-import { llmOrchestratorModule } from './llm-orchestrator.module';
+import { LlmOrchestratorModule } from './llm-orchestrator.module';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { LlmOrchestratorService } from './llm-orchestrator.service';
+import { join } from 'path';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(llmOrchestratorModule);
-  await app.listen(process.env.port ?? 3000);
+  const appContext = await NestFactory.createApplicationContext(LlmOrchestratorModule);
+   
+  
+    const configService = appContext.get(ConfigService); // ✅ đúng
+  const grpcUrl = configService.get<string>('GRPC_LISTEN_LLM_URL');
+  
+    const app = await NestFactory.createMicroservice<MicroserviceOptions>(LlmOrchestratorModule, {
+      transport: Transport.GRPC,
+      options: {
+        package: 'llm',
+        protoPath: join(__dirname, './proto/llm-orchestrator.proto'),
+        url: grpcUrl,
+      },
+    });
+  
+    await app.listen();
 }
 bootstrap();

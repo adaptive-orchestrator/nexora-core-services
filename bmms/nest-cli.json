@@ -136,7 +136,13 @@
       "entryFile": "main",
       "sourceRoot": "apps/platform/llm-orchestrator/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/platform/llm-orchestrator/tsconfig.app.json"
+        "tsConfigPath": "apps/platform/llm-orchestrator/tsconfig.app.json",
+         "assets": [
+          {
+            "include": "proto/*.proto",
+            "outDir": "dist/out-tsc/apps/platform/llm-orchestrator/src"
+          }
+        ]
       }
     },
     "order-svc": {

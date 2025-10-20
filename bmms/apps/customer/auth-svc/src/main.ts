@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 
-
 async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(AuthSvcModule);
   const configService = appContext.get(ConfigService);

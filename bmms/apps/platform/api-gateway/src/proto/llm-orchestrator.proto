@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package llm;
+
+// Định nghĩa service chính cho Orchestrator
+service LlmOrchestratorService {
+  // Gửi 1 yêu cầu chat duy nhất, nhận kết quả phân tích + changeset
+  rpc ChatOnce (LlmChatRequest) returns (LlmChatResponse);
+}
+
+// ====== Request & Response ======
+
+message LlmChatRequest {
+  string message = 1;     // Câu hỏi hoặc yêu cầu nghiệp vụ tự nhiên
+  string tenant_id = 2;   // Tenant đang thao tác
+  string role = 3;        // Vai trò người dùng (admin, staff, ...)
+  string lang = 4;        // Ngôn ngữ (vi, en, ...)
+}
+
+message LlmChatResponse {
+  string proposal_text = 1;     // Văn bản đề xuất của LLM
+  Changeset changeset = 2;      // Tập thay đổi cấu hình hệ thống
+  Metadata metadata = 3;        // Thông tin ngữ nghĩa (intent, confidence, risk)
+}
+
+// ====== Nested Structures ======
+
+message Changeset {
+  string model = 1;                 // Tên model / domain entity bị ảnh hưởng
+  repeated Feature features = 2;    // Danh sách key-value thay đổi
+  repeated string impacted_services = 3; // Các service bị ảnh hưởng
+}
+
+message Feature {
+  string key = 1;
+  string value = 2;
+}
+
+message Metadata {
+  string intent = 1;       // Hành động hoặc ý định của người dùng
+  double confidence = 2;   // Độ tin cậy của model
+  string risk = 3;         // Mức độ rủi ro: low / medium / high
+}
