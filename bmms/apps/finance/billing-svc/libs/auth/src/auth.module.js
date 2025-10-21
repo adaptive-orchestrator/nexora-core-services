@@ -6,14 +6,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DbService = void 0;
+exports.AuthModule = void 0;
 var common_1 = require("@nestjs/common");
-var DbService = /** @class */ (function () {
-    function DbService() {
+var auth_service_1 = require("./auth.service");
+var AuthModule = /** @class */ (function () {
+    function AuthModule() {
     }
-    DbService = __decorate([
-        (0, common_1.Injectable)()
-    ], DbService);
-    return DbService;
+    AuthModule = __decorate([
+        (0, common_1.Module)({
+            providers: [auth_service_1.AuthService],
+            exports: [auth_service_1.AuthService],
+        })
+    ], AuthModule);
+    return AuthModule;
 }());
-exports.DbService = DbService;
+exports.AuthModule = AuthModule;

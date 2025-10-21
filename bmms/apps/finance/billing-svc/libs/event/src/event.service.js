@@ -7,11 +7,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventService = void 0;
-const common_1 = require("@nestjs/common");
-let EventService = class EventService {
-};
+var common_1 = require("@nestjs/common");
+var EventService = /** @class */ (function () {
+    function EventService() {
+    }
+    EventService = __decorate([
+        (0, common_1.Injectable)()
+    ], EventService);
+    return EventService;
+}());
 exports.EventService = EventService;
-exports.EventService = EventService = __decorate([
-    (0, common_1.Injectable)()
-], EventService);
-//# sourceMappingURL=event.service.js.map

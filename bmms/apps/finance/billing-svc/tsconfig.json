@@ -48,5 +48,13 @@
         "libs/event/src/*"
       ]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "libs/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
