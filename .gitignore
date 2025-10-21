@@ -23,6 +23,3 @@ lerna-debug.log*
 .temp
 .tmp
 
-
-# Kubernetes
-k8s

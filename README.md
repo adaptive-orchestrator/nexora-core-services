@@ -220,6 +220,23 @@ using url: `http://localhost:3011/api/v1/orders`, test `order service`
 }
 ```
 
+Test with curl
+```bash
+curl -X POST http://localhost:3011/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": 1,
+    "notes": "Đơn hàng test tạo qua Postman",
+    "shippingAddress": "123 Đường Lê Lợi, Quận 1, TP.HCM",
+    "billingAddress": "123 Đường Lê Lợi, Quận 1, TP.HCM",
+    "items": [
+      {"productId": 101, "quantity": 2, "price": 150000, "notes": "Bọc quà giúp mình nha"},
+      {"productId": 102, "quantity": 1, "price": 220000}
+    ]
+  }'
+
+```
+
 # Kubernetes:
 Download https://minikube.sigs.k8s.io/docs/start/?arch=%2Flinux%2Fx86-64%2Fstable%2Fbinary+download
 
@@ -227,7 +244,7 @@ https://kompose.io/installation/
 
 Ref https://devopscube.com/create-kubernetes-yaml/
 
-Start minikue
+Start cluster kubernetes
 ```bash
 minikube start --driver=docker
 ```
