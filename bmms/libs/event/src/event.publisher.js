@@ -16,7 +16,6 @@ exports.EventPublisher = void 0;
 const common_1 = require("@nestjs/common");
 const microservices_1 = require("@nestjs/microservices");
 let EventPublisher = class EventPublisher {
-    kafkaClient;
     constructor(kafkaClient) {
         this.kafkaClient = kafkaClient;
     }

@@ -1,0 +1,155 @@
+services:
+  order-service:
+    container_name: order-service
+    build:
+      context: ./apps/order/order-svc
+    env_file: .env
+    ports:
+      - "3011:3011"
+    networks:
+      - bmms-network
+    depends_on:
+      order-db:
+        condition: service_healthy
+      redpanda-0:
+        condition: service_healthy 
+  payment-service:
+    container_name: payment-service
+    build:
+      context: ./apps/finance/payment-svc
+    env_file: .env
+    ports:
+      - "3015:3015"
+    networks:
+      - bmms-network
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      redpanda-0:
+        condition: service_healthy 
+  billing-service:
+    container_name: billing-service
+    build:
+      context: ./apps/finance/billing-svc
+    env_file: .env
+    ports:
+      - "3003:3003"
+    networks:
+      - bmms-network
+    depends_on:
+      billing-db:
+        condition: service_healthy
+      redpanda-0:
+        condition: service_healthy 
+  order-db:
+    image: mysql:8.0
+    container_name: bmms-order-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=order_db
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3306:3311"
+    volumes:
+      - order_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s      
+    networks:
+      - bmms-network
+
+  billing-db:
+    image: mysql:8.0
+    container_name: bmms-billing-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=billing_db
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3307:3314"
+    volumes:
+      - billing_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - bmms-network
+
+  payment-db:
+    image: mysql:8.0
+    container_name: bmms-payment-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=payment_db
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3308:3315"
+    volumes:
+      - payment_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--password=${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - bmms-network
+
+  redpanda-0:
+    image: redpandadata/redpanda:v25.1.12
+    container_name: redpanda-0
+    command:
+      - redpanda start
+      - --smp 1
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda-0:29092,OUTSIDE://localhost:9092
+      - --rpc-addr redpanda-0:33145
+      - --advertise-rpc-addr redpanda-0:33145
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "rpk cluster info --brokers localhost:29092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - redpanda_0_data:/var/lib/redpanda/data
+    networks:
+      - bmms-network
+networks:
+  bmms-network:
+    driver: bridge
+
+volumes:
+  customer_db_data:
+  crm_db_data:
+  catalogue_db_data:
+  promotion_db_data:
+  pricing_db_data:
+  order_db_data:
+  subscription_db_data:
+  inventory_db_data:
+  billing_db_data:
+  payment_db_data:
+  redpanda_0_data:
