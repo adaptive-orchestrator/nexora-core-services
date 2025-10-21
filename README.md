@@ -227,6 +227,11 @@ https://kompose.io/installation/
 
 Ref https://devopscube.com/create-kubernetes-yaml/
 
+Start minikue
+```bash
+minikube start --driver=docker
+```
+
 Check node master on k8s
 ```bash
 kubectl get nodes
@@ -236,6 +241,17 @@ Create namespace for project
 ```bash
 kubectl create namespace project-1
 ```
+
+Check namspace
+```bash
+kubectl get namespaces
+```
+
+Chec detail namespace
+```bash
+kubectl describe namespace project-1
+```
+
 convert docker-compose to kompose
 ```bash
 kompose convert -f docker-compose.yaml -o k8s/
@@ -247,4 +263,21 @@ deployment all file to k8s
 
 ```bash
 kubectl apply -f k8s/ -n project-1
+```
+## run container by pull docker
+
+Pull images to docker hub and then using this with order
+```bash
+kubectl create deployment order-service --image=0xt4i/order-service:0.0.1 \
+  --dry-run=client -o yaml > k8s/order/order-service-deployment.yaml
+kubectl apply -f k8s/order/order-service-deployment.yaml
+```
+
+```bash
+kubectl expose deployment order-service --port=3011 \
+  --target-port=3011 \
+  --type=LoadBalancer \
+  --dry-run=client -o yaml > k8s/order/order-service.yaml
+kubectl apply -f k8s/order/order-service.yaml
+
 ```
