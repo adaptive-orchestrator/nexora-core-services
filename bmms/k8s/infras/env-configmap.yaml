@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env
+  namespace: infras
+  labels:
+    io.kompose.service: redpanda-env
+data:
+  # 🧠 Application-level
+  API_GATEWAY_PORT: "3000"
+  FRONTEND_BASE_URL: http://localhost:4200
+  JWT_SECRET: your_super_secret_jwt_key_here_change_in_production
+  TOKEN_EXPIRE_TIME: 24h
+  LLM_ORCHESTRATOR_PORT: "3001"
+  RL_SCHEDULER_PORT: "3002"
+
+  # 🧰 Database credentials (shared defaults)
+  DB_USERNAME: bmms_user
+  DB_PASSWORD: bmms_password
+  DB_ROOT_PASSWORD: root123
+
+  # 🗄️ Order Service Database
+  ORDER_SVC_DB_HOST: order-db.order.svc.cluster.local
+  ORDER_SVC_DB_NAME: order_db
+  ORDER_SVC_DB_PASS: bmms_password
+  ORDER_SVC_DB_PORT: "3311"
+  ORDER_SVC_DB_USER: bmms_user
+
+  # 💰 Billing Service Database
+  BILLING_SVC_DB_HOST: billing-db.billing.svc.cluster.local
+  BILLING_SVC_DB_NAME: billing_db
+  BILLING_SVC_DB_PASS: bmms_password
+  BILLING_SVC_DB_PORT: "3314"
+  BILLING_SVC_DB_USER: bmms_user
+
+  # 💳 Payment Service Database
+  PAYMENT_SVC_DB_HOST: payment-db.payment.svc.cluster.local
+  PAYMENT_SVC_DB_NAME: payment_db
+  PAYMENT_SVC_DB_PASS: bmms_password
+  PAYMENT_SVC_DB_PORT: "3316"
+  PAYMENT_SVC_DB_USER: bmms_user
+
+  # 🔗 Kafka Broker (Redpanda)
+  KAFKA_BROKER: redpanda-0.infras.svc.cluster.local:9092
+
+  # 📧 Mail Configuration
+  MAIL_FROM: noreply@bmms.com
+  MAIL_HOST: smtp.gmail.com
+  MAIL_PORT: "587"
+  MAIL_USER: your_email@gmail.com
+  MAIL_PASSWORD: your_app_password

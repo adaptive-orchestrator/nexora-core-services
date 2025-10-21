@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env
+  namespace: payment
+  labels:
+    io.kompose.service: payment-db-env
+data:
+    # MySQL
+  DB_USERNAME: bmms_user
+  DB_PASSWORD: bmms_password
+  DB_ROOT_PASSWORD: root123
+
+  # Payment Service DB config
+  PAYMENT_SVC_DB_HOST: payment-db
+  PAYMENT_SVC_DB_PORT: "3306"
+  PAYMENT_SVC_DB_USER: bmms_user
+  PAYMENT_SVC_DB_PASS: bmms_password
+  PAYMENT_SVC_DB_NAME: payment_db
+
+
+  # Kafka broker
+  KAFKA_BROKER: redpanda-0.infras.svc.cluster.local:9092
+  BILLING_SERVICE_URL: http://billing-service.billing.svc.cluster.local:3003
+  PAYMENT_SERVICE_URL: http://order-service.order.svc.cluster.local:3011

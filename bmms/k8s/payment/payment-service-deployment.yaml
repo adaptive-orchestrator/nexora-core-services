@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: payment-service
+  name: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: payment-service
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: 0xt4i/payment-service:0.0.1
+          ports:
+            - containerPort: 3015
+          envFrom:
+            - configMapRef:
+                name: env
+            - secretRef:
+                name: mysql-secret  # nếu có Secret cho password
+      restartPolicy: Always

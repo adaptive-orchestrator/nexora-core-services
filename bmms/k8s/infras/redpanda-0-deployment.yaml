@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: redpanda-0
+  name: redpanda-0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: redpanda-0
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: redpanda-0
+    spec:
+      securityContext:
+        fsGroup: 0
+      containers:
+        - name: redpanda
+          image: redpandadata/redpanda:v25.1.12
+          args:
+            - redpanda
+            - start
+            - --smp 1
+            - --overprovisioned
+            - --check=false
+            - --node-id 0
+            - --kafka-addr 0.0.0.0:9092
+            - --advertise-kafka-addr redpanda.infras.svc.cluster.local:9092
+            - --rpc-addr 0.0.0.0:33145
+            - --advertise-rpc-addr redpanda.infras.svc.cluster.local:33145
+          ports:
+            - containerPort: 9092
+              name: kafka
+            - containerPort: 9644
+              name: admin
+            - containerPort: 33145
+              name: rpc
+          volumeMounts:
+            - name: redpanda-data
+              mountPath: /var/lib/redpanda/data
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+      volumes:
+        - name: redpanda-data
+          persistentVolumeClaim:
+            claimName: redpanda-0-data
+
