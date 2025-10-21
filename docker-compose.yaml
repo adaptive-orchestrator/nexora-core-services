@@ -4,7 +4,7 @@ services:
   # ==========================================
   # CUSTOMER DOMAIN DATABASES
   # ==========================================
-  customer_db:
+  customer-db:
     image: mysql:8.0
     container_name: bmms-customer-db
     restart: unless-stopped
@@ -26,7 +26,7 @@ services:
     networks:
       - bmms-network
 
-  crm_db:
+  crm-db:
     image: mysql:8.0
     container_name: bmms-crm-db
     restart: unless-stopped
@@ -51,7 +51,7 @@ services:
   # ==========================================
   # PRODUCT DOMAIN DATABASES
   # ==========================================
-  catalogue_db:
+  catalogue-db:
     image: mysql:8.0
     container_name: bmms-catalogue-db
     restart: unless-stopped
@@ -73,7 +73,7 @@ services:
     networks:
       - bmms-network
 
-  promotion_db:
+  promotion-db:
     image: mysql:8.0
     container_name: bmms-promotion-db
     restart: unless-stopped
@@ -95,7 +95,7 @@ services:
     networks:
       - bmms-network
 
-  pricing_db:
+  pricing-db:
     image: mysql:8.0
     container_name: bmms-pricing-db
     restart: unless-stopped
@@ -120,7 +120,7 @@ services:
   # ==========================================
   # ORDER DOMAIN DATABASES
   # ==========================================
-  order_db:
+  order-db:
     image: mysql:8.0
     container_name: bmms-order-db
     restart: unless-stopped
@@ -142,7 +142,7 @@ services:
     networks:
       - bmms-network
 
-  subscription_db:
+  subscription-db:
     image: mysql:8.0
     container_name: bmms-subscription-db
     restart: unless-stopped
@@ -164,7 +164,7 @@ services:
     networks:
       - bmms-network
 
-  inventory_db:
+  inventory-db:
     image: mysql:8.0
     container_name: bmms-inventory-db
     restart: unless-stopped
@@ -189,7 +189,7 @@ services:
   # ==========================================
   # FINANCE DOMAIN DATABASES
   # ==========================================
-  billing_db:
+  billing-db:
     image: mysql:8.0
     container_name: bmms-billing-db
     restart: unless-stopped
@@ -211,7 +211,7 @@ services:
     networks:
       - bmms-network
 
-  payment_db:
+  payment-db:
     image: mysql:8.0
     container_name: bmms-payment-db
     restart: unless-stopped
