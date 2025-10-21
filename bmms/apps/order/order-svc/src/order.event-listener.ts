@@ -2,13 +2,11 @@ import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import * as event from '@bmms/event';
 import { OrderSvcService } from './order-svc.service';
-import { CustomerSvcService } from 'apps/customer/customer-svc/src/customer-svc.service';
 
 
 @Controller()
 export class OrderEventListener {
   constructor(
-    private readonly customerSvcService: CustomerSvcService,
     private readonly orderSvcService: OrderSvcService,
   ) {}
 

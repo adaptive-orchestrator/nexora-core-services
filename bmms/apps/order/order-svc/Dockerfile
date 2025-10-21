@@ -39,4 +39,4 @@ ENV NODE_ENV=production
 EXPOSE 3011
 
 # Command start service
-CMD ["node", "dist/main.js"]
+CMD ["npm", "start","order-svc"]

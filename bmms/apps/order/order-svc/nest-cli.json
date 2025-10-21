@@ -15,7 +15,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/order/order-svc/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/order/order-svc/tsconfig.app.json"
+        "tsConfigPath": "tsconfig.app.json"
       }
     },
     "api-gateway": {
