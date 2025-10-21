@@ -12,20 +12,11 @@
 
     "inventory-svc": {
       "type": "application",
-      "root": "apps/order/inventory-svc",
+      "root": "/",
       "entryFile": "main",
-      "sourceRoot": "apps/order/inventory-svc/src",
+      "sourceRoot": "/src",
       "compilerOptions": {
         "tsConfigPath": "tsconfig.app.json"
-      }
-    },
-    "billing-svc": {
-      "type": "application",
-      "root": "apps/finance/billing-svc",
-      "entryFile": "main",
-      "sourceRoot": "apps/finance/billing-svc/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/finance/billing-svc/tsconfig.app.json"
       }
     },
     "auth": {
