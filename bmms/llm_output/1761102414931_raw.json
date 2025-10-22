@@ -1,0 +1,30 @@
+{
+  "proposal_text": "Convert the product group 'Abb' to a monthly subscription model.",
+  "changeset": {
+    "model": "product_group",
+    "features": [
+      {
+        "key": "product_group_name",
+        "value": "Abb"
+      },
+      {
+        "key": "is_subscription_enabled",
+        "value": true
+      },
+      {
+        "key": "subscription_billing_period",
+        "value": "monthly"
+      }
+    ],
+    "impacted_services": [
+      "BillingService",
+      "SubscriptionManagementService",
+      "ProductCatalogService"
+    ]
+  },
+  "metadata": {
+    "intent": "configure_product_group_subscription",
+    "confidence": 0.95,
+    "risk": "medium"
+  }
+}

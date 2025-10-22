@@ -3,6 +3,7 @@ import { LlmOrchestratorController } from './llm-orchestrator.controller';
 import { LlmOrchestratorService } from './llm-orchestrator.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { CodeSearchService } from './service/code-search.service';
 
 @Module({
   imports: [
@@ -26,6 +27,6 @@ import { JwtModule } from '@nestjs/jwt';
 
   ],
   controllers: [LlmOrchestratorController],
-  providers: [LlmOrchestratorService],
+  providers: [LlmOrchestratorService,CodeSearchService],
 })
 export class LlmOrchestratorModule { }

@@ -1,0 +1,3 @@
+// "start:code-indexer": "ts-node apps/code-indexer/src/main.ts",
+//     "index:once": "WATCH_MODE=false npm run start:code-indexer",
+//     "index:watch": "WATCH_MODE=true npm run start:code-indexer"

@@ -33,6 +33,21 @@
         "tsConfigPath": "libs/auth/tsconfig.lib.json"
       }
     },
+    "auth-svc": {
+      "type": "application",
+      "root": "apps/customer/auth-svc",
+      "entryFile": "main",
+      "sourceRoot": "apps/customer/auth-svc/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/customer/auth-svc/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "proto/*.proto",
+            "outDir": "dist/out-tsc/apps/customer/auth-svc/src"
+          }
+        ]
+      }
+    },
     "billing-svc": {
       "type": "application",
       "root": "apps/finance/billing-svc",
@@ -88,21 +103,6 @@
         "webpack": false
       }
     },
-    "auth-svc": {
-      "type": "application",
-      "root": "apps/customer/auth-svc",
-      "entryFile": "main",
-      "sourceRoot": "apps/customer/auth-svc/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/customer/auth-svc/tsconfig.app.json",
-        "assets": [
-          {
-            "include": "proto/*.proto",
-            "outDir": "dist/out-tsc/apps/customer/auth-svc/src"
-          }
-        ]
-      }
-    },
     "db": {
       "type": "library",
       "root": "libs/db",
@@ -137,7 +137,7 @@
       "sourceRoot": "apps/platform/llm-orchestrator/src",
       "compilerOptions": {
         "tsConfigPath": "apps/platform/llm-orchestrator/tsconfig.app.json",
-         "assets": [
+        "assets": [
           {
             "include": "proto/*.proto",
             "outDir": "dist/out-tsc/apps/platform/llm-orchestrator/src"
@@ -161,6 +161,15 @@
       "sourceRoot": "apps/finance/payment-svc/src",
       "compilerOptions": {
         "tsConfigPath": "apps/finance/payment-svc/tsconfig.app.json"
+      }
+    },
+    "code-indexer": {
+      "type": "application",
+      "root": "apps/platform/code-indexer",
+      "entryFile": "main",
+      "sourceRoot": "apps/platform/code-indexer/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/platform/code-indexer/tsconfig.app.json"
       }
     },
     "pricing-engine": {

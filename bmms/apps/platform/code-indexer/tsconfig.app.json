@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../../dist/out-tsc",
+    "rootDir": "../../../",          // 👈 Quan trọng: để bao hết cả libs/
+    "baseUrl": "../../../",
+    "paths": {
+      "@bmms/*": ["libs/*/src"]      // 👈 Giúp Nest hiểu alias @bmms/*
+    },
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*",
+    "../../../libs/**/*"             // 👈 Thêm libs vào vùng biên dịch
+  ],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}
