@@ -4,7 +4,7 @@ metadata:
   name: env
   namespace: order
   labels:
-    io.kompose.service: order-db-env
+    app: order-db-env
 data:
       # MySQL
   DB_USERNAME: bmms_user

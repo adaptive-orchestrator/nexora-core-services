@@ -85,7 +85,7 @@ metadata:
 spec:
   type: NodePort
   selector:
-    io.kompose.service: order-service
+    app: order-service
   ports:
     - name: http
       port: 3011
@@ -101,17 +101,17 @@ rồi gọi: http://localhost:3011/api/v1/orders
 ## 5) Xem log & sự kiện
 
 ```bash
-Log ứng dụng (theo label io.kompose.service)
-kubectl logs -n order   -l io.kompose.service=order-service   --tail=100 -f
-kubectl logs -n billing -l io.kompose.service=billing-service --tail=100 -f
-kubectl logs -n payment -l io.kompose.service=payment-service --tail=100 -f
+Log ứng dụng (theo label app)
+kubectl logs -n order   -l app=order-service   --tail=100 -f
+kubectl logs -n billing -l app=billing-service --tail=100 -f
+kubectl logs -n payment -l app=payment-service --tail=100 -f
 ```
 
 ### Sự kiện (Events): mô tả toàn bộ Pod theo label rồi grep Events (tăng A để xem thêm dòng)
 ```bash
-kubectl describe pod -n order   -l io.kompose.service=order-service   | grep -A 20 ^Events
-kubectl describe pod -n billing -l io.kompose.service=billing-service | grep -A 20 ^Events
-kubectl describe pod -n payment -l io.kompose.service=payment-service | grep -A 20 ^Events
+kubectl describe pod -n order   -l app=order-service   | grep -A 20 ^Events
+kubectl describe pod -n billing -l app=billing-service | grep -A 20 ^Events
+kubectl describe pod -n payment -l app=payment-service | grep -A 20 ^Events
 ```
 ### Redpanda (Kafka)
 ```bash
@@ -138,7 +138,7 @@ kubectl delete pods --all -n infras
 ```bash
 kubectl get pvc,pv -A
 kubectl describe pvc -n order
-kubectl describe pod -n order -l io.kompose.service=order-db | grep -A 20 ^Events
+kubectl describe pod -n order -l app=order-db | grep -A 20 ^Events
 ```
 ## 8) Lỗi thường gặp & cách xử lý nhanh
 

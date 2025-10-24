@@ -4,7 +4,7 @@ metadata:
   name: env
   namespace: payment
   labels:
-    io.kompose.service: payment-db-env
+    app: payment-db-env
 data:
     # MySQL
   DB_USERNAME: bmms_user

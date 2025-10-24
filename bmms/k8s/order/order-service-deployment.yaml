@@ -1,31 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
-    kompose.version: 1.37.0 (fb0539e64)
+  name: order-svc
   labels:
-    io.kompose.service: order-service
-  name: order-service
+    app: order-svc
 spec:
-  replicas: 1
+  replicas: 1           # chỉ định Kubernetes sẽ tạo 1 Pod hoặc nhiều pod để còn lại dự phòng
   selector:
     matchLabels:
-      io.kompose.service: order-service
+      app: order-service
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
-        kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: order-service
+        app: order-service
     spec:
-      containers:
+      containers:       # Chỉ định image base để chạy container kéo từ Docker Regỉstry
         - name: order-service
           image: 0xt4i/order-service:0.0.1
           ports:
             - containerPort: 3011
-          envFrom:
+          envFrom:      # Nạp biến môi trường có tên env từ configmap và 
             - configMapRef:
                 name: env
             - secretRef:

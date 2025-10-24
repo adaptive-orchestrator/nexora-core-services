@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    io.kompose.service: order-db-data
+    app: order-db-data
   name: order-db-data
 spec:
   accessModes:

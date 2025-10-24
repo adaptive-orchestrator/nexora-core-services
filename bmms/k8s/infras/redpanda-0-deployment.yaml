@@ -5,13 +5,13 @@ metadata:
     kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
     kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: redpanda-0
+    app: redpanda-0
   name: redpanda-0
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: redpanda-0
+      app: redpanda-0
   strategy:
     type: Recreate
   template:
@@ -20,7 +20,7 @@ spec:
         kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
         kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: redpanda-0
+        app: redpanda-0
     spec:
       securityContext:
         fsGroup: 0

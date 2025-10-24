@@ -5,20 +5,20 @@ metadata:
     kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
     kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: billing-service
+    app: billing-service
   name: billing-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: billing-service
+      app: billing-service
   template:
     metadata:
       annotations:
         kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
         kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: billing-service
+        app: billing-service
     spec:
       containers:
         - name: billing-service

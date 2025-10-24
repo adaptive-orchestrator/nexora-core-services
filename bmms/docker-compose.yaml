@@ -1,4 +1,29 @@
 services:
+  nginx:
+    container_name: nginx
+    build: 
+      dockerfile: Dockerfile
+      context: ./apps/frontend
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    networks:
+      - bmms-network
+      
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: ./apps/platform/api-gateway
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - bmms-network
+    
   order-service:
     container_name: order-service
     build:
@@ -43,7 +68,7 @@ services:
         condition: service_healthy 
   order-db:
     image: mysql:8.0
-    container_name: bmms-order-db
+    container_name: order-db
     restart: unless-stopped
     env_file: .env
     environment:
@@ -52,7 +77,7 @@ services:
       - MYSQL_USER=${DB_USERNAME}
       - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
-      - "3306:3311"
+      - "3306:3306"
     volumes:
       - order_db_data:/var/lib/mysql
     healthcheck:
@@ -66,7 +91,7 @@ services:
 
   billing-db:
     image: mysql:8.0
-    container_name: bmms-billing-db
+    container_name: billing-db
     restart: unless-stopped
     env_file: .env
     environment:
@@ -75,7 +100,7 @@ services:
       - MYSQL_USER=${DB_USERNAME}
       - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
-      - "3307:3314"
+      - "3307:3306"
     volumes:
       - billing_db_data:/var/lib/mysql
     healthcheck:
@@ -89,7 +114,7 @@ services:
 
   payment-db:
     image: mysql:8.0
-    container_name: bmms-payment-db
+    container_name: payment-db
     restart: unless-stopped
     env_file: .env
     environment:
@@ -98,7 +123,7 @@ services:
       - MYSQL_USER=${DB_USERNAME}
       - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
-      - "3308:3315"
+      - "3308:3306"
     volumes:
       - payment_db_data:/var/lib/mysql
     healthcheck:
@@ -142,14 +167,7 @@ networks:
     driver: bridge
 
 volumes:
-  customer_db_data:
-  crm_db_data:
-  catalogue_db_data:
-  promotion_db_data:
-  pricing_db_data:
   order_db_data:
-  subscription_db_data:
-  inventory_db_data:
   billing_db_data:
   payment_db_data:
   redpanda_0_data:

@@ -4,11 +4,11 @@ metadata:
   name: order-service
   namespace: order
   labels:
-    io.kompose.service: order-service
+    app: order-service
 spec:
   type: NodePort
   selector:
-    io.kompose.service: order-service
+    app: order-service
   ports:
     - name: http
       port: 3011         # port trong cluster

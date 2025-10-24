@@ -5,7 +5,7 @@ metadata:
     kompose.cmd: kompose convert -f docker-compose.yaml -o k8s/
     kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: payment-db
+    app: payment-db
   name: payment-db
 spec:
   ports:
@@ -13,4 +13,4 @@ spec:
       port: 3306
       targetPort: 3306
   selector:
-    io.kompose.service: payment-db
+    app: payment-db

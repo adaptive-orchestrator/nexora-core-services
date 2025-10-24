@@ -4,7 +4,7 @@ metadata:
   name: env
   namespace: billing
   labels:
-    io.kompose.service: billing-db-env
+    app: billing-db-env
 data:
       # MySQL
   DB_USERNAME: bmms_user

@@ -4,7 +4,7 @@ metadata:
   name: env
   namespace: infras
   labels:
-    io.kompose.service: redpanda-env
+    app: redpanda-env
 data:
   # 🧠 Application-level
   API_GATEWAY_PORT: "3000"
