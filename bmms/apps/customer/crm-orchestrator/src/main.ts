@@ -12,31 +12,29 @@ dotenv.config({ path: envPath });
 async function bootstrap() {
   const configService = new ConfigService();
   
-  // Create hybrid application
-  const app = await NestFactory.create(crmOrchestratorModule);
-
-  // Connect Kafka for event listening
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        clientId: 'crm-orchestrator',
-        brokers: (configService.get('KAFKA_BROKER') || 'localhost:9092').split(','),
-      },
-      consumer: {
-        groupId: 'crm-group',
-        allowAutoTopicCreation: true,
+  // Create pure microservice (Kafka only, no HTTP)
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    crmOrchestratorModule,
+    {
+      transport: Transport.KAFKA,
+      options: {
+        client: {
+          clientId: 'crm-orchestrator',
+          brokers: (configService.get('KAFKA_BROKER') || 'localhost:9092').split(','),
+        },
+        consumer: {
+          groupId: 'crm-group',
+          allowAutoTopicCreation: true,
+        },
       },
     },
-  });
+  );
 
-  await app.startAllMicroservices();
+  await app.listen();
   
-  const port = configService.get('CRM_ORCHESTRATOR_PORT') || 3005;
-  await app.listen(port);
-  
-  console.log(`✅ CRM Orchestrator running on http://localhost:${port}`);
-  console.log('✅ CRM Orchestrator (Kafka) listening for events');
+  console.log('✅ CRM Orchestrator (Background Service)');
+  console.log('✅ Listening to Kafka events: order.completed, payment.success, crm.check-churn');
+  console.log('🔄 Auto-updating customer segments and lifecycle stages');
 }
 bootstrap();
 

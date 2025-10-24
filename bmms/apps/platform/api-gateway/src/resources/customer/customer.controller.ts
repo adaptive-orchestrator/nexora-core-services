@@ -19,6 +19,7 @@ import {
 import { CustomerService } from './customer.service';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomerResponseDto, CustomersListResponseDto } from './dto/customer-response.dto';
+import { CustomerInsightsDto, SegmentCalculationDto } from './dto/customer-insights.dto';
 
 @ApiTags('Customer')
 @Controller('customers')
@@ -137,5 +138,36 @@ export class CustomerController {
   })
   async deleteCustomer(@Param('id', ParseIntPipe) id: number) {
     return this.customerService.deleteCustomer(id);
+  }
+
+  // ============ CRM Insights Endpoints ============
+
+  @Get(':id/insights')
+  @ApiOperation({
+    summary: 'Get customer insights and intelligence',
+    description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
+  })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer insights retrieved successfully',
+    type: CustomerInsightsDto,
+  })
+  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
+    return this.customerService.getCustomerInsights(id);
+  }
+
+  @Get('segments/thresholds')
+  @ApiOperation({
+    summary: 'Get segment calculation thresholds',
+    description: 'Get the spending thresholds for each customer segment (bronze, silver, gold, platinum)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Segment thresholds retrieved successfully',
+    type: SegmentCalculationDto,
+  })
+  getSegmentThresholds() {
+    return this.customerService.getSegmentThresholds();
   }
 }
