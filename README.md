@@ -8,66 +8,37 @@ A comprehensive microservices architecture built with NestJS, featuring domain-d
 
 ## 📁 Project Structureapps/ 
 
-├─ platform/ 
-
-```│ ├─ api-gateway/
-
-bmms/│ ├─ llm-orchestrator/ 
-
-├─ apps/                          # Microservices Applications│ └─ rl-scheduler/ 
-
-│  ├─ platform/                   # Platform Services├─ customer/ 
-
-│  │  ├─ api-gateway/            # REST API Gateway (Port 3000)│ ├─ customer-svc/ 
-
-│  │  ├─ llm-orchestrator/       # LLM Integration Service│ ├─ crm-orchestrator/ 
-
-│  │  ├─ rl-scheduler/           # Reinforcement Learning Scheduler├─ product/ 
-
-│  │  └─ code-indexer/           # Code Indexing Service│ ├─ catalogue-svc/ 
-
-│  ││ ├─ promotion-svc/ 
-
-│  ├─ customer/                   # Customer Domain│ └─ pricing-engine/ 
-
-│  │  ├─ auth-svc/               # Authentication Service (gRPC: 50051)├─ order/ 
-
-│  │  ├─ customer-svc/           # Customer Management│ ├─ order-svc/ 
-
-│  │  └─ crm-orchestrator/       # CRM Orchestration│ ├─ subscription-svc/ 
-
-│  ││ └─ inventory-svc/ 
-
-│  ├─ product/                    # Product Domain└─ finance/ 
-
-│  │  ├─ catalogue-svc/          # Product Catalogue (gRPC: 50054)  ├─ billing-svc/ 
-
-│  │  ├─ promotion-svc/          # Promotions & Discounts  └─ payment-svc/ 
-
-│  │  └─ pricing-engine/         # Dynamic Pricinglibs/
-
-│  │├─ Auth 
-
-│  ├─ order/                      # Order Domain├─ Db 
-
-│  │  ├─ order-svc/              # Order Management├─ Event 
-
-│  │  ├─ subscription-svc/       # Subscription Handling├─ Common
-
-│  │  └─ inventory-svc/          # Inventory Management```
-
+bmms/│ 
+├─ apps/                         # Microservices Applications
+│  ├─ platform/                  # Platform Services
+│  │  ├─ api-gateway/            # REST API Gateway (Port 3000)
+│  │  ├─ llm-orchestrator/       # LLM Integration Service 
+│  │  ├─ rl-scheduler/           # Reinforcement Learning Scheduler 
+│  │  └─ code-indexer/           # Code Indexing Service 
+│  ├─ customer/                  # Customer Domain 
+│  │  ├─ auth-svc/               # Authentication Service (gRPC: 50051) 
+│  │  ├─ customer-svc/           # Customer Management
+│  │  └─ crm-orchestrator/       # CRM Orchestration 
+│  ├─ product/                   # Product Domain 
+│  │  ├─ catalogue-svc/          # Product Catalogue (gRPC: 50054)   
+│  │  ├─ promotion-svc/          # Promotions & Discounts   
+│  │  └─ pricing-engine/         # Dynamic Pricing
+│  ├─ order/                     # Order Domain 
+│  │  ├─ order-svc/              # Order Management 
+│  │  ├─ subscription-svc/       # Subscription Handling
+│  │  └─ inventory-svc/          # Inventory Management
 │  │
-│  └─ finance/                    # Finance Domain
+│  └─ finance/                   # Finance Domain
 │     ├─ billing-svc/            # Billing & Invoicing
 │     └─ payment-svc/            # Payment Processing
 │
-├─ libs/                          # Shared Libraries
+├─ libs/                         # Shared Libraries
 │  ├─ auth/                      # Authentication Module
 │  ├─ db/                        # Database Module (TypeORM)
 │  ├─ event/                     # Event Bus (Kafka)
 │  └─ common/                    # Common Utilities
 │
-└─ llm_output/                    # LLM Generated Outputs
+└─ llm_output/                   # LLM Generated Outputs
 ```
 
 ## 🚀 Quick Start

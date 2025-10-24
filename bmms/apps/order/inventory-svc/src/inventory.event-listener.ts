@@ -36,12 +36,15 @@ export class InventoryEventListener {
 
       console.log(`📦 Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
 
+      const reservations: any[] = [];
+      const reservedItems: Array<{ productId: number; quantity: number; reservationId: number }> = [];
+
       // Reserve inventory for each item in order
       for (const item of items) {
         const { productId, quantity } = item;
 
         try {
-          // Reserve stock
+          // Reserve stock (this already emits individual inventory.reserved events)
           const reservation = await this.inventoryService.reserveStock(
             productId,
             quantity,
@@ -49,23 +52,43 @@ export class InventoryEventListener {
             customerId,
           );
 
+          reservations.push(reservation);
+          reservedItems.push({
+            productId,
+            quantity,
+            reservationId: reservation.id,
+          });
+
           console.log(`✅ Reserved ${quantity} units of product ${productId} for order ${orderNumber}`);
         } catch (error) {
           console.error(`❌ Failed to reserve product ${productId} for order ${orderNumber}:`, error.message);
           
-          // TODO: Implement compensation logic
-          // - Release already reserved items
-          // - Notify order service about reservation failure
-          // - Update order status to 'RESERVATION_FAILED'
+          // Compensation: Release already reserved items
+          if (reservedItems.length > 0) {
+            console.log(`🔄 Rolling back ${reservedItems.length} reservations...`);
+            try {
+              await this.inventoryService.releaseReservations(orderId, 'reservation_failed');
+            } catch (rollbackError) {
+              console.error('❌ Failed to rollback reservations:', rollbackError);
+            }
+          }
+          
+          // Log failure (Order service should handle timeout and update status)
+          console.error(`🚨 Reservation failed for order ${orderNumber}. Order service should handle this.`);
+          
           throw error;
         }
       }
 
       console.log(`✅ All inventory reserved successfully for order ${orderNumber}`);
+      console.log(`📊 Total reservations: ${reservations.length}, Total items: ${reservedItems.length}`);
+      
+      // Note: Individual inventory.reserved events already emitted by reserveStock()
+      // Billing service will listen to those events
+      
     } catch (error) {
       console.error('❌ Error handling ORDER_CREATED:', error);
-      // TODO: Send alert to admin about reservation failure
-      // TODO: Emit ORDER_RESERVATION_FAILED event back to order service
+      // Error already logged and compensation already executed
     }
   }
 
