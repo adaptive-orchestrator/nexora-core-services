@@ -9,6 +9,7 @@ import { InventoryModule } from './resources/inventory/inventory.module';
 import { CustomerModule } from './resources/customer/customer.module';
 import { OrderModule } from './resources/order/order.module';
 import { BillingModule } from './resources/billing/billing.module';
+import { PaymentModule } from './resources/payment/payment.module';
 
 @Module({
   imports: [
@@ -23,16 +24,13 @@ import { BillingModule } from './resources/billing/billing.module';
     InventoryModule,
     OrderModule,
     BillingModule,
+    PaymentModule,
   ],
   controllers: [
     ApiGatewayController,
-    // KHÔNG cần thêm AuthController và LlmOrchestratorController ở đây
-    // vì chúng đã được declare trong AuthModule và LlmOrchestratorModule
   ],
   providers: [
     ApiGatewayService,
-    // KHÔNG cần thêm LlmOrchestratorService ở đây
-    // vì nó đã được declare trong LlmOrchestratorModule
   ],
 })
 export class ApiGatewayModule {}

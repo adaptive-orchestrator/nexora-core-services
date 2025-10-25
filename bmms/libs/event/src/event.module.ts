@@ -47,6 +47,34 @@ export class EventModule {
               };
             },
           },
+          // Alias for backward compatibility
+          {
+            name: 'EVENT_SERVICE',
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => {
+              const brokers = configService
+                .get<string>('KAFKA_BROKER', 'localhost:9092')
+                .split(',');
+
+              return {
+                transport: Transport.KAFKA,
+                options: {
+                  client: {
+                    clientId,
+                    brokers,
+                  },
+                  consumer: {
+                    groupId: consumerGroupId,
+                    allowAutoTopicCreation: true,
+                  },
+                  producer: {
+                    allowAutoTopicCreation: true,
+                  },
+                },
+              };
+            },
+          },
         ]),
       ],
       exports: [ClientsModule],

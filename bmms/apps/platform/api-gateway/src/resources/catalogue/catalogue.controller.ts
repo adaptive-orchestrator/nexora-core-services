@@ -1,6 +1,9 @@
 import { Controller, Post, Body, Get, Param, HttpCode, HttpStatus, ValidationPipe } from '@nestjs/common';
 import { CatalogueService } from './catalogue.service';
 import { ApiTags, ApiOperation, ApiBody, ApiOkResponse, ApiCreatedResponse, ApiBadRequestResponse, ApiNotFoundResponse } from '@nestjs/swagger';
+import { CreateProductDto } from './dto/create-product.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { CreateFeatureDto } from './dto/create-feature.dto';
 
 @ApiTags('Catalogue')
 @Controller('catalogue')
@@ -13,7 +16,7 @@ export class CatalogueController {
   @ApiOperation({ summary: 'Create product', description: 'Create a new product in catalogue' })
   @ApiCreatedResponse({ description: 'Product created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })
-  async createProduct(@Body(ValidationPipe) body: any) {
+  async createProduct(@Body(ValidationPipe) body: CreateProductDto) {
     return this.catalogueService.createProduct(body);
   }
 
@@ -40,7 +43,7 @@ export class CatalogueController {
   @ApiOperation({ summary: 'Create plan', description: 'Create a new subscription plan' })
   @ApiCreatedResponse({ description: 'Plan created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })
-  async createPlan(@Body(ValidationPipe) body: any) {
+  async createPlan(@Body(ValidationPipe) body: CreatePlanDto) {
     return this.catalogueService.createPlan(body);
   }
 
@@ -67,7 +70,7 @@ export class CatalogueController {
   @ApiOperation({ summary: 'Create feature', description: 'Create a new feature' })
   @ApiCreatedResponse({ description: 'Feature created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })
-  async createFeature(@Body(ValidationPipe) body: any) {
+  async createFeature(@Body(ValidationPipe) body: CreateFeatureDto) {
     return this.catalogueService.createFeature(body);
   }
 

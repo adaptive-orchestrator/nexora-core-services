@@ -40,11 +40,16 @@ async function bootstrap() {
   console.log(`✅ gRPC server configured on ${grpcUrl}`);
 
   await app.startAllMicroservices();
+  await app.init();
   console.log('✅ All microservices started!');
 
+  // HTTP server for VNPay callback and testing
+  // Comment out if you don't need HTTP endpoints
   const httpPort = configService.get<number>('SERVER_PORT') || 3013;
   await app.listen(httpPort);
-  console.log(`🚀 Payment Service HTTP running on port ${httpPort}`);
-  console.log(`🚀 Payment Service gRPC running on ${grpcUrl}`);
+  console.log(`🚀 Payment Service (HTTP) running on port ${httpPort} - for VNPay callbacks`);
+  
+  console.log(`🚀 Payment Service (gRPC) running on ${grpcUrl}`);
+  console.log('🚀 Payment Service (Kafka) listening for events');
 }
 bootstrap();

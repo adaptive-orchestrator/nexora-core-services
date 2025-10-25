@@ -8,8 +8,9 @@ export class CatalogueSvcController {
 
   // Products
   @GrpcMethod('CatalogueService', 'CreateProduct')
-  createProduct(data: any) {
-    return this.service.createProduct(data);
+  async createProduct(data: any) {
+    const product = await this.service.createProduct(data);
+    return { product };
   }
 
   @GrpcMethod('CatalogueService', 'GetAllProducts')
@@ -20,14 +21,22 @@ export class CatalogueSvcController {
 
   @GrpcMethod('CatalogueService', 'GetProductById')
   async getProductById(data: { id: number }) {
-    const product = await this.service.findProductById(data.id);
-    return { product, message: 'Product found' };
+    try {
+      console.log(`[CatalogueController] GetProductById called with id: ${data.id}`);
+      const product = await this.service.findProductById(data.id);
+      console.log(`[CatalogueController] Product found:`, product);
+      return { product, message: 'Product found' };
+    } catch (error) {
+      console.error(`[CatalogueController] Error getting product ${data.id}:`, error);
+      throw error;
+    }
   }
 
   // Plans
   @GrpcMethod('CatalogueService', 'CreatePlan')
-  createPlan(data: any) {
-    return this.service.createPlan(data);
+  async createPlan(data: any) {
+    const plan = await this.service.createPlan(data);
+    return { plan };
   }
 
   @GrpcMethod('CatalogueService', 'GetAllPlans')
@@ -44,8 +53,9 @@ export class CatalogueSvcController {
 
   // Features
   @GrpcMethod('CatalogueService', 'CreateFeature')
-  createFeature(data: any) {
-    return this.service.createFeature(data);
+  async createFeature(data: any) {
+    const feature = await this.service.createFeature(data);
+    return { feature };
   }
 
   @GrpcMethod('CatalogueService', 'GetAllFeatures')

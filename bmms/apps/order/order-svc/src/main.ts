@@ -6,15 +6,14 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 
 async function bootstrap() {
-  // Create hybrid application (HTTP + gRPC + Kafka)
-  const app = await NestFactory.create(OrderSvcModule);
+  // Create application context (no HTTP server, just for DI)
+  const app = await NestFactory.create(OrderSvcModule, { logger: ['log', 'error', 'warn'] });
 
   // 1. Connect gRPC microservice
-  console.log('⏳ Starting gRPC microservice...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
-      url: process.env.GRPC_SERVER_ORDER_URL || '127.0.0.1:50057',
+      url: process.env.GRPC_LISTEN_ORDER_URL || '0.0.0.0:50057',
       package: 'order',
       protoPath: join(__dirname, './proto/order.proto'),
       loader: {
@@ -28,7 +27,6 @@ async function bootstrap() {
   });
 
   // 2. Connect Kafka microservice
-  console.log('⏳ Starting Kafka microservice...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -43,15 +41,13 @@ async function bootstrap() {
     },
   });
 
-  await app.startAllMicroservices();
-  
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  const port = process.env.PORT || 3011;
-  await app.listen(port);
+  // Start only microservices (no HTTP server)
+  await app.startAllMicroservices();
+  await app.init();
   
-  console.log(`✅ Order Service (HTTP) running on port ${port}`);
-  console.log('✅ Order Service (gRPC) listening on port 50057');
+  console.log(`✅ Order Service (gRPC) listening on ${process.env.GRPC_LISTEN_ORDER_URL || '0.0.0.0:50057'}`);
   console.log('✅ Kafka Consumer listening for events');
 }
 bootstrap();

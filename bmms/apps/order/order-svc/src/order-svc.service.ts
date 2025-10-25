@@ -72,30 +72,50 @@ export class OrderSvcService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
+    console.log('🔧 [OrderSvcService] onModuleInit called');
+    console.log('🔧 customerClient:', !!this.customerClient);
+    console.log('🔧 catalogueClient:', !!this.catalogueClient);
+    console.log('🔧 inventoryClient:', !!this.inventoryClient);
+    
     this.customerService = this.customerClient.getService<ICustomerGrpcService>('CustomerService');
     this.catalogueService = this.catalogueClient.getService<ICatalogueGrpcService>('CatalogueService');
     this.inventoryService = this.inventoryClient.getService<IInventoryGrpcService>('InventoryService');
+    
+    console.log('✅ [OrderSvcService] gRPC services initialized');
+    console.log('✅ customerService:', !!this.customerService);
+    console.log('✅ catalogueService:', !!this.catalogueService);
+    console.log('✅ inventoryService:', !!this.inventoryService);
   }
 
   // ============= CRUD =============
 
   async create(dto: CreateOrderDto): Promise<Order> {
+    console.log('🔵 [OrderSvc.create] START - dto:', JSON.stringify(dto));
+    
     // 1. Validate customer exists
+    console.log('🔵 [OrderSvc.create] Step 1: Validating customer...');
     await this.validateCustomer(dto.customerId);
+    console.log('✅ [OrderSvc.create] Customer validation passed');
 
     // 2. Validate all products exist and get prices
+    console.log('🔵 [OrderSvc.create] Step 2: Validating products...');
     const validatedItems = await this.validateProducts(dto.items);
+    console.log('✅ [OrderSvc.create] Products validated:', validatedItems);
 
     // 3. Generate order number
+    console.log('🔵 [OrderSvc.create] Step 3: Generating order number...');
     const orderNumber = await this.generateOrderNumber();
+    console.log('✅ [OrderSvc.create] Order number generated:', orderNumber);
 
     // 4. Calculate totals
     const subtotal = validatedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
+    console.log('✅ [OrderSvc.create] Subtotal calculated:', subtotal);
 
     // 5. Create order
+    console.log('🔵 [OrderSvc.create] Step 4: Creating order in DB...');
     const order = await this.orderRepo.save(
       this.orderRepo.create({
         orderNumber,
@@ -108,6 +128,7 @@ export class OrderSvcService implements OnModuleInit {
         status: 'pending',
       }),
     );
+    console.log('✅ [OrderSvc.create] Order created:', order.id);
 
     // 6. Add items
     const items = await Promise.all(
@@ -176,8 +197,15 @@ export class OrderSvcService implements OnModuleInit {
         throw new NotFoundException(`Customer ${customerId} not found`);
       }
     } catch (error) {
+      // Log full error to help debugging gRPC/internal failures
+      console.error('[OrderSvc] validateCustomer error:', error);
+
       if (error instanceof NotFoundException) throw error;
-      throw new BadRequestException(`Failed to validate customer: ${error.message}`);
+
+      // If upstream gRPC call failed (network / unavailable service), surface a clearer message
+      // so that API Gateway doesn't just return a vague INTERNAL error.
+      const message = error?.message || 'Failed to validate customer';
+      throw new BadRequestException(`Failed to validate customer: ${message}`);
     }
   }
 
@@ -189,10 +217,13 @@ export class OrderSvcService implements OnModuleInit {
 
     for (const item of items) {
       try {
+        console.log(`🔵 [validateProducts] Checking product ${item.productId}...`);
+        
         // Get product from catalogue
         const response: any = await firstValueFrom(
           this.catalogueService.getProductById({ id: item.productId })
         );
+        console.log(`✅ [validateProducts] Catalogue response:`, response);
 
         if (!response || !response.product) {
           throw new NotFoundException(`Product ${item.productId} not found in catalogue`);
@@ -207,8 +238,10 @@ export class OrderSvcService implements OnModuleInit {
           price: Number(product.price), // Use price from catalogue
           notes: item.notes,
         });
+        console.log(`✅ [validateProducts] Product ${item.productId} validated with price ${product.price}`);
 
       } catch (error) {
+        console.error(`❌ [validateProducts] Error validating product ${item.productId}:`, error);
         if (error instanceof NotFoundException) throw error;
         throw new BadRequestException(`Failed to validate product ${item.productId}: ${error.message}`);
       }

@@ -5,10 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(BillingSvcModule);
+  const app = await NestFactory.create(BillingSvcModule, { logger: ['log', 'error', 'warn'] });
   const configService = app.get(ConfigService);
    
-  // ⭐ Connect Kafka microservice for events
+  // Connect Kafka microservice for events
   console.log('⏳ Starting Kafka microservices...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
@@ -25,7 +25,7 @@ async function bootstrap() {
   });
   console.log('✅ Kafka consumer configured');
 
-  // ⭐ Connect gRPC microservice for API Gateway
+  // Connect gRPC microservice for API Gateway
   const grpcUrl = configService.get<string>('GRPC_LISTEN_BILLING_URL') || '0.0.0.0:50058';
   console.log('⏳ Starting gRPC server...');
   app.connectMicroservice<MicroserviceOptions>({
@@ -39,11 +39,11 @@ async function bootstrap() {
   console.log(`✅ gRPC server configured on ${grpcUrl}`);
 
   await app.startAllMicroservices();
+  await app.init();
   console.log('✅ All microservices started!');
   
-  const httpPort = configService.get<number>('SERVER_PORT') || 3003;
-  await app.listen(httpPort);
-  console.log(`🚀 Billing Service HTTP running on port ${httpPort}`);
-  console.log(`🚀 Billing Service gRPC running on ${grpcUrl}`);
+  // HTTP server removed - only gRPC + Kafka
+  console.log(`✅ Billing Service (gRPC) listening on ${grpcUrl}`);
+  console.log('✅ Billing Service (Kafka) listening for events');
 }
 bootstrap();

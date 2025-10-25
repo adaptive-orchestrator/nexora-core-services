@@ -24,9 +24,15 @@ export class CustomerSvcController {
 
   @GrpcMethod('CustomerService', 'GetCustomerById')
   async getCustomerById(data: { id: number }) {
-    this.logger.log(`GetCustomerById called with id: ${data.id}`);
-    const customer = await this.service.findOne(data.id);
-    return { customer };
+    try {
+      this.logger.log(`GetCustomerById called with id: ${data.id}`);
+      const customer = await this.service.findOne(data.id);
+      this.logger.log(`GetCustomerById success: ${JSON.stringify(customer)}`);
+      return { customer };
+    } catch (error) {
+      this.logger.error(`GetCustomerById error for id ${data.id}:`, error);
+      throw error;
+    }
   }
 
   @GrpcMethod('CustomerService', 'GetCustomerByEmail')
