@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { join } from 'path';
 import { DbModule } from '@bmms/db';
 import { EventModule } from '@bmms/event';
 import { OrderSvcController } from './order-svc.controller';
@@ -29,7 +30,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'customer',
-          protoPath: './apps/order/order-svc/src/proto/customer.proto',
+          protoPath: join(__dirname, 'proto/customer.proto'),
           url: process.env.GRPC_SERVER_CUSTOMER_URL || '127.0.0.1:50052',
         },
       },
@@ -38,7 +39,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'catalogue',
-          protoPath: './apps/order/order-svc/src/proto/catalogue.proto',
+          protoPath: join(__dirname, 'proto/catalogue.proto'),
           url: process.env.GRPC_SERVER_CATALOGUE_URL || '127.0.0.1:50055',
         },
       },
@@ -47,7 +48,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'inventory',
-          protoPath: './apps/order/order-svc/src/proto/inventory.proto',
+          protoPath: join(__dirname, 'proto/inventory.proto'),
           url: process.env.GRPC_SERVER_INVENTORY_URL || '127.0.0.1:50056',
         },
       },
