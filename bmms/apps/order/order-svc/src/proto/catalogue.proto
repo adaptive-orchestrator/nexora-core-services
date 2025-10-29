@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package catalogue;
+
+service CatalogueService {
+  // Product operations
+  rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
+  rpc GetAllProducts (Empty) returns (ProductListResponse);
+  rpc GetProductById (ProductByIdRequest) returns (ProductResponse);
+  
+  // Plan operations
+  rpc CreatePlan (CreatePlanRequest) returns (PlanResponse);
+  rpc GetAllPlans (Empty) returns (PlanListResponse);
+  rpc GetPlanById (PlanByIdRequest) returns (PlanResponse);
+  
+  // Feature operations
+  rpc CreateFeature (CreateFeatureRequest) returns (FeatureResponse);
+  rpc GetAllFeatures (Empty) returns (FeatureListResponse);
+  rpc GetFeatureById (FeatureByIdRequest) returns (FeatureResponse);
+}
+
+// Common messages
+message Empty {}
+
+// Product messages
+message Product {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string sku = 5;
+  string category = 6;
+  string createdAt = 7;
+  string updatedAt = 8;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  string sku = 4;
+  string category = 5;
+}
+
+message ProductByIdRequest {
+  int32 id = 1;
+}
+
+message ProductResponse {
+  Product product = 1;
+  string message = 2;
+}
+
+message ProductListResponse {
+  repeated Product products = 1;
+}
+
+// Plan messages
+message Plan {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string billingCycle = 5;
+  repeated Feature features = 6;  // Changed from string to Feature
+  bool trialEnabled = 7;
+  int32 trialDays = 8;
+  string createdAt = 9;
+  string updatedAt = 10;
+}
+
+message CreatePlanRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  string billingCycle = 4;
+  repeated int32 featureIds = 5;  // Changed field name and type
+  bool trialEnabled = 6;
+  int32 trialDays = 7;
+}
+
+message PlanByIdRequest {
+  int32 id = 1;
+}
+
+message PlanResponse {
+  Plan plan = 1;
+  string message = 2;
+}
+
+message PlanListResponse {
+  repeated Plan plans = 1;
+}
+
+// Feature messages
+message Feature {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  string code = 4;
+  string createdAt = 5;
+  string updatedAt = 6;
+}
+
+message CreateFeatureRequest {
+  string name = 1;
+  string description = 2;
+  string code = 3;
+}
+
+message FeatureByIdRequest {
+  int32 id = 1;
+}
+
+message FeatureResponse {
+  Feature feature = 1;
+  string message = 2;
+}
+
+message FeatureListResponse {
+  repeated Feature features = 1;
+}

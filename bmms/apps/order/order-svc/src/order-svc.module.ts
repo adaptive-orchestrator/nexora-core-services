@@ -29,7 +29,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'customer',
-          protoPath: './apps/customer/customer-svc/src/proto/customer.proto',
+          protoPath: './apps/order/order-svc/src/proto/customer.proto',
           url: process.env.GRPC_SERVER_CUSTOMER_URL || '127.0.0.1:50052',
         },
       },
@@ -38,7 +38,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'catalogue',
-          protoPath: './apps/product/catalogue-svc/src/proto/catalogue.proto',
+          protoPath: './apps/order/order-svc/src/proto/catalogue.proto',
           url: process.env.GRPC_SERVER_CATALOGUE_URL || '127.0.0.1:50055',
         },
       },
@@ -47,7 +47,7 @@ import { Order } from './entities/order.entity';
         transport: Transport.GRPC,
         options: {
           package: 'inventory',
-          protoPath: './apps/order/inventory-svc/src/proto/inventory.proto',
+          protoPath: './apps/order/order-svc/src/proto/inventory.proto',
           url: process.env.GRPC_SERVER_INVENTORY_URL || '127.0.0.1:50056',
         },
       },

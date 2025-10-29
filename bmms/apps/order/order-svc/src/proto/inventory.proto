@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package inventory;
+
+service InventoryService {
+  // Inventory CRUD
+  rpc CreateInventory (CreateInventoryRequest) returns (InventoryResponse);
+  rpc GetInventoryByProduct (ProductIdRequest) returns (InventoryResponse);
+  rpc GetAllInventory (Empty) returns (InventoryListResponse);
+  rpc UpdateInventory (UpdateInventoryRequest) returns (InventoryResponse);
+  
+  // Stock Management
+  rpc AdjustStock (AdjustStockRequest) returns (InventoryResponse);
+  rpc ReserveStock (ReserveStockRequest) returns (ReservationResponse);
+  rpc ReleaseStock (ReleaseStockRequest) returns (MessageResponse);
+  rpc ConfirmReservation (ConfirmReservationRequest) returns (MessageResponse);
+  
+  // Bulk Operations
+  rpc BulkReserve (BulkReserveRequest) returns (BulkReserveResponse);
+  rpc CheckAvailability (CheckAvailabilityRequest) returns (AvailabilityResponse);
+  
+  // History & Reports
+  rpc GetInventoryHistory (ProductIdRequest) returns (HistoryListResponse);
+  rpc GetLowStockItems (LowStockRequest) returns (InventoryListResponse);
+}
+
+// Common messages
+message Empty {}
+
+message MessageResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// Inventory messages
+message Inventory {
+  int32 id = 1;
+  int32 productId = 2;
+  int32 quantity = 3;
+  int32 reserved = 4;
+  int32 available = 5;
+  string warehouseLocation = 6;
+  int32 reorderLevel = 7;
+  int32 maxStock = 8;
+  bool isActive = 9;
+  string createdAt = 10;
+  string updatedAt = 11;
+}
+
+message CreateInventoryRequest {
+  int32 productId = 1;
+  int32 quantity = 2;
+  string warehouseLocation = 3;
+  int32 reorderLevel = 4;
+  int32 maxStock = 5;
+}
+
+message UpdateInventoryRequest {
+  int32 id = 1;
+  int32 quantity = 2;
+  string warehouseLocation = 3;
+  int32 reorderLevel = 4;
+  int32 maxStock = 5;
+  bool isActive = 6;
+}
+
+message ProductIdRequest {
+  int32 productId = 1;
+}
+
+message InventoryResponse {
+  Inventory inventory = 1;
+  string message = 2;
+}
+
+message InventoryListResponse {
+  repeated Inventory items = 1;
+  int32 total = 2;
+}
+
+// Stock adjustment messages
+message AdjustStockRequest {
+  int32 productId = 1;
+  int32 quantity = 2;
+  string reason = 3;
+  string adjustmentType = 4; // RESTOCK, DAMAGED, RETURNED, etc.
+}
+
+// Reservation messages
+message InventoryReservation {
+  int32 id = 1;
+  int32 inventoryId = 2;
+  int32 productId = 3;
+  int32 orderId = 4;
+  int32 customerId = 5;
+  int32 reservedQuantity = 6;
+  string status = 7;
+  string expiresAt = 8;
+  string createdAt = 9;
+}
+
+message ReserveStockRequest {
+  int32 productId = 1;
+  int32 quantity = 2;
+  int32 orderId = 3;
+  int32 customerId = 4;
+}
+
+message ReleaseStockRequest {
+  int32 reservationId = 1;
+}
+
+message ConfirmReservationRequest {
+  int32 reservationId = 1;
+}
+
+message ReservationResponse {
+  InventoryReservation reservation = 1;
+  string message = 2;
+}
+
+// Bulk operations
+message ReserveItem {
+  int32 productId = 1;
+  int32 quantity = 2;
+}
+
+message BulkReserveRequest {
+  repeated ReserveItem items = 1;
+  int32 orderId = 2;
+  int32 customerId = 3;
+}
+
+message BulkReserveResponse {
+  repeated InventoryReservation reservations = 1;
+  bool allSuccessful = 2;
+  repeated string errors = 3;
+}
+
+message CheckAvailabilityRequest {
+  int32 productId = 1;
+  int32 requestedQuantity = 2;
+}
+
+message AvailabilityResponse {
+  bool available = 1;
+  int32 availableQuantity = 2;
+  string message = 3;
+}
+
+// History messages
+message InventoryHistory {
+  int32 id = 1;
+  int32 inventoryId = 2;
+  int32 productId = 3;
+  string action = 4;
+  int32 quantityBefore = 5;
+  int32 quantityAfter = 6;
+  int32 quantityChanged = 7;
+  string reason = 8;
+  string performedBy = 9;
+  string createdAt = 10;
+}
+
+message HistoryListResponse {
+  repeated InventoryHistory items = 1;
+  int32 total = 2;
+}
+
+message LowStockRequest {
+  int32 threshold = 1;
+}
