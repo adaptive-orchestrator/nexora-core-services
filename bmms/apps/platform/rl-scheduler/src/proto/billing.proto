@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package billing;
+
+service BillingService {
+  // Invoice CRUD operations
+  rpc CreateInvoice (CreateInvoiceRequest) returns (InvoiceResponse);
+  rpc GetInvoiceById (InvoiceIdRequest) returns (InvoiceResponse);
+  rpc GetAllInvoices (Empty) returns (InvoiceListResponse);
+  rpc UpdateInvoiceStatus (UpdateInvoiceStatusRequest) returns (InvoiceResponse);
+  rpc RetryPayment (InvoiceIdRequest) returns (MessageResponse);
+}
+
+// Common messages
+message Empty {}
+
+message MessageResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+// Invoice messages
+message Invoice {
+  int32 id = 1;
+  int32 orderId = 2;
+  int32 customerId = 3;
+  double totalAmount = 4;
+  double taxAmount = 5;
+  double discountAmount = 6;
+  double netAmount = 7;
+  string status = 8;
+  string invoiceNumber = 9;
+  string description = 10;
+  string dueDate = 11;
+  string createdAt = 12;
+  string updatedAt = 13;
+}
+
+message CreateInvoiceRequest {
+  int32 orderId = 1;
+  int32 customerId = 2;
+  double totalAmount = 3;
+  optional double taxAmount = 4;
+  optional double discountAmount = 5;
+  optional string description = 6;
+}
+
+message InvoiceIdRequest {
+  int32 id = 1;
+}
+
+message InvoiceResponse {
+  Invoice invoice = 1;
+}
+
+message InvoiceListResponse {
+  repeated Invoice invoices = 1;
+}
+
+message UpdateInvoiceStatusRequest {
+  int32 id = 1;
+  string status = 2;
+}

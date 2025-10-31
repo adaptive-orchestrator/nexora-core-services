@@ -15,7 +15,7 @@ import { join } from 'path';
         transport: Transport.GRPC,
         options: {
           package: 'subscription',
-          protoPath: join(__dirname, '../../../order/subscription-svc/src/proto/subscription.proto'),
+          protoPath: join(__dirname, 'proto/subscription.proto'),
           url: process.env.GRPC_SERVER_SUBSCRIPTION_URL || 'localhost:50059',
         },
       },
@@ -24,7 +24,7 @@ import { join } from 'path';
         transport: Transport.GRPC,
         options: {
           package: 'billing',
-          protoPath: join(__dirname, '../../../finance/billing-svc/src/proto/billing.proto'),
+          protoPath: join(__dirname, '/proto/billing.proto'),
           url: process.env.GRPC_SERVER_BILLING_URL || 'localhost:50058',
         },
       },
