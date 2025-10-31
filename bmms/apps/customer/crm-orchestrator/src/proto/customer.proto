@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package customer;
+
+service CustomerService {
+  rpc GetAllCustomers (GetAllCustomersRequest) returns (GetAllCustomersResponse);
+  rpc GetCustomerById (GetCustomerByIdRequest) returns (CustomerResponse);
+  rpc GetCustomerByEmail (GetCustomerByEmailRequest) returns (CustomerResponse);
+  rpc UpdateCustomer (UpdateCustomerRequest) returns (CustomerResponse);
+  rpc DeleteCustomer (DeleteCustomerRequest) returns (DeleteCustomerResponse);
+  
+  // Internal method - only called by event listeners, not exposed via API Gateway
+  rpc CreateCustomerInternal (CreateCustomerInternalRequest) returns (CustomerResponse);
+}
+
+message GetAllCustomersRequest {
+  optional int32 page = 1;
+  optional int32 limit = 2;
+  optional string segment = 3;
+}
+
+message GetAllCustomersResponse {
+  repeated Customer customers = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message GetCustomerByIdRequest {
+  int32 id = 1;
+}
+
+message GetCustomerByEmailRequest {
+  string email = 1;
+}
+
+message UpdateCustomerRequest {
+  int32 id = 1;
+  optional string name = 2;
+  optional string email = 3;
+  optional string segment = 4;
+  optional string tenantId = 5;
+}
+
+message DeleteCustomerRequest {
+  int32 id = 1;
+}
+
+message DeleteCustomerResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CreateCustomerInternalRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message CustomerResponse {
+  Customer customer = 1;
+}
+
+message Customer {
+  int32 id = 1;
+  string name = 2;
+  string email = 3;
+  string segment = 4;
+  string tenantId = 5;
+  string createdAt = 6;
+  string updatedAt = 7;
+}
