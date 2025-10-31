@@ -24,6 +24,4 @@ COPY package*.json ./
 ENV NODE_ENV=production
 RUN npm install --omit=dev
 
-EXPOSE 3011
-
 CMD ["node", "dist/apps/order/order-svc/src/main.js"]

@@ -24,6 +24,4 @@ COPY .env ./
 ENV NODE_ENV=production
 RUN npm install --omit=dev
 
-EXPOSE 3011
-
 CMD ["node", "dist/apps/platform/api-gateway/src/main.js"]

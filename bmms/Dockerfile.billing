@@ -16,13 +16,12 @@ RUN npm run build
 # ========================
 FROM node:22-alpine
 WORKDIR /usr/bmms
-COPY --from=builder /usr/bmms/apps/finance/billing-svc ./apps/finance/billing-svc
+COPY --from=builder /usr/bmms/dist/apps/finance/billing-svc ./dist/apps/finance/billing-svc
+COPY --from=builder /usr/bmms/apps/finance/billing-svc/src/proto ./dist/apps/finance/billing-svc/src/proto
 COPY --from=builder /usr/bmms/dist/libs ./dist/libs/
 COPY package*.json ./
 COPY .env ./
 ENV NODE_ENV=production
 RUN npm install --omit=dev
-
-EXPOSE 3011
 
 CMD ["node", "dist/apps/finance/billing-svc/src/main.js"]
