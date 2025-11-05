@@ -5,6 +5,12 @@ export enum Role {
   ADMIN = 'admin',
 }
 
+export enum BusinessModel {
+  RETAIL = 'retail',
+  SUBSCRIPTION = 'subscription',
+  FREEMIUM = 'freemium',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -25,6 +31,14 @@ export class User {
     default: Role.USER,
   })
   role: Role;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessModel,
+    nullable: true,
+    comment: 'Business model preference (only for ADMIN users)',
+  })
+  businessModel?: BusinessModel;
 
   @Column({ nullable: true })
   resetToken: string;

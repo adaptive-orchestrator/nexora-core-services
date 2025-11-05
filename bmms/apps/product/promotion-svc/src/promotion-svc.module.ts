@@ -7,6 +7,11 @@ import { Promotion } from './entities/promotion.entity';
 import { PromotionUsage } from './entities/promotion-usage.entity';
 import { DbModule } from '@bmms/db';
 import { EventModule } from '@bmms/event';
+// Strategy Pattern imports
+import { PromotionStrategyService } from './strategies/promotion-strategy.service';
+import { RetailPromotionStrategy } from './strategies/retail-promotion.strategy';
+import { SubscriptionPromotionStrategy } from './strategies/subscription-promotion.strategy';
+import { FreemiumPromotionStrategy } from './strategies/freemium-promotion.strategy';
 
 @Module({
   imports: [
@@ -16,7 +21,14 @@ import { EventModule } from '@bmms/event';
     EventModule,
   ],
   controllers: [PromotionSvcController],
-  providers: [PromotionSvcService],
-  exports: [PromotionSvcService],
+  providers: [
+    PromotionSvcService,
+    // Strategy services
+    PromotionStrategyService,
+    RetailPromotionStrategy,
+    SubscriptionPromotionStrategy,
+    FreemiumPromotionStrategy,
+  ],
+  exports: [PromotionSvcService, PromotionStrategyService],
 })
 export class PromotionSvcModule {}

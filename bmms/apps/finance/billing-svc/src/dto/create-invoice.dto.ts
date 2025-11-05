@@ -12,4 +12,9 @@ export class CreateInvoiceDto {
   totalAmount: number;
   dueDate: Date;
   notes?: string;
+  
+  // New fields for strategy pattern support
+  billingPeriod?: 'monthly' | 'yearly' | 'onetime';
+  isFreeTier?: boolean;
+  businessModel?: string; // 'retail', 'subscription', 'freemium'
 }

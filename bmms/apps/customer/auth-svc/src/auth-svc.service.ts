@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './auth/entities/user.entity';
+import { User, Role } from './auth/entities/user.entity';
 import { ResetPasswordDto } from './auth/dto/reset-password.dto';
 import { SignupDto } from './auth/dto/signup.dto';
 import { MailerService } from './mailer/mailer.service';
@@ -54,12 +54,20 @@ export class AuthSvcService {
   }
 
   async signup(signupDto: SignupDto) {
-    const { email, password, name } = signupDto;
+    const { email, password, name, role } = signupDto;
     const existing = await this.userRepo.findOne({ where: { email } });
     if (existing) throw new ConflictException('Email already exists');
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = this.userRepo.create({ email, password: hashed, name });
+    
+    // Create user với role từ DTO (nếu có), mặc định là USER
+    const user = this.userRepo.create({ 
+      email, 
+      password: hashed, 
+      name,
+      role: role || Role.USER, // Default to USER if not specified
+    });
+    
     const savedUser = await this.userRepo.save(user);
 
     // Emit user.created event to Kafka

@@ -14,6 +14,10 @@ import { CreateFeatureDto } from '../dto/create-feature.dto';
 import { UpdateFeatureDto } from '../dto/update-feature.dto';
 import { Feature, Plan, Product } from './catalogue.entity';
 
+// Import catalogue strategies
+import { CatalogueStrategyService } from './strategies/catalogue-strategy.service';
+import { CatalogueQueryParams, CatalogueDisplayResult } from './strategies/catalogue-strategy.interface';
+
 
 @Injectable()
 export class CatalogueSvcService {
@@ -29,6 +33,9 @@ export class CatalogueSvcService {
 
     @Inject('KAFKA_SERVICE')
     private readonly kafka: ClientKafka,
+
+    // Inject catalogue strategy service
+    private readonly catalogueStrategy: CatalogueStrategyService,
   ) {}
 
   // ============= PRODUCTS =============
@@ -192,5 +199,27 @@ export class CatalogueSvcService {
 
   async removeFeature(id: number): Promise<void> {
     await this.featureRepo.delete(id);
+  }
+
+  // ============= NEW: SMART CATALOGUE WITH STRATEGY PATTERN =============
+
+  /**
+   * Get catalogue items using automatic strategy selection
+   */
+  async getItemsByModel(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
+    console.log('🎯 Getting catalogue items with STRATEGY pattern');
+    return await this.catalogueStrategy.getItemsByModel(params);
+  }
+
+  async getRetailProducts(params?: { limit?: number }): Promise<CatalogueDisplayResult> {
+    return this.getItemsByModel({ businessModel: 'retail', ...params });
+  }
+
+  async getSubscriptionPlans(params?: { limit?: number }): Promise<CatalogueDisplayResult> {
+    return this.getItemsByModel({ businessModel: 'subscription', ...params });
+  }
+
+  async getFreemiumItems(params?: { limit?: number }): Promise<CatalogueDisplayResult> {
+    return this.getItemsByModel({ businessModel: 'freemium', ...params });
   }
 }

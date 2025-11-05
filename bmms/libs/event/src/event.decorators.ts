@@ -70,6 +70,11 @@ export const EventTopics = {
   SUBSCRIPTION_TRIAL_ENDED: 'subscription.trial.ended',
   SUBSCRIPTION_PLAN_CHANGED: 'subscription.plan.changed',
 
+  // Add-on events (NEW)
+  ADDON_PURCHASED: 'addon.purchased',
+  ADDON_RENEWED: 'addon.renewed',
+  ADDON_CANCELLED: 'addon.cancelled',
+
   // Promotion events
   PROMOTION_CREATED: 'promotion.created',
   PROMOTION_APPLIED: 'promotion.applied',

@@ -20,6 +20,8 @@ import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 import { PaymentRecordDto } from './dto/payment-record.dto';
 import { EventTopics } from '@bmms/event';
 
+// Import billing strategies
+import { BillingStrategyService } from './strategies/billing-strategy.service';
 
 
 @Injectable()
@@ -39,6 +41,9 @@ export class BillingService {
 
     @Inject('KAFKA_SERVICE')
     private readonly kafka: ClientKafka,
+
+    // Inject billing strategy service
+    private readonly billingStrategy: BillingStrategyService,
   ) {}
 
   // ============= CRUD =============
@@ -553,6 +558,140 @@ export class BillingService {
         createdAt: invoice.createdAt,
       },
     });
+
+    return invoice;
+  }
+
+  // ============= NEW: SMART BILLING WITH STRATEGY PATTERN =============
+
+  /**
+   * Create invoice using automatic strategy selection
+   * 
+   * Strategy is selected based on:
+   * 1. metadata.businessModel (from order/subscription)
+   * 2. ENV var BILLING_MODE (for dev mode)
+   * 3. Default to onetime
+   * 
+   * Usage:
+   * - Retail: await billingService.createWithStrategy({...}, 'retail')
+   * - Subscription: await billingService.createWithStrategy({...}, 'subscription')
+   * - Freemium: await billingService.createWithStrategy({...}, 'freemium', addons)
+   */
+  async createWithStrategy(
+    dto: CreateInvoiceDto,
+    businessModel?: string,
+    addons?: Array<{ addonId: string; name: string; price: number }>,
+  ): Promise<Invoice> {
+    console.log(`💡 Creating invoice with STRATEGY pattern (model: ${businessModel || 'auto'})`);
+
+    // Check if invoice already exists
+    const existing = await this.invoiceRepo.findOne({
+      where: { orderId: dto.orderId },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Invoice for order ${dto.orderId} already exists`);
+    }
+
+    // Use strategy to calculate amounts
+    const billingResult = await this.billingStrategy.calculate({
+      orderId: dto.orderId?.toString(),
+      customerId: dto.customerId?.toString(),
+      items: dto.items.map(item => ({
+        productId: item.productId?.toString(),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      })),
+      addons,
+      metadata: {
+        businessModel,
+        billingPeriod: dto.billingPeriod as any,
+        isFreeTier: dto.isFreeTier,
+      },
+    });
+
+    console.log(`📊 Billing calculation result:`, {
+      subtotal: billingResult.subtotal,
+      tax: billingResult.tax,
+      total: billingResult.totalAmount,
+      mode: billingResult.billingMode,
+    });
+
+    // Generate invoice number
+    const invoiceNumber = await this.generateInvoiceNumber();
+
+    // Create invoice with calculated amounts
+    const invoiceData = {
+      invoiceNumber,
+      orderId: dto.orderId,
+      orderNumber: dto.orderNumber,
+      customerId: dto.customerId,
+      subtotal: billingResult.subtotal,
+      tax: billingResult.tax,
+      shippingCost: dto.shippingCost || 0,
+      discount: billingResult.discount,
+      totalAmount: billingResult.totalAmount,
+      dueAmount: billingResult.totalAmount,
+      dueDate: dto.dueDate,
+      notes: dto.notes,
+      status: 'draft' as any,
+    };
+
+    const invoice = await this.invoiceRepo.save(
+      this.invoiceRepo.create(invoiceData),
+    );
+
+    // Create items
+    const items = await Promise.all(
+      dto.items.map((item) =>
+        this.itemRepo.save(
+          this.itemRepo.create({
+            invoiceId: invoice.id,
+            productId: item.productId,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+          }),
+        ),
+      ),
+    );
+
+    invoice.items = items;
+
+    // Save history
+    await this.historyRepo.save(
+      this.historyRepo.create({
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        action: 'created',
+        details: `Invoice created with ${billingResult.billingMode} billing mode`,
+      }),
+    );
+
+    console.log('📤 Emitting INVOICE_CREATED event...');
+
+    this.kafka.emit(EventTopics.INVOICE_CREATED, {
+      eventId: crypto.randomUUID(),
+      eventType: EventTopics.INVOICE_CREATED,
+      timestamp: new Date(),
+      source: 'billing-svc',
+      data: {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        orderId: invoice.orderId,
+        orderNumber: invoice.orderNumber,
+        customerId: invoice.customerId,
+        totalAmount: invoice.totalAmount,
+        dueDate: invoice.dueDate,
+        status: invoice.status,
+        billingMode: billingResult.billingMode,
+        businessModel,
+        createdAt: invoice.createdAt,
+      },
+    });
+
+    console.log('✅ Invoice created successfully with strategy pattern');
 
     console.log('✅ Recurring invoice created:', invoice.invoiceNumber);
     return invoice;

@@ -5,7 +5,7 @@ metadata:
   namespace: order
   labels:
     app: subscription-svc
-    model: MultiBusinessModel
+    model: BusinessModel
 spec:
   replicas: 1
   selector:
@@ -27,13 +27,11 @@ spec:
                 name: env
           env:
             - name: BUSINESS_MODEL
-              value: "multi"
-            - name: SUPPORTED_MODELS
-              value: "retail,subscription"
-            - name: RETAIL_PRODUCTS_COUNT
-              value: "2"
-            - name: SUBSCRIPTION_PLANS_COUNT
-              value: "1"
+              value: "subscription"
+            - name: SUBSCRIPTION_PRICE
+              value: "199000"
+            - name: SUBSCRIPTION_FREQUENCY
+              value: "monthly"
           resources:
             requests:
               memory: "256Mi"

@@ -13,6 +13,12 @@ import { PaymentRecord } from './entities/payment-record.entity';
 import { BillingEventListener } from './billing.event-listener';
 import { getOrderGrpcClientOptions } from './client-options/order.grpc-client';
 
+// Import billing strategies
+import { BillingStrategyService } from './strategies/billing-strategy.service';
+import { OnetimeBillingStrategy } from './strategies/onetime-billing.strategy';
+import { RecurringBillingStrategy } from './strategies/recurring-billing.strategy';
+import { FreemiumBillingStrategy } from './strategies/freemium-billing.strategy';
+
 @Module({
   imports: [
       ConfigModule.forRoot({
@@ -28,6 +34,13 @@ import { getOrderGrpcClientOptions } from './client-options/order.grpc-client';
       ClientsModule.register([getOrderGrpcClientOptions()]),
     ],
   controllers: [BillingController,BillingEventListener],
-  providers: [BillingService],
+  providers: [
+    BillingService,
+    // Register all billing strategies
+    BillingStrategyService,
+    OnetimeBillingStrategy,
+    RecurringBillingStrategy,
+    FreemiumBillingStrategy,
+  ],
 })
 export class BillingSvcModule {}

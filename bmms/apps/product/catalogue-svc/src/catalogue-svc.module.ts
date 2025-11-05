@@ -7,6 +7,12 @@ import { DbModule } from '@bmms/db';
 import { EventModule } from '@bmms/event';
 import { Feature, Plan, Product } from './catalogue.entity';
 
+// Import catalogue strategies
+import { CatalogueStrategyService } from './strategies/catalogue-strategy.service';
+import { RetailCatalogueStrategy } from './strategies/retail-catalogue.strategy';
+import { SubscriptionCatalogueStrategy } from './strategies/subscription-catalogue.strategy';
+import { FreemiumCatalogueStrategy } from './strategies/freemium-catalogue.strategy';
+
 @Module({
   imports: [ ConfigModule.forRoot({
         isGlobal: true,
@@ -19,6 +25,13 @@ import { Feature, Plan, Product } from './catalogue.entity';
         consumerGroupId: 'catalogue-group',
       }),],
   controllers: [CatalogueSvcController],
-  providers: [CatalogueSvcService],
+  providers: [
+    CatalogueSvcService,
+    // Register all catalogue strategies
+    CatalogueStrategyService,
+    RetailCatalogueStrategy,
+    SubscriptionCatalogueStrategy,
+    FreemiumCatalogueStrategy,
+  ],
 })
 export class CatalogueSvcModule {}

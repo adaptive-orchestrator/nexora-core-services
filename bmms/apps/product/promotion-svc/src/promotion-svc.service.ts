@@ -15,6 +15,8 @@ import {
   ApplyPromotionDto,
   PromotionValidationResult,
 } from './dto/validate-promotion.dto';
+// Strategy Pattern import
+import { PromotionStrategyService } from './strategies/promotion-strategy.service';
 
 @Injectable()
 export class PromotionSvcService {
@@ -23,6 +25,8 @@ export class PromotionSvcService {
     private readonly promotionRepo: Repository<Promotion>,
     @InjectRepository(PromotionUsage)
     private readonly usageRepo: Repository<PromotionUsage>,
+    // Inject strategy service
+    private readonly strategyService: PromotionStrategyService,
   ) {}
 
   // ============ CRUD Operations ============
@@ -397,4 +401,94 @@ export class PromotionSvcService {
       freeMonths,
     };
   }
+
+  // ============================================
+  // NEW: Strategy-Based Methods
+  // ============================================
+
+  /**
+   * Validate promotion using PROMOTION_MODE ENV (Dev mode)
+   * 
+   * Usage in dev:
+   * ```bash
+   * export PROMOTION_MODE=retail
+   * # or
+   * export PROMOTION_MODE=subscription
+   * # or
+   * export PROMOTION_MODE=freemium
+   * ```
+   */
+  async validatePromotionByEnv(params: {
+    promotionCode: string;
+    userId?: number;
+    subscriptionPlanId?: number;
+    addonIds?: number[];
+  }) {
+    return this.strategyService.validatePromotionByEnv(params);
+  }
+
+  /**
+   * Validate promotion using explicit business model (Production)
+   * 
+   * Usage:
+   * ```typescript
+   * await service.validatePromotionByModel('subscription', { 
+   *   promotionCode: 'SAVE50',
+   *   subscriptionPlanId: 3 
+   * });
+   * ```
+   */
+  async validatePromotionByModel(
+    businessModel: string,
+    params: {
+      promotionCode: string;
+      userId?: number;
+      subscriptionPlanId?: number;
+      addonIds?: number[];
+    },
+  ) {
+    return this.strategyService.validatePromotionByModel(businessModel, params);
+  }
+
+  /**
+   * Calculate discount using PROMOTION_MODE ENV (Dev mode)
+   */
+  async calculateDiscountByEnv(params: {
+    promotionType: 'percentage' | 'fixed_amount' | 'trial_extension' | 'free_months';
+    promotionValue: number;
+    orderAmount?: number;
+    addonPrices?: number[];
+  }): Promise<number> {
+    return this.strategyService.calculateDiscountByEnv(params);
+  }
+
+  /**
+   * Calculate discount using explicit business model (Production)
+   */
+  async calculateDiscountByModel(
+    businessModel: string,
+    params: {
+      promotionType: 'percentage' | 'fixed_amount' | 'trial_extension' | 'free_months';
+      promotionValue: number;
+      orderAmount?: number;
+      addonPrices?: number[];
+    },
+  ): Promise<number> {
+    return this.strategyService.calculateDiscountByModel(businessModel, params);
+  }
+
+  /**
+   * Get available promotion strategies
+   */
+  getAvailableStrategies(): string[] {
+    return this.strategyService.getAvailableStrategies();
+  }
+
+  /**
+   * Get current ENV mode
+   */
+  getCurrentPromotionMode(): string {
+    return this.strategyService.getCurrentMode();
+  }
 }
+

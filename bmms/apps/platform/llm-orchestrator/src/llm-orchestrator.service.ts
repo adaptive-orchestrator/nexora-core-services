@@ -34,18 +34,28 @@ const SYSTEM_PROMPT = `You are an expert business analyst that converts Vietname
 **BUSINESS MODELS:**
 1. **Retail Model**: One-time purchase, inventory management
    - Required services: OrderService, InventoryService
+   - BillingService mode: ONETIME
    - Note: 1 OrderService handles ALL retail products via database (product_id)
    
 2. **Subscription Model**: Recurring payment, subscription plans
    - Required services: SubscriptionService, PromotionService
+   - BillingService mode: RECURRING
    - Note: 1 SubscriptionService handles ALL subscription plans via database
    
-3. **Freemium Model**: Free tier with upgrade option
-   - Required services: SubscriptionService (with free flag), PromotionService
-   - Note: Same SubscriptionService handles both free and paid tiers
+3. **Freemium Model**: Free tier with optional paid add-ons
+   - Required services: SubscriptionService (with is_free=true), PromotionService
+   - BillingService mode: FREEMIUM (free base + pay for add-ons)
+   - Add-ons: Extra storage, premium features, etc. (charged separately)
+   - Note: Same SubscriptionService handles free users + add-on purchases
    
-4. **Multi-Model**: Support multiple models simultaneously
+4. **Freemium + Add-on Model**: Free base plan with purchasable add-ons
+   - Base plan: Free (no billing)
+   - Add-ons: Paid features billed separately (e.g., extra storage, AI features)
+   - BillingService mode: ADDON (only bill for add-ons, not base subscription)
+   
+5. **Multi-Model**: Support multiple models simultaneously
    - Required services: ALL of the above
+   - BillingService mode: HYBRID (handle all billing types)
    - Note: SHARED SERVICE PATTERN - Each service type deploys ONCE, not per product
    - Example: 2 retail products + 1 subscription → Still only 1 OrderService, 1 SubscriptionService
 
@@ -133,6 +143,28 @@ Output: {
     "intent": "business_model_expansion",
     "to_model": "multi",
     "note": "SHARED SERVICE PATTERN: Each service in impacted_services list will be deployed ONCE (e.g., 1 OrderService handles both retail products, 1 SubscriptionService handles subscription + freemium)"
+  }
+}
+
+Example 3 - Freemium with Add-ons:
+Input: "Tạo gói Freemium miễn phí với 3 add-on tính phí: Extra Storage (50k/tháng), AI Assistant (100k/tháng), Priority Support (30k/tháng)"
+Output: {
+  "changeset": {
+    "model": "FreemiumWithAddons",
+    "features": [
+      {"key": "business_model", "value": "freemium"},
+      {"key": "base_plan_price", "value": 0},
+      {"key": "addons_enabled", "value": true},
+      {"key": "addon_extra_storage_price", "value": 50000},
+      {"key": "addon_ai_assistant_price", "value": 100000},
+      {"key": "addon_priority_support_price", "value": 30000}
+    ],
+    "impacted_services": ["SubscriptionService", "BillingService", "PaymentService", "CatalogueService", "AuthService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "to_model": "freemium_addon",
+    "billing_mode": "addon_only"
   }
 }
 
