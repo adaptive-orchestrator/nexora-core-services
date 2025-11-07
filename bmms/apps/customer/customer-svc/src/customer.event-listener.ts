@@ -19,6 +19,7 @@ export class CustomerEventListener {
         name: event.data.name,
         email: event.data.email,
         userId: event.data.id, // Link to Auth User
+        role: event.data.role,
       });
 
       this.logger.log(`Customer profile created successfully for user: ${event.data.email}, customer ID: ${customer.id}`);

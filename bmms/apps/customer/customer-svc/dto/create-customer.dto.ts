@@ -23,4 +23,8 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsString()
   tenantId?: string;
+
+  @IsOptional()
+  @IsString()
+  role?: string;
 }

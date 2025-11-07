@@ -20,6 +20,7 @@ export interface UserCreatedEvent extends BaseEvent {
     email: string;
     name: string;
     createdAt: Date;
+    role: string;
   };
 }
 
@@ -30,6 +31,7 @@ export interface CustomerCreatedEvent extends BaseEvent {
     name: string;
     email: string;
     createdAt: Date;
+    role: string;
   };
 }
 

@@ -60,8 +60,7 @@ export class AuthSvcService {
     if (existing) throw new ConflictException('Email already exists');
 
     const hashed = await bcrypt.hash(password, 10);
-    console.log('User signed up:', email);
-    console.log('Hashed password:', hashed);
+
     
     // Create user với role từ DTO (nếu có), mặc định là USER
     const user = this.userRepo.create({ 
@@ -82,6 +81,7 @@ export class AuthSvcService {
         email: savedUser.email,
         name: savedUser.name,
         createdAt: new Date(),
+        role: savedUser.role,
       },
     };
 

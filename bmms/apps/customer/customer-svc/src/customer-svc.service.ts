@@ -29,6 +29,7 @@ export class CustomerSvcService {
         name: customer.name,
         email: customer.email,
         createdAt: customer.createdAt,
+        role: customer.role,
       },
     };
 

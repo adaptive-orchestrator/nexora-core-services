@@ -82,4 +82,7 @@ export class Customer {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @Column()
+  role: string;
 }

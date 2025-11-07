@@ -68,4 +68,5 @@ message Customer {
   string tenantId = 5;
   string createdAt = 6;
   string updatedAt = 7;
+  string role = 8;
 }
