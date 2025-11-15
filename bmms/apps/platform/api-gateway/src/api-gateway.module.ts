@@ -1,24 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+
 import { ApiGatewayController } from './api-gateway.controller';
 import { ApiGatewayService } from './api-gateway.service';
+import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthModule } from './resources/auth/auth.module';
+import { CustomerModule } from './resources/customer/customer.module';
 import { LlmOrchestratorModule } from './resources/llm-orchestrator/llm-orchestrator.module';
 import { CatalogueModule } from './resources/catalogue/catalogue.module';
 import { InventoryModule } from './resources/inventory/inventory.module';
-import { CustomerModule } from './resources/customer/customer.module';
 import { OrderModule } from './resources/order/order.module';
 import { BillingModule } from './resources/billing/billing.module';
 import { PaymentModule } from './resources/payment/payment.module';
 import { SubscriptionModule } from './resources/subscription/subscription.module';
 import { PromotionModule } from './resources/promotion/promotion.module';
-import { AddonModule } from './resources/addon/addon.module';
-import { AdminStatsModule } from './resources/admin/admin-stats.module';
-import { ProjectModule } from './resources/project/project.module';
-import { AiChatModule } from './resources/ai-chat/ai-chat.module';
-import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -26,11 +23,20 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-      signOptions: { expiresIn: '1d' },
+
+    PassportModule.register({
+      defaultStrategy: 'jwt',
     }),
+
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' },
+      }),
+    }),
+
     AuthModule,
     CustomerModule,
     LlmOrchestratorModule,
@@ -41,14 +47,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PaymentModule,
     SubscriptionModule,
     PromotionModule,
-    AddonModule,
-    AdminStatsModule,
-    ProjectModule,
-    AiChatModule,
   ],
-  controllers: [
-    ApiGatewayController,
-  ],
+  controllers: [ApiGatewayController],
   providers: [
     ApiGatewayService,
     JwtStrategy,
