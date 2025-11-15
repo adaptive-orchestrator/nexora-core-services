@@ -1,0 +1,17 @@
+{
+  "proposal_text": "Yêu cầu chuyển đổi nhóm sản phẩm 'A' từ mô hình kinh doanh hiện tại (giả định là bán lẻ) sang mô hình đăng ký theo tháng. Điều này đòi hỏi kích hoạt và cấu hình các dịch vụ hỗ trợ đăng ký, quản lý khuyến mãi và xử lý thanh toán định kỳ. CatalogueService sẽ cần được cập nhật để liệt kê sản phẩm này dưới dạng một gói đăng ký.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

@@ -64,8 +64,18 @@ message Customer {
   int32 id = 1;
   string name = 2;
   string email = 3;
-  string segment = 4;
-  string tenantId = 5;
-  string createdAt = 6;
-  string updatedAt = 7;
+  optional string phone = 4;
+  optional string address = 5;
+  string segment = 6;
+  string status = 7;
+  string lifecycleStage = 8;
+  optional string tenantId = 9;
+  optional int32 userId = 10;
+  double totalSpent = 11;
+  int32 orderCount = 12;
+  optional string lastOrderDate = 13;
+  optional string notes = 14;
+  string role = 15;
+  string createdAt = 16;
+  string updatedAt = 17;
 }
