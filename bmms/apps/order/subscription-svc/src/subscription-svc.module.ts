@@ -15,6 +15,7 @@ import { AddonController } from './addon.controller';
 import { AddonService } from './addon.service';
 import { Addon } from './entities/addon.entity';
 import { UserAddon } from './entities/user-addon.entity';
+import { AddonGrpcController } from './addon.grpc-controller';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import { UserAddon } from './entities/user-addon.entity';
       },
     ]),
   ],
-  controllers: [subscriptionSvcController, SubscriptionEventListener, AddonController],
+  controllers: [subscriptionSvcController, SubscriptionEventListener, AddonController, AddonGrpcController],
   providers: [subscriptionSvcService, ProrationService, AddonService],
 })
 export class subscriptionSvcModule {}

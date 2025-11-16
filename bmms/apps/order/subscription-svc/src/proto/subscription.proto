@@ -15,6 +15,14 @@ service SubscriptionService {
   
   // Trial management
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
+  
+  // Addon operations
+  rpc ListAddons (Empty) returns (AddonListResponse);
+  rpc GetAddonByKey (AddonByKeyRequest) returns (AddonResponse);
+  rpc CreateAddon (CreateAddonRequest) returns (AddonResponse);
+  rpc PurchaseAddons (PurchaseAddonsRequest) returns (UserAddonListResponse);
+  rpc GetUserAddons (UserAddonsBySubscriptionRequest) returns (UserAddonListResponse);
+  rpc CancelAddon (CancelAddonRequest) returns (UserAddonResponse);
 }
 
 // Common messages
@@ -93,4 +101,78 @@ message TrialExpiryResponse {
   int32 converted = 2;
   int32 failed = 3;
   string message = 4;
+}
+
+// Addon messages
+message Addon {
+  int32 id = 1;
+  string addonKey = 2;
+  string name = 3;
+  string description = 4;
+  double price = 5;
+  string billingPeriod = 6;
+  bool isActive = 7;
+  string features = 8; // JSON string
+  string createdAt = 9;
+  string updatedAt = 10;
+}
+
+message UserAddon {
+  int32 id = 1;
+  int32 subscriptionId = 2;
+  int32 addonId = 3;
+  int32 customerId = 4;
+  double price = 5;
+  string status = 6;
+  string purchasedAt = 7;
+  string expiresAt = 8;
+  string nextBillingDate = 9;
+  string cancelledAt = 10;
+}
+
+message AddonByKeyRequest {
+  string key = 1;
+}
+
+message CreateAddonRequest {
+  string addonKey = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string billingPeriod = 5;
+  string features = 6; // JSON string
+}
+
+message PurchaseAddonsRequest {
+  int32 subscriptionId = 1;
+  int32 customerId = 2;
+  repeated string addonKeys = 3;
+}
+
+message UserAddonsBySubscriptionRequest {
+  int32 subscriptionId = 1;
+}
+
+message CancelAddonRequest {
+  int32 id = 1;
+}
+
+message AddonResponse {
+  Addon addon = 1;
+  string message = 2;
+}
+
+message AddonListResponse {
+  repeated Addon addons = 1;
+  string message = 2;
+}
+
+message UserAddonResponse {
+  UserAddon userAddon = 1;
+  string message = 2;
+}
+
+message UserAddonListResponse {
+  repeated UserAddon userAddons = 1;
+  string message = 2;
 }

@@ -1,20 +1,29 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
+import type { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
+interface IAddonGrpcService {
+  listAddons(data: any): any;
+  getAddonByKey(data: any): any;
+  createAddon(data: any): any;
+  purchaseAddons(data: any): any;
+  getUserAddons(data: any): any;
+  cancelAddon(data: any): any;
+}
+
 @Injectable()
-export class AddonService {
+export class AddonService implements OnModuleInit {
   private readonly logger = new Logger(AddonService.name);
-  private readonly subscriptionSvcUrl: string;
+  private addonService: IAddonGrpcService;
 
   constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
-  ) {
-    this.subscriptionSvcUrl =
-      this.configService.get<string>('SUBSCRIPTION_SVC_URL') ||
-      'http://localhost:3006';
+    @Inject('SUBSCRIPTION_PACKAGE')
+    private readonly client: ClientGrpc,
+  ) {}
+
+  onModuleInit() {
+    this.addonService = this.client.getService<IAddonGrpcService>('SubscriptionService');
+    this.logger.log('✅ AddonService gRPC client initialized');
   }
 
   /**
@@ -22,10 +31,8 @@ export class AddonService {
    */
   async listAddons() {
     try {
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.subscriptionSvcUrl}/addons`),
-      );
-      return response.data;
+      const result: any = await firstValueFrom(this.addonService.listAddons({}));
+      return result.addons || [];
     } catch (error) {
       this.logger.error(`Failed to list add-ons: ${error.message}`);
       throw error;
@@ -37,10 +44,8 @@ export class AddonService {
    */
   async getAddon(key: string) {
     try {
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.subscriptionSvcUrl}/addons/${key}`),
-      );
-      return response.data;
+      const result: any = await firstValueFrom(this.addonService.getAddonByKey({ key }));
+      return result.addon;
     } catch (error) {
       this.logger.error(`Failed to get add-on ${key}: ${error.message}`);
       throw error;
@@ -59,10 +64,13 @@ export class AddonService {
     features?: Record<string, any>;
   }) {
     try {
-      const response = await firstValueFrom(
-        this.httpService.post(`${this.subscriptionSvcUrl}/addons`, data),
+      const result: any = await firstValueFrom(
+        this.addonService.createAddon({
+          ...data,
+          features: data.features ? JSON.stringify(data.features) : '{}',
+        }),
       );
-      return response.data;
+      return result.addon;
     } catch (error) {
       this.logger.error(`Failed to create add-on: ${error.message}`);
       throw error;
@@ -78,13 +86,10 @@ export class AddonService {
     addonKeys: string[];
   }) {
     try {
-      const response = await firstValueFrom(
-        this.httpService.post(
-          `${this.subscriptionSvcUrl}/addons/purchase`,
-          data,
-        ),
+      const result: any = await firstValueFrom(
+        this.addonService.purchaseAddons(data),
       );
-      return response.data;
+      return result.userAddons || [];
     } catch (error) {
       this.logger.error(`Failed to purchase add-ons: ${error.message}`);
       throw error;
@@ -96,12 +101,10 @@ export class AddonService {
    */
   async getUserAddons(subscriptionId: number) {
     try {
-      const response = await firstValueFrom(
-        this.httpService.get(
-          `${this.subscriptionSvcUrl}/addons/user/${subscriptionId}`,
-        ),
+      const result: any = await firstValueFrom(
+        this.addonService.getUserAddons({ subscriptionId }),
       );
-      return response.data;
+      return result.userAddons || [];
     } catch (error) {
       this.logger.error(
         `Failed to get user add-ons for subscription ${subscriptionId}: ${error.message}`,
@@ -115,10 +118,10 @@ export class AddonService {
    */
   async cancelAddon(id: number) {
     try {
-      const response = await firstValueFrom(
-        this.httpService.delete(`${this.subscriptionSvcUrl}/addons/user/${id}`),
+      const result: any = await firstValueFrom(
+        this.addonService.cancelAddon({ id }),
       );
-      return response.data;
+      return result.userAddon;
     } catch (error) {
       this.logger.error(`Failed to cancel add-on ${id}: ${error.message}`);
       throw error;
