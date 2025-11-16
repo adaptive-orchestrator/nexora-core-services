@@ -14,6 +14,7 @@ import { BillingModule } from './resources/billing/billing.module';
 import { PaymentModule } from './resources/payment/payment.module';
 import { SubscriptionModule } from './resources/subscription/subscription.module';
 import { PromotionModule } from './resources/promotion/promotion.module';
+import { AddonModule } from './resources/addon/addon.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -37,6 +38,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PaymentModule,
     SubscriptionModule,
     PromotionModule,
+    AddonModule,
   ],
   controllers: [
     ApiGatewayController,

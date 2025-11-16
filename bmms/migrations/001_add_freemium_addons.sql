@@ -1,6 +1,8 @@
--- Migration: Add Freemium + Add-on Support
+-- Migration: Add Freemium + Add-on Support (SUBSCRIPTION DATABASE)
 -- Date: 2025-01-15
 -- Description: Create tables for add-ons và user add-on purchases
+-- Database: subscription_db ONLY
+-- Note: Run billing migration separately for invoices.metadata column
 
 -- =============================================
 -- 1. CREATE ADDONS TABLE
@@ -47,18 +49,29 @@ CREATE TABLE IF NOT EXISTS user_addons (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='User addon purchases and renewals';
 
 -- =============================================
--- 3. UPDATE INVOICES TABLE (add metadata column)
+-- 3. UPDATE SUBSCRIPTIONS TABLE (add freemium support)
 -- =============================================
 
-ALTER TABLE invoices 
-ADD COLUMN metadata JSON COMMENT 'Billing metadata: {billingMode, businessModel, addonCharges, nextBillingDate}' 
-AFTER notes;
+-- Add is_free_tier column if not exists
+SET @dbname = 'subscription_db';
+SET @tablename = 'subscriptions';
+SET @preparedStatement = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE (table_name = @tablename)
+       AND (table_schema = @dbname)
+       AND (column_name = 'is_free_tier')) > 0,
+    "SELECT 'Column is_free_tier already exists' AS msg",
+    "ALTER TABLE subscriptions ADD COLUMN is_free_tier BOOLEAN DEFAULT FALSE COMMENT 'Whether this is a free tier subscription' AFTER status"
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
 
 -- =============================================
 -- 4. SEED SAMPLE ADDONS
 -- =============================================
 
-INSERT INTO addons (addon_key, name, description, price, billing_period, features) VALUES
+INSERT IGNORE INTO addons (addon_key, name, description, price, billingPeriod, features) VALUES
 ('extra_storage_50gb', 'Extra 50GB Storage', 'Tăng dung lượng lưu trữ từ 10GB lên 60GB', 30000, 'monthly', '{"storage_gb": 50}'),
 ('extra_storage_100gb', 'Extra 100GB Storage', 'Tăng dung lượng lưu trữ từ 10GB lên 110GB', 50000, 'monthly', '{"storage_gb": 100}'),
 ('extra_storage_500gb', 'Extra 500GB Storage', 'Tăng dung lượng lưu trữ từ 10GB lên 510GB', 200000, 'monthly', '{"storage_gb": 500}'),
@@ -71,24 +84,14 @@ INSERT INTO addons (addon_key, name, description, price, billing_period, feature
 ('white_label', 'White Label', 'Loại bỏ branding của hệ thống, sử dụng brand riêng', 300000, 'onetime', '{"remove_branding": true, "custom_logo": true}');
 
 -- =============================================
--- 5. UPDATE SUBSCRIPTIONS TABLE (add freemium support)
+-- 5. CREATE INDEX FOR PERFORMANCE
 -- =============================================
 
-ALTER TABLE subscriptions 
-ADD COLUMN is_free_tier BOOLEAN DEFAULT FALSE COMMENT 'Whether this is a free tier subscription' 
-AFTER status;
+-- Speed up queries for active addons (skip if already exists)
+-- CREATE INDEX idx_active_monthly_addons ON addons(isActive, billingPeriod);
 
--- =============================================
--- 6. CREATE INDEX FOR PERFORMANCE
--- =============================================
-
--- Speed up queries for active addons
-CREATE INDEX idx_active_monthly_addons ON addons(is_active, billing_period) 
-WHERE is_active = TRUE AND billing_period = 'monthly';
-
--- Speed up renewal queries
-CREATE INDEX idx_renewal_lookup ON user_addons(status, next_billing_date) 
-WHERE status = 'active' AND next_billing_date IS NOT NULL;
+-- Speed up renewal queries (skip if already exists)
+-- CREATE INDEX idx_renewal_lookup ON user_addons(status, next_billing_date);
 
 -- =============================================
 -- 7. VERIFICATION QUERIES
@@ -96,8 +99,8 @@ WHERE status = 'active' AND next_billing_date IS NOT NULL;
 
 -- Check addons created
 SELECT COUNT(*) as total_addons, 
-       SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_addons,
-       SUM(CASE WHEN billing_period = 'monthly' THEN 1 ELSE 0 END) as monthly_addons
+       SUM(CASE WHEN isActive = TRUE THEN 1 ELSE 0 END) as active_addons,
+       SUM(CASE WHEN billingPeriod = 'monthly' THEN 1 ELSE 0 END) as monthly_addons
 FROM addons;
 
 -- Check tables structure
@@ -115,6 +118,5 @@ SHOW INDEX FROM user_addons;
 /*
 DROP TABLE IF EXISTS user_addons;
 DROP TABLE IF EXISTS addons;
-ALTER TABLE invoices DROP COLUMN metadata;
 ALTER TABLE subscriptions DROP COLUMN is_free_tier;
 */
