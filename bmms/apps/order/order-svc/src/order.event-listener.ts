@@ -1,12 +1,19 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as event from '@bmms/event';
 import { OrderSvcService } from './order-svc.service';
+import { Order } from './entities/order.entity';
 
 @Controller()
 export class OrderEventListener {
+  private readonly logger = new Logger(OrderEventListener.name);
+
   constructor(
     private readonly orderSvcService: OrderSvcService,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
   ) {}
 
   /** ------------------- Customer Events ------------------- */
@@ -75,28 +82,67 @@ export class OrderEventListener {
   async handlePaymentSuccess(@Payload() event: event.PaymentSuccessEvent) {
     try {
       this.logEvent(event);
+      this.logger.debug('💰 handlePaymentSuccess TRIGGERED');
 
-      const { orderId, transactionId } = event.data;
+      const { orderId, transactionId, amount } = event.data;
 
-      // Update order status
-      //await this.orderSvcService.updateOrderStatus(orderId, 'PAID');
+      if (!orderId) {
+        this.logger.warn('No orderId in payment success event');
+        return;
+      }
 
-      console.log(`✅ Order ${orderId} marked as PAID with transaction ${transactionId}`);
+      // Update order status to paid
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+      });
+
+      if (!order) {
+        this.logger.warn(`Order ${orderId} not found`);
+        return;
+      }
+
+      order.status = 'paid';
+      order.paymentStatus = 'paid';
+      await this.orderRepository.save(order);
+
+      this.logger.log(`✅ Order ${orderId} marked as PAID with transaction ${transactionId}`);
 
     } catch (error) {
-      console.error('Error handling PAYMENT_SUCCESS event:', error);
+      this.logger.error('Error handling PAYMENT_SUCCESS event:', error);
     }
   }
   @EventPattern(event.EventTopics.PAYMENT_FAILED)
-  async handlePaymentFailed(@Payload() event:event.PaymentFailedEvent) {
+  async handlePaymentFailed(@Payload() event: event.PaymentFailedEvent) {
     try {
       this.logEvent(event);
+      this.logger.debug('❌ handlePaymentFailed TRIGGERED');
+      
       const { orderId, reason } = event.data;
 
-      // Send notification to customer about payment failure
+      if (!orderId) {
+        this.logger.warn('No orderId in payment failed event');
+        return;
+      }
+
+      // Update order status to failed
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+      });
+
+      if (!order) {
+        this.logger.warn(`Order ${orderId} not found`);
+        return;
+      }
+
+      order.status = 'failed';
+      order.paymentStatus = 'failed';
+      await this.orderRepository.save(order);
+
+      this.logger.warn(`❌ Order ${orderId} marked as FAILED: ${reason}`);
+
+      // TODO: Send notification to customer about payment failure
       // await this.notificationService.sendPaymentFailureAlert(orderId, reason);
 
-      console.log(`❌ Payment failed for order ${orderId}: ${reason}`);
     } catch (error) {
       console.error('❌ Error handling PAYMENT_FAILED:', error);
     }

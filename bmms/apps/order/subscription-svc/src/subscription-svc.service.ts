@@ -85,17 +85,17 @@ export class subscriptionSvcService implements OnModuleInit {
     const plan = planResponse.plan;
     console.log('✅ [SubscriptionSvc.create] Plan found:', plan.name);
 
-    // 3. Check if customer already has active subscription
-    const existingActive = await this.subscriptionRepo.findOne({
-      where: {
-        customerId: dto.customerId,
-        status: SubscriptionStatus.ACTIVE,
-      },
+    // 3. Check if customer already has active or pending subscription
+    const existingSubscription = await this.subscriptionRepo.findOne({
+      where: [
+        { customerId: dto.customerId, status: SubscriptionStatus.ACTIVE },
+        { customerId: dto.customerId, status: SubscriptionStatus.PENDING },
+      ],
     });
 
-    if (existingActive) {
+    if (existingSubscription) {
       throw new BadRequestException(
-        `Customer ${dto.customerId} already has an active subscription`
+        `Customer ${dto.customerId} already has an ${existingSubscription.status} subscription (ID: ${existingSubscription.id})`
       );
     }
 
@@ -111,7 +111,7 @@ export class subscriptionSvcService implements OnModuleInit {
     }
 
     // 5. Handle trial period
-    let status = SubscriptionStatus.ACTIVE;
+    let status = SubscriptionStatus.PENDING; // Start as pending, activate after payment
     let trialStart: Date | undefined;
     let trialEnd: Date | undefined;
     let isTrialUsed = false;
@@ -123,6 +123,8 @@ export class subscriptionSvcService implements OnModuleInit {
       trialEnd.setDate(trialEnd.getDate() + plan.trialDays);
       isTrialUsed = true;
       console.log(`🎁 [SubscriptionSvc.create] Trial enabled for ${plan.trialDays} days`);
+    } else {
+      console.log(`💳 [SubscriptionSvc.create] Subscription created as PENDING - awaiting payment`);
     }
 
     // 6. Create subscription
@@ -216,6 +218,37 @@ export class subscriptionSvcService implements OnModuleInit {
     }
 
     return subscription;
+  }
+
+  /**
+   * Activate a pending subscription (called after payment success)
+   */
+  async activateSubscription(subscriptionId: number): Promise<Subscription> {
+    const subscription = await this.findById(subscriptionId);
+
+    if (subscription.status !== SubscriptionStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot activate subscription with status: ${subscription.status}. Must be PENDING.`
+      );
+    }
+
+    subscription.status = SubscriptionStatus.ACTIVE;
+    const updated = await this.subscriptionRepo.save(subscription);
+
+    // Emit activation event
+    const event = createBaseEvent('subscription.activated', 'subscription-svc');
+    this.kafka.emit(EventTopics.SUBSCRIPTION_ACTIVATED, {
+      ...event,
+      data: {
+        subscriptionId: updated.id,
+        customerId: updated.customerId,
+        planId: updated.planId,
+        activatedAt: new Date(),
+      },
+    });
+
+    console.log(`✅ [SubscriptionSvc] Subscription ${subscriptionId} activated`);
+    return updated;
   }
 
   /**

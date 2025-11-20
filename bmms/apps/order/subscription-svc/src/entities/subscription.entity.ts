@@ -9,6 +9,7 @@ import {
 import { SubscriptionHistory } from './subscription-history.entity';
 
 export enum SubscriptionStatus {
+  PENDING = 'pending',
   TRIAL = 'trial',
   ACTIVE = 'active',
   PAST_DUE = 'past_due',

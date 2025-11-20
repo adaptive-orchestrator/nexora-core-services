@@ -12,6 +12,7 @@ service SubscriptionService {
   rpc RenewSubscription (RenewSubscriptionRequest) returns (SubscriptionResponse);
   rpc ChangePlan (ChangePlanRequest) returns (SubscriptionResponse);
   rpc UpdateSubscriptionStatus (UpdateStatusRequest) returns (SubscriptionResponse);
+  rpc ActivateSubscription (ActivateSubscriptionRequest) returns (SubscriptionResponse);
   
   // Trial management
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
@@ -84,6 +85,10 @@ message UpdateStatusRequest {
   int32 id = 1;
   string newStatus = 2;
   string reason = 3;
+}
+
+message ActivateSubscriptionRequest {
+  int32 subscriptionId = 1;
 }
 
 message SubscriptionResponse {

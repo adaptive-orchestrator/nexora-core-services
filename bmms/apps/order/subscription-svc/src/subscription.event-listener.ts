@@ -20,12 +20,10 @@ export class SubscriptionEventListener {
 
       const { invoiceId, customerId } = eventData.data;
 
-      // Get invoice to check if it's for a subscription
-      // In a real scenario, you'd query billing service or use the invoice metadata
-      console.log(`💳 Payment succeeded for invoice ${invoiceId}`);
+      console.log(`💳 Payment succeeded for invoice ${invoiceId}, customer ${customerId}`);
 
-      // TODO: If invoice is for a subscription trial ending, convert trial to active
-      // This would require getting invoice details and checking subscriptionId
+      // TODO: In the future, we can fetch invoice details to get subscriptionId
+      // and activate the subscription here. For now, activation happens via direct API call.
       
     } catch (error) {
       console.error('❌ Error handling PAYMENT_SUCCESS:', error);

@@ -11,6 +11,7 @@ interface IPaymentGrpcService {
   getAllPayments(data: any): any;
   getPaymentsByInvoice(data: any): any;
   getPaymentStats(data: any): any;
+  processPayment(data: any): any;
 }
 
 @Injectable()
@@ -55,5 +56,10 @@ export class PaymentService implements OnModuleInit {
 
   async getPaymentStats() {
     return firstValueFrom(this.paymentService.getPaymentStats({}));
+  }
+
+  async processPayment(dto: { invoiceId: number; amount: number; paymentMethod: string }) {
+    const response: any = await firstValueFrom(this.paymentService.processPayment(dto));
+    return response;
   }
 }

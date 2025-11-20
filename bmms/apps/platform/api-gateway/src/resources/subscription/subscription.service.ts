@@ -15,6 +15,7 @@ interface ISubscriptionGrpcService {
   changePlan(data: any): any;
   updateSubscriptionStatus(data: any): any;
   checkTrialExpiry(data: any): any;
+  activateSubscription(data: any): any;
 }
 
 @Injectable()
@@ -147,6 +148,20 @@ export class SubscriptionService implements OnModuleInit {
       return result;
     } catch (error) {
       console.error('❌ [API Gateway] Error checking trial expiry:', error);
+      throw error;
+    }
+  }
+
+  async activateSubscription(subscriptionId: number) {
+    try {
+      console.log(`🔄 [API Gateway] Activating subscription ${subscriptionId}...`);
+      const result = await firstValueFrom(
+        this.subscriptionService.activateSubscription({ subscriptionId })
+      );
+      console.log(`✅ [API Gateway] Subscription ${subscriptionId} activated`);
+      return result;
+    } catch (error) {
+      console.error('❌ [API Gateway] Error activating subscription:', error);
       throw error;
     }
   }

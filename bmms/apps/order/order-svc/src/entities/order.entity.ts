@@ -23,10 +23,17 @@ export class Order {
 
   @Column({
     type: 'enum',
-    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'confirmed', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'failed'],
     default: 'pending',
   })
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'paid' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed';
+
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending',
+  })
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
 
   @Column('decimal', { precision: 12, scale: 2, default: 0 })
   subtotal: number; // Tổng giá trước phí

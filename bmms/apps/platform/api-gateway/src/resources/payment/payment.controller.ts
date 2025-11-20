@@ -62,4 +62,12 @@ export class PaymentController {
   async confirmPayment(@Body() dto: ConfirmPaymentDto) {
     return this.paymentService.confirmPayment(dto);
   }
+
+  @Post('pay')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Process payment immediately (for testing/simple flow)' })
+  @ApiResponse({ status: 200, description: 'Payment processed successfully', type: PaymentResponseDto })
+  async processPayment(@Body() dto: { invoiceId: number; amount: number; paymentMethod: string }) {
+    return this.paymentService.processPayment(dto);
+  }
 }

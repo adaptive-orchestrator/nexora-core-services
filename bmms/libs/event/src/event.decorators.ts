@@ -61,6 +61,7 @@ export const EventTopics = {
 
   // Subscription events
   SUBSCRIPTION_CREATED: 'subscription.created',
+  SUBSCRIPTION_ACTIVATED: 'subscription.activated',
   SUBSCRIPTION_UPDATED: 'subscription.updated',
   SUBSCRIPTION_RENEWED: 'subscription.renewed',
   SUBSCRIPTION_CANCELLED: 'subscription.cancelled',

@@ -139,6 +139,30 @@ export class SubscriptionController {
     return this.subscriptionService.renewSubscription(id);
   }
 
+  @Post(':id/activate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ 
+    summary: 'Activate subscription after payment',
+    description: 'Activate a pending subscription after successful payment confirmation.'
+  })
+  @ApiParam({ name: 'id', description: 'Subscription ID', example: 1 })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Subscription activated successfully', 
+    type: SubscriptionResponseDto 
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Subscription cannot be activated (must be in PENDING status)' 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Subscription not found' 
+  })
+  async activateSubscription(@Param('id', ParseIntPipe) id: number) {
+    return this.subscriptionService.activateSubscription(id);
+  }
+
   @Patch(':id/change-plan')
   @ApiOperation({ 
     summary: 'Change subscription plan',

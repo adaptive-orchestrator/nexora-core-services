@@ -311,4 +311,26 @@ export class subscriptionSvcController {
       throw error;
     }
   }
+
+  @GrpcMethod('SubscriptionService', 'ActivateSubscription')
+  async activateSubscription(data: { subscriptionId: number }) {
+    try {
+      console.log(`🔄 [SubscriptionController] Activating subscription ${data.subscriptionId}...`);
+      const subscription = await this.subscriptionSvcService.activateSubscription(data.subscriptionId);
+      
+      return {
+        subscription: {
+          id: subscription.id,
+          customerId: subscription.customerId,
+          planId: subscription.planId,
+          status: subscription.status,
+          updatedAt: subscription.updatedAt?.toISOString(),
+        },
+        message: 'Subscription activated successfully',
+      };
+    } catch (error) {
+      console.error('❌ [gRPC ActivateSubscription] Error:', error);
+      throw error;
+    }
+  }
 }
