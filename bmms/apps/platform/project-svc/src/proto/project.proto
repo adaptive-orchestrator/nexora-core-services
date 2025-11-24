@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package project;
+
+service ProjectService {
+  rpc CreateProject (CreateProjectRequest) returns (ProjectResponse);
+  rpc GetProjectsByUser (GetProjectsByUserRequest) returns (ProjectListResponse);
+  rpc GetProjectById (GetProjectByIdRequest) returns (ProjectResponse);
+  rpc UpdateProject (UpdateProjectRequest) returns (ProjectResponse);
+  rpc DeleteProject (DeleteProjectRequest) returns (DeleteResponse);
+  
+  // Task operations
+  rpc CreateTask (CreateTaskRequest) returns (TaskResponse);
+  rpc GetProjectTasks (GetProjectTasksRequest) returns (TaskListResponse);
+  rpc UpdateTask (UpdateTaskRequest) returns (TaskResponse);
+  rpc DeleteTask (DeleteTaskRequest) returns (DeleteResponse);
+  rpc GetProjectAnalytics (GetProjectByIdRequest) returns (AnalyticsResponse);
+}
+
+// ====== Project Messages ======
+
+message CreateProjectRequest {
+  int32 user_id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  string start_date = 5;
+  string end_date = 6;
+  repeated string tags = 7;
+}
+
+message UpdateProjectRequest {
+  int32 id = 1;
+  int32 user_id = 2;
+  string name = 3;
+  string description = 4;
+  string status = 5;
+  string start_date = 6;
+  string end_date = 7;
+  repeated string tags = 8;
+}
+
+message GetProjectsByUserRequest {
+  int32 user_id = 1;
+}
+
+message GetProjectByIdRequest {
+  int32 id = 1;
+  int32 user_id = 2;
+}
+
+message DeleteProjectRequest {
+  int32 id = 1;
+  int32 user_id = 2;
+}
+
+message ProjectResponse {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  string status = 4;
+  int32 owner_id = 5;
+  string owner_name = 6;
+  int32 total_tasks = 7;
+  int32 completed_tasks = 8;
+  int32 team_member_count = 9;
+  string start_date = 10;
+  string end_date = 11;
+  repeated string tags = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message ProjectListResponse {
+  repeated ProjectResponse projects = 1;
+}
+
+// ====== Task Messages ======
+
+message CreateTaskRequest {
+  int32 project_id = 1;
+  int32 user_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string priority = 6;
+  int32 assigned_to = 7;
+  string due_date = 8;
+}
+
+message UpdateTaskRequest {
+  int32 id = 1;
+  int32 user_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string priority = 6;
+  int32 assigned_to = 7;
+  string due_date = 8;
+}
+
+message GetProjectTasksRequest {
+  int32 project_id = 1;
+  int32 user_id = 2;
+}
+
+message DeleteTaskRequest {
+  int32 id = 1;
+  int32 user_id = 2;
+}
+
+message TaskResponse {
+  int32 id = 1;
+  int32 project_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string priority = 6;
+  int32 assigned_to = 7;
+  string assigned_to_name = 8;
+  int32 created_by = 9;
+  string due_date = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message TaskListResponse {
+  repeated TaskResponse tasks = 1;
+}
+
+// ====== Analytics Messages ======
+
+message AnalyticsResponse {
+  TasksByStatus tasks_by_status = 1;
+  int32 completion_rate = 2;
+  int32 overdue_tasks = 3;
+  int32 upcoming_tasks = 4;
+}
+
+message TasksByStatus {
+  int32 todo = 1;
+  int32 in_progress = 2;
+  int32 in_review = 3;
+  int32 completed = 4;
+}
+
+// ====== Common Messages ======
+
+message DeleteResponse {
+  string message = 1;
+}

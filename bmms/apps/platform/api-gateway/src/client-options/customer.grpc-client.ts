@@ -6,6 +6,6 @@ export const customerGrpcClientOptions: ClientOptions = {
   options: {
     package: 'customer',
     protoPath: join(__dirname, '../proto/customer.proto'),
-    url: process.env.GRPC_SERVER_CUSTOMER_URL || '127.0.0.1:50052',
+    url: process.env.GRPC_SERVER_CUSTOMER_URL || '127.0.0.1:50054',
   },
 };

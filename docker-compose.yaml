@@ -234,6 +234,31 @@ services:
       - bmms-network
 
   # ==========================================
+  # PLATFORM DOMAIN DATABASES
+  # ==========================================
+  project_db:
+    image: mysql:8.0
+    container_name: bmms-project-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=project_db
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "3320:3306"
+    volumes:
+      - project_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bmms-network
+
+  # ==========================================
   # KAFKA/REDPANDA (Optional - if you need event streaming)
   # ==========================================
   redpanda-0:
@@ -274,4 +299,5 @@ volumes:
   inventory_db_data:
   billing_db_data:
   payment_db_data:
+  project_db_data:
   redpanda_0_data:

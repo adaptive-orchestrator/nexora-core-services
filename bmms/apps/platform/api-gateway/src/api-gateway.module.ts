@@ -15,6 +15,9 @@ import { PaymentModule } from './resources/payment/payment.module';
 import { SubscriptionModule } from './resources/subscription/subscription.module';
 import { PromotionModule } from './resources/promotion/promotion.module';
 import { AddonModule } from './resources/addon/addon.module';
+import { AdminStatsModule } from './resources/admin/admin-stats.module';
+import { ProjectModule } from './resources/project/project.module';
+import { AiChatModule } from './resources/ai-chat/ai-chat.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -39,6 +42,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     SubscriptionModule,
     PromotionModule,
     AddonModule,
+    AdminStatsModule,
+    ProjectModule,
+    AiChatModule,
   ],
   controllers: [
     ApiGatewayController,

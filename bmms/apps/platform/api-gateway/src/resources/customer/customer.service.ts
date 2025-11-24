@@ -6,6 +6,7 @@ interface ICustomerGrpcService {
   getAllCustomers(data: any): any;
   getCustomerById(data: { id: number }): any;
   getCustomerByEmail(data: { email: string }): any;
+  getCustomerByUserId(data: { userId: number }): any;
   updateCustomer(data: any): any;
   deleteCustomer(data: { id: number }): any;
 }
@@ -38,10 +39,25 @@ export class CustomerService implements OnModuleInit {
     );
   }
 
+  async getCustomerByUserId(userId: number) {
+    return firstValueFrom(
+      this.customerService.getCustomerByUserId({ userId }),
+    );
+  }
+
   async updateCustomer(id: number, updateData: any) {
     return firstValueFrom(
       this.customerService.updateCustomer({ id, ...updateData }),
     );
+  }
+
+  async updateCustomerByUserId(userId: number, updateData: any) {
+    // First get customer by userId
+    const customerResult: any = await this.getCustomerByUserId(userId);
+    const customerId = customerResult.customer.id;
+    
+    // Then update the customer
+    return this.updateCustomer(customerId, updateData);
   }
 
   async deleteCustomer(id: number) {

@@ -6,6 +6,12 @@ package llm;
 service LlmOrchestratorService {
   // Gửi 1 yêu cầu chat duy nhất, nhận kết quả phân tích + changeset
   rpc ChatOnce (LlmChatRequest) returns (LlmChatResponse);
+  
+  // AI Chat: Generate text response
+  rpc GenerateText (GenerateTextRequest) returns (GenerateTextResponse);
+  
+  // AI Chat: Generate code
+  rpc GenerateCode (GenerateCodeRequest) returns (GenerateCodeResponse);
 }
 
 // ====== Request & Response ======
@@ -40,4 +46,31 @@ message Metadata {
   string intent = 1;       // Hành động hoặc ý định của người dùng
   double confidence = 2;   // Độ tin cậy của model
   string risk = 3;         // Mức độ rủi ro: low / medium / high
+}
+
+// ====== AI Chat Messages ======
+
+message GenerateTextRequest {
+  string prompt = 1;               // User message/prompt
+  repeated ContextMessage context = 2;  // Conversation context
+}
+
+message GenerateTextResponse {
+  string text = 1;                 // AI generated text response
+}
+
+message GenerateCodeRequest {
+  string prompt = 1;               // Code generation prompt
+  repeated ContextMessage context = 2;  // Context for code generation
+}
+
+message GenerateCodeResponse {
+  string code = 1;                 // Generated code
+  string language = 2;             // Programming language
+  string explanation = 3;          // Explanation of the code
+}
+
+message ContextMessage {
+  string role = 1;                 // 'user' or 'assistant'
+  string content = 2;              // Message content
 }

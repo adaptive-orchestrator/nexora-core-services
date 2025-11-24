@@ -31,7 +31,7 @@ async function bootstrap() {
   console.log('✅ Kafka consumer configured');
 
   // ⭐ Connect gRPC microservice for API Gateway
-  const grpcUrl = configService.get<string>('GRPC_LISTEN_PAYMENT_URL') || '0.0.0.0:50059';
+  const grpcUrl = configService.get<string>('GRPC_LISTEN_PAYMENT_URL') || '0.0.0.0:50060';
   console.log('⏳ Starting gRPC server...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,

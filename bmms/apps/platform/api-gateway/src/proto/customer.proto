@@ -6,6 +6,7 @@ service CustomerService {
   rpc GetAllCustomers (GetAllCustomersRequest) returns (GetAllCustomersResponse);
   rpc GetCustomerById (GetCustomerByIdRequest) returns (CustomerResponse);
   rpc GetCustomerByEmail (GetCustomerByEmailRequest) returns (CustomerResponse);
+  rpc GetCustomerByUserId (GetCustomerByUserIdRequest) returns (CustomerResponse);
   rpc UpdateCustomer (UpdateCustomerRequest) returns (CustomerResponse);
   rpc DeleteCustomer (DeleteCustomerRequest) returns (DeleteCustomerResponse);
   
@@ -32,6 +33,10 @@ message GetCustomerByIdRequest {
 
 message GetCustomerByEmailRequest {
   string email = 1;
+}
+
+message GetCustomerByUserIdRequest {
+  int32 userId = 1;
 }
 
 message UpdateCustomerRequest {

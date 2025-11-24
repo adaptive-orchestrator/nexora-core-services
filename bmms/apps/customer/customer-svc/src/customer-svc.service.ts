@@ -82,6 +82,12 @@ export class CustomerSvcService {
     return customer;
   }
 
+  async findByUserId(userId: number): Promise<Customer> {
+    const customer = await this.repo.findOne({ where: { userId } });
+    if (!customer) throw new NotFoundException(`Customer with userId ${userId} not found`);
+    return customer;
+  }
+
   async update(id: number, dto: UpdateCustomerDto): Promise<Customer> {
     const customer = await this.findOne(id);
     Object.assign(customer, dto);

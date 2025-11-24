@@ -8,6 +8,8 @@ import {
   Body,
   ParseIntPipe,
   HttpStatus,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,11 +17,15 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
+  ApiBody,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CustomerService } from './customer.service';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomerResponseDto, CustomersListResponseDto } from './dto/customer-response.dto';
 import { CustomerInsightsDto, SegmentCalculationDto } from './dto/customer-insights.dto';
+import { JwtGuard } from '../../guards/jwt.guard';
 
 @ApiTags('Customer')
 @Controller('customers')
@@ -90,6 +96,35 @@ export class CustomerController {
   })
   async getCustomerByEmail(@Param('email') email: string) {
     const result: any = await this.customerService.getCustomerByEmail(email);
+    return result.customer;
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('me')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update current user profile',
+    description: 'Update the profile of the currently authenticated user (name, email). Requires JWT authentication.',
+  })
+  @ApiBody({ type: UpdateCustomerDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Profile updated successfully',
+    type: CustomerResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Customer not found for the authenticated user',
+  })
+  async updateCurrentCustomer(
+    @Body() updateDto: UpdateCustomerDto,
+    @Request() req: any,
+  ) {
+    const userId = req.user?.sub || req.user?.id;
+    const result: any = await this.customerService.updateCustomerByUserId(userId, updateDto);
     return result.customer;
   }
 

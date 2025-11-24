@@ -13,6 +13,8 @@
     "start:debug": "nest start --debug --watch",
     "start:llm": "nest start llm-orchestrator",
     "start:llm:dev": "nest start llm-orchestrator --watch",
+    "start:project": "nest start project-svc",
+    "start:project:dev": "nest start project-svc --watch",
     "start:k8s-generator": "nest start k8s-generator",
     "start:k8s-generator:dev": "nest start k8s-generator --watch",
     "start:customer": "nest start customer-svc",

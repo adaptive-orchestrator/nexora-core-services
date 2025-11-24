@@ -312,6 +312,17 @@ export class subscriptionSvcController {
     }
   }
 
+  @GrpcMethod('SubscriptionService', 'GetSubscriptionStats')
+  async getSubscriptionStats() {
+    try {
+      const stats = await this.subscriptionSvcService.getStats();
+      return stats;
+    } catch (error) {
+      console.error('❌ [gRPC GetSubscriptionStats] Error:', error);
+      throw error;
+    }
+  }
+
   @GrpcMethod('SubscriptionService', 'ActivateSubscription')
   async activateSubscription(data: { subscriptionId: number }) {
     try {

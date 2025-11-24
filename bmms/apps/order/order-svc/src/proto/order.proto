@@ -10,6 +10,7 @@ service OrderService {
   rpc UpdateOrderStatus (UpdateOrderStatusRequest) returns (OrderResponse);
   rpc CancelOrder (CancelOrderRequest) returns (OrderResponse);
   rpc AddItemToOrder (AddItemToOrderRequest) returns (OrderResponse);
+  rpc GetOrderStats (GetOrderStatsRequest) returns (OrderStatsResponse);
 }
 
 message CreateOrderRequest {
@@ -99,4 +100,17 @@ message OrderItem {
   double price = 5;
   double subtotal = 6;
   optional string notes = 7;
+}
+
+message GetOrderStatsRequest {
+  // Empty - returns overall stats
+}
+
+message OrderStatsResponse {
+  int32 totalOrders = 1;
+  double totalRevenue = 2;
+  double avgOrderValue = 3;
+  int32 pendingOrders = 4;
+  int32 completedOrders = 5;
+  int32 cancelledOrders = 6;
 }

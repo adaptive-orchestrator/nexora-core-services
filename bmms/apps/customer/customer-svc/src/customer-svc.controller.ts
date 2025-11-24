@@ -42,6 +42,13 @@ export class CustomerSvcController {
     return { customer };
   }
 
+  @GrpcMethod('CustomerService', 'GetCustomerByUserId')
+  async getCustomerByUserId(data: { userId: number }) {
+    this.logger.log(`GetCustomerByUserId called with userId: ${data.userId}`);
+    const customer = await this.service.findByUserId(data.userId);
+    return { customer };
+  }
+
   @GrpcMethod('CustomerService', 'UpdateCustomer')
   async updateCustomer(data: any) {
     this.logger.log(`UpdateCustomer called with id: ${data.id}`);

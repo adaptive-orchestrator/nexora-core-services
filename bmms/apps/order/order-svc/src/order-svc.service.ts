@@ -602,4 +602,25 @@ export class OrderSvcService implements OnModuleInit {
       totalItems,
     };
   }
+
+  async getStats(): Promise<any> {
+    const allOrders = await this.orderRepo.find({ relations: ['items'] });
+
+    const totalOrders = allOrders.length;
+    const totalRevenue = allOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
+    const completedOrders = allOrders.filter(o => o.status === 'delivered').length;
+    const cancelledOrders = allOrders.filter(o => o.status === 'cancelled').length;
+
+    return {
+      totalOrders,
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      avgOrderValue: Number(avgOrderValue.toFixed(2)),
+      pendingOrders,
+      completedOrders,
+      cancelledOrders,
+    };
+  }
 }

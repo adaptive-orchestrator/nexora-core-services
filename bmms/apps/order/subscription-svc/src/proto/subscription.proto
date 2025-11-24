@@ -13,6 +13,7 @@ service SubscriptionService {
   rpc ChangePlan (ChangePlanRequest) returns (SubscriptionResponse);
   rpc UpdateSubscriptionStatus (UpdateStatusRequest) returns (SubscriptionResponse);
   rpc ActivateSubscription (ActivateSubscriptionRequest) returns (SubscriptionResponse);
+  rpc GetSubscriptionStats (Empty) returns (SubscriptionStatsResponse);
   
   // Trial management
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
@@ -181,3 +182,13 @@ message UserAddonListResponse {
   repeated UserAddon userAddons = 1;
   string message = 2;
 }
+
+message SubscriptionStatsResponse {
+  int32 activeCount = 1;
+  int32 cancelledCount = 2;
+  int32 churnedCount = 3;
+  double monthlyRevenue = 4;
+  double totalRevenue = 5;
+  double avgSubscriptionValue = 6;
+}
+

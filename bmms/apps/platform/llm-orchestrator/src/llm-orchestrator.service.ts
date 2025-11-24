@@ -173,7 +173,6 @@ Return ONLY the JSON, no markdown code blocks, no additional text.`;
 @Injectable()
 export class LlmOrchestratorService {
   [x: string]: any;
-  private provider = (process.env.LLM_PROVIDER || 'deepseek').toLowerCase();
   private geminiClient: GoogleGenerativeAI;
   private useRAG = process.env.USE_RAG === 'true'; // 👈 Feature flag
 
@@ -209,12 +208,7 @@ export class LlmOrchestratorService {
       }
     }
 
-    const content =
-      this.provider === 'ollama'
-        ? await this.callOllama(message, tenant, role, lang)
-        : this.provider === 'deepseek'
-          ? await this.callDeepSeek(message, tenant, role, lang)
-          : await this.callGemini(message, tenant, role, lang);
+    const content = await this.callGemini(message, tenant, role, lang, codeContext);
 
     // Clean code fence if present
     let cleaned = content.trim();
@@ -309,77 +303,6 @@ export class LlmOrchestratorService {
   }
 
   // -------------------------------
-  // DeepSeek (OpenAI-compatible)
-  // -------------------------------
-  private async callDeepSeek(
-    message: string,
-    tenant: string,
-    role: string,
-    lang: string,
-  ): Promise<string> {
-    const base = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-    const model = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-    const key = process.env.DEEPSEEK_API_KEY;
-    if (!key) throw new Error('Missing DEEPSEEK_API_KEY');
-
-    const res = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: `tenant_id=${tenant}; role=${role}; lang=${lang};\n\nYêu cầu: ${message}`,
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);
-    const data: any = await res.json();
-    return data?.choices?.[0]?.message?.content ?? '{}';
-  }
-
-  // -------------------------------
-  // Ollama (Local)
-  // -------------------------------
-  private async callOllama(
-    message: string,
-    tenant: string,
-    role: string,
-    lang: string,
-  ): Promise<string> {
-    const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-    const model = process.env.OLLAMA_MODEL || 'llama3.1';
-
-    const res = await fetch(`${base}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: `tenant_id=${tenant}; role=${role}; lang=${lang};\n\nYêu cầu: ${message}`,
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) throw new Error(`Ollama ${res.status}: ${await res.text()}`);
-    const data: any = await res.json();
-    return data?.message?.content ?? '{}';
-  }
-
-  // -------------------------------
   // Gemini (Google API)
   // -------------------------------
   private async callGemini(
@@ -411,4 +334,81 @@ Yêu cầu: ${message}`;
 
     return result.response.text() || '{}';
   }
+
+  // -------------------------------
+  // AI Chat Methods
+  // -------------------------------
+  
+  /**
+   * Generate text response for AI chat
+   */
+  async generateText(prompt: string, context: any[]): Promise<string> {
+    try {
+      return await this.callGeminiChat(prompt, context, 'You are a helpful AI assistant. Provide clear, concise, and helpful responses.');
+    } catch (error) {
+      console.error('[AI Chat] Error:', error);
+      return 'I apologize, but I encountered an error processing your request. Please try again.';
+    }
+  }
+
+  /**
+   * Generate code based on prompt
+   */
+  async generateCode(prompt: string, context: any[]): Promise<{ code: string; language: string; explanation: string }> {
+    const codeSystemPrompt = `You are an expert programmer. Generate clean, well-documented code based on user requests. 
+Always respond in JSON format:
+{
+  "code": "the generated code here",
+  "language": "programming language (e.g., python, javascript, typescript)",
+  "explanation": "brief explanation of what the code does"
+}`;
+
+    try {
+      const responseText = await this.callGeminiChat(prompt, context, codeSystemPrompt);
+
+      // Parse JSON response
+      let cleaned = responseText.trim();
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+      }
+
+      const parsed = JSON.parse(cleaned);
+      return {
+        code: parsed.code || '',
+        language: parsed.language || 'python',
+        explanation: parsed.explanation || 'Code generated successfully'
+      };
+    } catch (error) {
+      console.error('[Code Generation] Error:', error);
+      return {
+        code: '// Error generating code',
+        language: 'text',
+        explanation: 'Failed to generate code. Please try again with a clearer prompt.'
+      };
+    }
+  }
+
+  /**
+   * Generic chat method for Gemini
+   */
+  private async callGeminiChat(prompt: string, context: any[], systemPrompt: string): Promise<string> {
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    
+    const model = this.geminiClient.getGenerativeModel({
+      model: modelName,
+      systemInstruction: systemPrompt,
+    });
+
+    // Build conversation history for Gemini
+    const history = context.map((msg: any) => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
+
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(prompt);
+
+    return result.response.text() || '';
+  }
 }
+

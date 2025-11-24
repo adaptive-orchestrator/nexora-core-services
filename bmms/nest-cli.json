@@ -184,6 +184,21 @@
         ]
       }
     },
+    "project-svc": {
+      "type": "application",
+      "root": "apps/platform/project-svc",
+      "entryFile": "main",
+      "sourceRoot": "apps/platform/project-svc/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/platform/project-svc/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "proto/*.proto",
+            "outDir": "dist/out-tsc/apps/platform/project-svc/src"
+          }
+        ]
+      }
+    },
     "order-svc": {
       "type": "application",
       "root": "apps/order/order-svc",

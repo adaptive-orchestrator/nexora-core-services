@@ -39,7 +39,11 @@ export class UserController {
   @Patch('me')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiOperation({ 
+    summary: '[DEPRECATED] Update current user profile',
+    description: '⚠️ DEPRECATED: Please use PATCH /customers/me instead. This endpoint only updates authentication data (email, name) but not business profile data.',
+    deprecated: true
+  })
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({
     status: HttpStatus.OK,

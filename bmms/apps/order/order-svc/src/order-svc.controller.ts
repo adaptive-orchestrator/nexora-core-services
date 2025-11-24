@@ -53,4 +53,10 @@ export class OrderSvcController {
     });
     return { order };
   }
+
+  @GrpcMethod('OrderService', 'GetOrderStats')
+  async getOrderStats(data: any) {
+    const stats = await this.service.getStats();
+    return stats;
+  }
 }

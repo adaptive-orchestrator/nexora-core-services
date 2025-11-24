@@ -707,5 +707,33 @@ export class subscriptionSvcService implements OnModuleInit {
 
     return subscription;
   }
+
+  async getStats(): Promise<any> {
+    const allSubscriptions = await this.subscriptionRepo.find();
+
+    const activeCount = allSubscriptions.filter(s => s.status === SubscriptionStatus.ACTIVE).length;
+    const cancelledCount = allSubscriptions.filter(s => s.status === SubscriptionStatus.CANCELLED).length;
+    const expiredCount = allSubscriptions.filter(s => s.status === SubscriptionStatus.EXPIRED).length;
+
+    // Calculate monthly revenue (sum of all active subscriptions)
+    const monthlyRevenue = allSubscriptions
+      .filter(s => s.status === SubscriptionStatus.ACTIVE)
+      .reduce((sum, s) => sum + Number(s.amount), 0);
+
+    // Calculate total revenue (all time)
+    const totalRevenue = allSubscriptions
+      .reduce((sum, s) => sum + Number(s.amount), 0);
+
+    const avgSubscriptionValue = activeCount > 0 ? monthlyRevenue / activeCount : 0;
+
+    return {
+      activeCount,
+      cancelledCount,
+      expiredCount,
+      monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      avgSubscriptionValue: Number(avgSubscriptionValue.toFixed(2)),
+    };
+  }
 }
 
