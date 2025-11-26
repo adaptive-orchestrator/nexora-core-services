@@ -8,7 +8,7 @@ RUN npm install
 COPY ./apps ./apps/
 COPY *.json ./
 COPY ./libs ./libs/
-COPY .env ./
+# COPY .env ./
 RUN npm run build
 
 # ========================
@@ -19,7 +19,17 @@ WORKDIR /usr/bmms
 COPY --from=builder /usr/bmms/dist/apps/platform/llm-orchestrator ./dist/apps/platform/llm-orchestrator
 COPY --from=builder /usr/bmms/apps/platform/llm-orchestrator/src/proto ./dist/apps/platform/llm-orchestrator/src/proto
 COPY --from=builder /usr/bmms/dist/libs ./dist/libs/
-COPY .env ./
+
+# nhận build-arg từ bên ngoài
+ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+
+ARG JWT_SECRET
+ENV JWT_SECRET=$JWT_SECRET
+
+ARG TOKEN_EXPIRE_TIME: 
+ENV TOKEN_EXPIRE_TIME=$TOKEN_EXPIRE_TIME
+
 COPY package*.json ./
 ENV NODE_ENV=production
 RUN npm install --omit=dev
