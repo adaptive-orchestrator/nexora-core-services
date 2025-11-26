@@ -46,7 +46,7 @@ echo "==================================="
 echo "2. Checking IAM Role"
 echo "==================================="
 
-ROLE_NAME="GitHubActionsRole"
+ROLE_NAME="bmms-dev-GitHubActionsRole"
 
 if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
     echo "✓ IAM Role '$ROLE_NAME' exists"
