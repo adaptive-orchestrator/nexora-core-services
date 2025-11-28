@@ -13,7 +13,7 @@ import { AdminStatsService } from './admin-stats.service';
         options: {
           package: 'order',
           protoPath: join(__dirname, '../../proto/order.proto'),
-          url: process.env.ORDER_SERVICE_URL || 'localhost:50054',
+          url: process.env.GRPC_SERVER_ORDER_URL || 'localhost:50057',
         },
       },
       {
@@ -22,7 +22,7 @@ import { AdminStatsService } from './admin-stats.service';
         options: {
           package: 'subscription',
           protoPath: join(__dirname, '../../proto/subscription.proto'),
-          url: process.env.SUBSCRIPTION_SERVICE_URL || 'localhost:50056',
+          url: process.env.GRPC_SERVER_SUBSCRIPTION_URL || 'localhost:50059',
         },
       },
       {
@@ -31,7 +31,7 @@ import { AdminStatsService } from './admin-stats.service';
         options: {
           package: 'customer',
           protoPath: join(__dirname, '../../proto/customer.proto'),
-          url: process.env.CUSTOMER_SERVICE_URL || 'localhost:50052',
+          url: process.env.GRPC_SERVER_CUSTOMER_URL || 'localhost:50054',
         },
       },
     ]),

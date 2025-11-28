@@ -138,7 +138,7 @@ curl -X POST http://localhost:3000/auth/login \
   }'
 ```
 
-### � Customer (`/customers`)
+###  Customer (`/customers`)
 
 > **Note**: Customers are NOT created via API. They are automatically created when users sign up through Auth service via event-driven architecture.
 
@@ -181,7 +181,7 @@ curl -X PATCH http://localhost:3000/customers/1 \
   }'
 ```
 
-### �📦 Catalogue (`/catalogue`)
+### 📦 Catalogue (`/catalogue`)
 
 #### Products
 

@@ -20,6 +20,9 @@ export class Product {
   @Column()
   category: string;
 
+  @Column({ nullable: true })
+  imageUrl: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -24,6 +24,11 @@ export class CreateProductDto {
   @IsOptional()
   sku?: string;
 
+  @ApiProperty({ description: 'Product image URL', example: 'https://example.com/iphone15.jpg', required: false })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
   @ApiProperty({ description: 'Is product active', example: true, required: false })
   @IsBoolean()
   @IsOptional()

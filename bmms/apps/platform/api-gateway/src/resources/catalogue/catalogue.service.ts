@@ -6,6 +6,7 @@ interface CatalogueGrpcService {
   createProduct(data: any): any;
   getAllProducts(data: any): any;
   getProductById(data: { id: number }): any;
+  updateProduct(data: any): any;
   createPlan(data: any): any;
   getAllPlans(data: any): any;
   getPlanById(data: { id: number }): any;
@@ -40,10 +41,10 @@ export class CatalogueService implements OnModuleInit {
     }
   }
 
-  async getAllProducts() {
+  async getAllProducts(page: number = 1, limit: number = 20) {
     try {
       return await firstValueFrom(
-        this.catalogueGrpcService.getAllProducts({}).pipe(
+        this.catalogueGrpcService.getAllProducts({ page, limit }).pipe(
           catchError(error => {
             throw new HttpException(error.details || 'Failed to get products', HttpStatus.INTERNAL_SERVER_ERROR);
           }),
@@ -61,6 +62,21 @@ export class CatalogueService implements OnModuleInit {
         this.catalogueGrpcService.getProductById({ id }).pipe(
           catchError(error => {
             throw new HttpException(error.details || 'Product not found', HttpStatus.NOT_FOUND);
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Catalogue service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  async updateProduct(id: number, data: any) {
+    try {
+      return await firstValueFrom(
+        this.catalogueGrpcService.updateProduct({ id, ...data }).pipe(
+          catchError(error => {
+            throw new HttpException(error.details || 'Failed to update product', HttpStatus.INTERNAL_SERVER_ERROR);
           }),
         ),
       );

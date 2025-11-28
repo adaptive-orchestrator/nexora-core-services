@@ -54,8 +54,24 @@ export class CatalogueSvcService {
     return product;
   }
 
-  async listProducts(): Promise<Product[]> {
-    return this.productRepo.find();
+  async listProducts(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, page: number, limit: number, totalPages: number }> {
+    const skip = (page - 1) * limit;
+    
+    const [products, total] = await this.productRepo.findAndCount({
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      products,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   async findProductById(id: number): Promise<Product> {

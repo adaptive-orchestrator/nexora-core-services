@@ -14,9 +14,10 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetAllProducts')
-  async getAllProducts() {
-    const products = await this.service.listProducts();
-    return { products };
+  async getAllProducts(data: { page?: number; limit?: number }) {
+    const page = data.page || 1;
+    const limit = data.limit || 20;
+    return await this.service.listProducts(page, limit);
   }
 
   @GrpcMethod('CatalogueService', 'GetProductById')
@@ -30,6 +31,13 @@ export class CatalogueSvcController {
       console.error(`[CatalogueController] Error getting product ${data.id}:`, error);
       throw error;
     }
+  }
+
+  @GrpcMethod('CatalogueService', 'UpdateProduct')
+  async updateProduct(data: any) {
+    const { id, ...updateData } = data;
+    const product = await this.service.updateProduct(id, updateData);
+    return { product, message: 'Product updated successfully' };
   }
 
   // Plans

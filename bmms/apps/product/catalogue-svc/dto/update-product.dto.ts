@@ -4,4 +4,5 @@ export class UpdateProductDto {
   price?: number;
   sku?: string;
   category?: string;
+  imageUrl?: string;
 }

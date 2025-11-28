@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Get, Param, HttpCode, HttpStatus, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Put, HttpCode, HttpStatus, ValidationPipe, Query } from '@nestjs/common';
 import { CatalogueService } from './catalogue.service';
-import { ApiTags, ApiOperation, ApiBody, ApiOkResponse, ApiCreatedResponse, ApiBadRequestResponse, ApiNotFoundResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiOkResponse, ApiCreatedResponse, ApiBadRequestResponse, ApiNotFoundResponse, ApiQuery } from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { CreateFeatureDto } from './dto/create-feature.dto';
@@ -22,10 +22,17 @@ export class CatalogueController {
 
   @Get('products')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all products', description: 'Retrieve all products from catalogue' })
+  @ApiOperation({ summary: 'Get all products', description: 'Retrieve all products from catalogue with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
   @ApiOkResponse({ description: 'Products retrieved successfully' })
-  async getAllProducts() {
-    return this.catalogueService.getAllProducts();
+  async getAllProducts(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? Number(page) : 1;
+    const limitNum = limit ? Number(limit) : 20;
+    return this.catalogueService.getAllProducts(pageNum, limitNum);
   }
 
   @Get('products/:id')
@@ -35,6 +42,15 @@ export class CatalogueController {
   @ApiNotFoundResponse({ description: 'Product not found' })
   async getProductById(@Param('id') id: string) {
     return this.catalogueService.getProductById(Number(id));
+  }
+
+  @Put('products/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update product', description: 'Update an existing product' })
+  @ApiOkResponse({ description: 'Product updated successfully' })
+  @ApiNotFoundResponse({ description: 'Product not found' })
+  async updateProduct(@Param('id') id: string, @Body(ValidationPipe) body: CreateProductDto) {
+    return this.catalogueService.updateProduct(Number(id), body);
   }
 
   // ============= PLANS =============

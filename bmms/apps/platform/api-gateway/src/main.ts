@@ -10,7 +10,11 @@ async function bootstrap() {
     transform: true,
   }));
 
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Octaltask API Documentation')
