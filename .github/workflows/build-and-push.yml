@@ -70,7 +70,6 @@ jobs:
           else
             # Build all services from apps/ directory
             MATRIX_JSON='[
-              {"service": "bmms", "dockerfile": "Dockerfile.bmms"},
               {"service": "api-gateway", "dockerfile": "Dockerfile.api-gateway"},
               {"service": "auth-svc", "dockerfile": "Dockerfile.auth-svc"},
               {"service": "billing-svc", "dockerfile": "Dockerfile.billing-svc"},
@@ -85,7 +84,6 @@ jobs:
               {"service": "payment-svc", "dockerfile": "Dockerfile.payment-svc"},
               {"service": "pricing-engine", "dockerfile": "Dockerfile.pricing-engine"},
               {"service": "promotion-svc", "dockerfile": "Dockerfile.promotion-svc"},
-              {"service": "rl-scheduler", "dockerfile": "Dockerfile.rl-scheduler"},
               {"service": "subscription-svc", "dockerfile": "Dockerfile.subscription-svc"}
             ]'
           fi
