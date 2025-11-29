@@ -542,7 +542,13 @@ export class BillingService {
   }
 
   async getInvoiceStats(customerId: number): Promise<any> {
-    const invoices = await this.listByCustomer(customerId);
+    // Get all invoices for stats (include cancelled, no pagination limit)
+    const result = await this.listByCustomer(customerId, { 
+      page: 1, 
+      limit: 10000, 
+      includeCancelled: true 
+    });
+    const invoices = result.invoices;
 
     const totalInvoices = invoices.length;
     const paidInvoices = invoices.filter((i) => i.isPaid()).length;
