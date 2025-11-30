@@ -5,12 +5,16 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { InvoiceItem } from './invoice-item.entity';
 import { PaymentRecord } from './payment-record.entity';
 
 
 @Entity('invoices')
+@Index(['status', 'createdAt'])  // Composite index for list queries
+@Index(['customerId', 'status']) // Index for customer queries
+@Index(['subscriptionId'])       // Index for subscription queries
 export class Invoice {
   @PrimaryGeneratedColumn()
   id: number;
@@ -35,6 +39,7 @@ export class Invoice {
   invoiceType: 'onetime' | 'recurring';
 
   @Column()
+  @Index()
   customerId: number;
 
   @Column({

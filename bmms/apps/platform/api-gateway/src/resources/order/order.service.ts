@@ -40,7 +40,7 @@ export class OrderService implements OnModuleInit {
   }
 
   async getOrdersByCustomer(customerId: string, page: number = 1, limit: number = 10) {
-    return firstValueFrom(this.orderService.getOrdersByCustomer({ customerId, page, limit }));
+    return firstValueFrom(this.orderService.getOrdersByCustomer({ customerId: Number(customerId), page, limit }));
   }
 
   async updateOrderStatus(id: number, dto: UpdateOrderStatusDto) {
@@ -58,9 +58,9 @@ export class OrderService implements OnModuleInit {
   async addItemToOrder(orderId: number, productId: string, quantity: number, unitPrice: number) {
     return firstValueFrom(this.orderService.addItemToOrder({ 
       orderId, 
-      productId, 
+      productId: Number(productId), 
       quantity, 
-      unitPrice 
+      price: unitPrice 
     }));
   }
 }

@@ -152,16 +152,30 @@ export class BillingService {
     const skip = (page - 1) * limit;
     const includeCancelled = options?.includeCancelled || false;
 
-    const queryBuilder = this.invoiceRepo.createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.items', 'items')
-      .leftJoinAndSelect('invoice.payments', 'payments');
+    const queryBuilder = this.invoiceRepo.createQueryBuilder('invoice');
+
+    // DON'T load relations for list - improves performance significantly
+    // Relations will be loaded only when getting single invoice by ID
 
     // Exclude cancelled invoices by default
     if (!includeCancelled) {
       queryBuilder.andWhere('invoice.status != :cancelled', { cancelled: 'cancelled' });
     }
 
+    // Select only necessary columns for list view
     queryBuilder
+      .select([
+        'invoice.id',
+        'invoice.invoiceNumber',
+        'invoice.orderNumber',
+        'invoice.customerId',
+        'invoice.status',
+        'invoice.totalAmount',
+        'invoice.paidAmount',
+        'invoice.dueAmount',
+        'invoice.dueDate',
+        'invoice.createdAt',
+      ])
       .orderBy('invoice.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -188,15 +202,26 @@ export class BillingService {
     const includeCancelled = options?.includeCancelled || false;
 
     const queryBuilder = this.invoiceRepo.createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.items', 'items')
-      .leftJoinAndSelect('invoice.payments', 'payments')
       .where('invoice.customerId = :customerId', { customerId });
 
     if (!includeCancelled) {
       queryBuilder.andWhere('invoice.status != :cancelled', { cancelled: 'cancelled' });
     }
 
+    // Select only necessary columns
     queryBuilder
+      .select([
+        'invoice.id',
+        'invoice.invoiceNumber',
+        'invoice.orderNumber',
+        'invoice.customerId',
+        'invoice.status',
+        'invoice.totalAmount',
+        'invoice.paidAmount',
+        'invoice.dueAmount',
+        'invoice.dueDate',
+        'invoice.createdAt',
+      ])
       .orderBy('invoice.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -223,15 +248,26 @@ export class BillingService {
     const includeCancelled = options?.includeCancelled || false;
 
     const queryBuilder = this.invoiceRepo.createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.items', 'items')
-      .leftJoinAndSelect('invoice.payments', 'payments')
       .where('invoice.subscriptionId = :subscriptionId', { subscriptionId });
 
     if (!includeCancelled) {
       queryBuilder.andWhere('invoice.status != :cancelled', { cancelled: 'cancelled' });
     }
 
+    // Select only necessary columns
     queryBuilder
+      .select([
+        'invoice.id',
+        'invoice.invoiceNumber',
+        'invoice.subscriptionId',
+        'invoice.customerId',
+        'invoice.status',
+        'invoice.totalAmount',
+        'invoice.paidAmount',
+        'invoice.dueAmount',
+        'invoice.dueDate',
+        'invoice.createdAt',
+      ])
       .orderBy('invoice.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -478,34 +514,13 @@ export class BillingService {
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     
-    // Add random suffix to prevent race condition duplicates
-    const randomSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
-    const timestamp = Date.now().toString(36).toUpperCase();
-
-    const latestInvoice = await this.invoiceRepo
-      .createQueryBuilder('invoice')
-      .where('invoice.invoiceNumber LIKE :pattern', {
-        pattern: `INV-${year}-${month}-%`,
-      })
-      .orderBy('invoice.id', 'DESC')
-      .take(1)
-      .getOne();
-
-    let sequence = 1;
-    if (latestInvoice) {
-      // Extract sequence from format INV-YYYY-MM-XXXXX-RANDOM
-      const parts = latestInvoice.invoiceNumber.split('-');
-      if (parts.length >= 4) {
-        const lastSequence = parseInt(parts[3], 10);
-        if (!isNaN(lastSequence)) {
-          sequence = lastSequence + 1;
-        }
-      }
-    }
-
-    const sequenceStr = String(sequence).padStart(5, '0');
-    // Format: INV-2025-11-00001-A1B2C3 (with random suffix to prevent duplicates)
-    return `INV-${year}-${month}-${sequenceStr}-${randomSuffix}`;
+    // Use UUID-based approach to completely avoid race conditions
+    // Format: INV-YYYY-MM-XXXXXX where XXXXXX is a unique random string
+    const uniqueId = crypto.randomBytes(6).toString('hex').toUpperCase();
+    const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
+    
+    // Format: INV-2025-11-A1B2C3D4E5F6 (completely unique, no sequence needed)
+    return `INV-${year}-${month}-${timestamp}${uniqueId}`;
   }
 
   async getOverdueInvoices(): Promise<Invoice[]> {

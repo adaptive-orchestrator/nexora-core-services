@@ -32,7 +32,16 @@ export class CustomerSvcController {
       return { customer };
     } catch (error) {
       this.logger.error(`GetCustomerById error for id ${data.id}:`, error);
-      throw error;
+      if (error.status === 404 || error.name === 'NotFoundException') {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: `Customer with id ${data.id} not found`,
+        });
+      }
+      throw new RpcException({
+        code: status.INTERNAL,
+        message: error.message || 'Internal server error',
+      });
     }
   }
 

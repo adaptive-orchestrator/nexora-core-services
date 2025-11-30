@@ -7,9 +7,10 @@ export class CreatePaymentDto {
   @IsNumber()
   invoiceId: number;
 
-  @ApiProperty({ example: 'INV-2025-10-00001', description: 'Invoice Number' })
+  @ApiProperty({ example: 'INV-2025-10-00001', description: 'Invoice Number', required: false })
   @IsString()
-  invoiceNumber: string;
+  @IsOptional()
+  invoiceNumber?: string;
 
   @ApiProperty({ example: 1, description: 'Customer ID' })
   @IsNumber()

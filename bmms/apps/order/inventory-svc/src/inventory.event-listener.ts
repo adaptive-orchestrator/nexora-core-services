@@ -122,13 +122,18 @@ export class InventoryEventListener {
     }
   }
 
-   private logEvent<T extends { eventType: string; timestamp: Date | string }>(event: T) {
-    const timestamp = typeof event.timestamp === 'string'
-      ? new Date(event.timestamp).toISOString()
-      : event.timestamp.toISOString();
+   private logEvent<T extends { eventType: string; timestamp?: Date | string }>(event: T) {
+    let timestamp: string;
+    if (!event.timestamp) {
+      timestamp = new Date().toISOString();
+    } else if (typeof event.timestamp === 'string') {
+      timestamp = new Date(event.timestamp).toISOString();
+    } else {
+      timestamp = event.timestamp.toISOString();
+    }
 
     console.log(
-      `🔥 [BILLING] Received event [${event.eventType}] at ${timestamp}`,
+      `🔥 [INVENTORY] Received event [${event.eventType}] at ${timestamp}`,
     );
   }
 }

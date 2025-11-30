@@ -49,25 +49,26 @@ export class DbModule {
               autoLoadEntities: true,
               synchronize: true, // ⚠️ CHỈ dùng trong development, tắt đi ở production!
               logging: false, // 🚀 Disable logging for performance
-              // 🚀 Connection Pool Optimization (Round 2)
+              // 🚀 Connection Pool Optimization for High Concurrency (1000 VUs)
               extra: {
-                connectionLimit: 100,       // Tăng từ 50 lên 100
+                connectionLimit: 100,       // Giữ 100 (đủ cho 1 service)
                 waitForConnections: true,
-                queueLimit: 200,           // Tăng từ 100 lên 200
+                queueLimit: 1000,           // Tăng queue lên 1000 để buffer requests
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 10000,
-                acquireTimeout: 60000,     // 60s timeout
-                timeout: 60000,
-                maxIdle: 50,               // Keep 50 idle connections ready
+                acquireTimeout: 120000,     // 120s timeout
+                timeout: 120000,
+                maxIdle: 50,                // Keep 50 idle connections
                 idleTimeout: 60000,
+                connectTimeout: 60000,      // Connection timeout
               },
               // 🚀 Query Cache (Extended)
               cache: {
                 duration: 60000, // Cache queries 60 seconds
               },
               // 🚀 Retry Strategy
-              retryAttempts: 3,
-              retryDelay: 1000,
+              retryAttempts: 5,             // Tăng từ 3 lên 5
+              retryDelay: 2000,             // Tăng delay lên 2s
             };
           },
         }),

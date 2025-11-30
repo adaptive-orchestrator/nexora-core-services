@@ -40,10 +40,11 @@ message InitiatePaymentRequest {
 }
 
 message ConfirmPaymentRequest {
-  string paymentId = 1;
+  int32 paymentId = 1;
   string status = 2;
   optional string transactionId = 3;
-  optional string failureReason = 4;
+  optional double amount = 4;
+  optional string failureReason = 5;
 }
 
 message PaymentIdRequest {

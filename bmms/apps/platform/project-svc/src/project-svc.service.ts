@@ -14,11 +14,16 @@ export class ProjectSvcService {
   ) {}
 
   async createProject(data: any) {
+    console.log('📝 [ProjectSvc] createProject data:', JSON.stringify(data));
+    
+    // Ensure ownerId is set - default to 1 if not provided
+    const ownerId = data.user_id || data.userId || 1;
+    
     const project = this.projectRepository.create({
       name: data.name,
       description: data.description,
       status: data.status || 'planning',
-      ownerId: data.user_id,
+      ownerId: ownerId,
       ownerName: 'Current User', // TODO: Get from user service
       startDate: data.start_date,
       endDate: data.end_date,
@@ -42,15 +47,19 @@ export class ProjectSvcService {
   }
 
   async getProjectById(id: number, userId: number) {
+    console.log(`📝 [ProjectSvc] getProjectById id=${id}, userId=${userId}`);
+    
     const project = await this.projectRepository.findOne({
-      where: { id },
+      where: { id: Number(id) },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
-    if (project.ownerId !== userId) {
+    // Compare as numbers to avoid type mismatch
+    if (Number(project.ownerId) !== Number(userId)) {
+      console.log(`⚠️ [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -59,14 +68,14 @@ export class ProjectSvcService {
 
   async updateProject(data: any) {
     const project = await this.projectRepository.findOne({
-      where: { id: data.id },
+      where: { id: Number(data.id) },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${data.id} not found`);
     }
 
-    if (project.ownerId !== data.user_id) {
+    if (Number(project.ownerId) !== Number(data.user_id)) {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -85,14 +94,14 @@ export class ProjectSvcService {
 
   async deleteProject(id: number, userId: number) {
     const project = await this.projectRepository.findOne({
-      where: { id },
+      where: { id: Number(id) },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
-    if (project.ownerId !== userId) {
+    if (Number(project.ownerId) !== Number(userId)) {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -250,38 +259,73 @@ export class ProjectSvcService {
   }
 
   private mapProjectToResponse(project: Project) {
+    let startDate: string | null = null;
+    let endDate: string | null = null;
+    
+    try {
+      if (project.startDate && project.startDate instanceof Date) {
+        startDate = project.startDate.toISOString().split('T')[0];
+      } else if (project.startDate && typeof project.startDate === 'string') {
+        startDate = project.startDate;
+      }
+    } catch (e) {
+      console.log('Error parsing startDate:', e);
+    }
+    
+    try {
+      if (project.endDate && project.endDate instanceof Date) {
+        endDate = project.endDate.toISOString().split('T')[0];
+      } else if (project.endDate && typeof project.endDate === 'string') {
+        endDate = project.endDate;
+      }
+    } catch (e) {
+      console.log('Error parsing endDate:', e);
+    }
+    
     return {
       id: project.id,
       name: project.name,
-      description: project.description,
-      status: project.status,
+      description: project.description || '',
+      status: project.status || 'planning',
       owner_id: project.ownerId,
-      owner_name: project.ownerName,
-      total_tasks: project.totalTasks,
-      completed_tasks: project.completedTasks,
-      team_member_count: project.teamMemberCount,
-      start_date: project.startDate ? project.startDate.toISOString().split('T')[0] : null,
-      end_date: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+      owner_name: project.ownerName || '',
+      total_tasks: project.totalTasks || 0,
+      completed_tasks: project.completedTasks || 0,
+      team_member_count: project.teamMemberCount || 1,
+      start_date: startDate || '',
+      end_date: endDate || '',
       tags: project.tags || [],
-      created_at: project.createdAt.toISOString(),
-      updated_at: project.updatedAt.toISOString(),
+      created_at: project.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: project.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 
   private mapTaskToResponse(task: Task) {
+    let dueDate: string | null = null;
+    
+    try {
+      if (task.dueDate && task.dueDate instanceof Date) {
+        dueDate = task.dueDate.toISOString().split('T')[0];
+      } else if (task.dueDate && typeof task.dueDate === 'string') {
+        dueDate = task.dueDate;
+      }
+    } catch (e) {
+      console.log('Error parsing dueDate:', e);
+    }
+    
     return {
       id: task.id,
       project_id: task.projectId,
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      assigned_to: task.assignedTo,
-      assigned_to_name: task.assignedToName,
-      created_by: task.createdBy,
-      due_date: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null,
-      created_at: task.createdAt.toISOString(),
-      updated_at: task.updatedAt.toISOString(),
+      title: task.title || '',
+      description: task.description || '',
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
+      assigned_to: task.assignedTo || 0,
+      assigned_to_name: task.assignedToName || '',
+      created_by: task.createdBy || 0,
+      due_date: dueDate || '',
+      created_at: task.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: task.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 }

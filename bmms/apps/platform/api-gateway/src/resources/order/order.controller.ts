@@ -90,10 +90,11 @@ export class OrderController {
   @ApiResponse({ status: 400, description: 'Cannot add item to order' })
   async addItemToOrder(
     @Param('id', ParseIntPipe) orderId: number,
-    @Body('productId') productId: string,
-    @Body('quantity') quantity: number,
-    @Body('unitPrice') unitPrice: number,
+    @Body() body: { productId: number | string; quantity: number; price?: number; unitPrice?: number },
   ) {
-    return this.orderService.addItemToOrder(orderId, productId, quantity, unitPrice);
+    const productId = String(body.productId);
+    const quantity = body.quantity;
+    const price = body.price ?? body.unitPrice ?? 0;
+    return this.orderService.addItemToOrder(orderId, productId, quantity, price);
   }
 }

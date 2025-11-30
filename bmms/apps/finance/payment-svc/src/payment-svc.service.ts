@@ -40,10 +40,13 @@ export class PaymentService {
         );
       }
 
+      // Generate invoiceNumber if not provided
+      const invoiceNumber = dto.invoiceNumber || `INV-${dto.invoiceId}-${Date.now()}`;
+
       // Create new payment record
       const payment = this.paymentRepository.create({
         invoiceId: dto.invoiceId,
-        invoiceNumber: dto.invoiceNumber,
+        invoiceNumber: invoiceNumber,
         customerId: dto.customerId,
         totalAmount: dto.amount,
         status: 'initiated',
@@ -57,7 +60,7 @@ export class PaymentService {
         savedPayment.id,
         dto.invoiceId,
         'initiated',
-        `Payment initiated for invoice ${dto.invoiceNumber}`,
+        `Payment initiated for invoice ${invoiceNumber}`,
       );
 
       this.logger.log(`✅ Payment initiated: ${savedPayment.id}`);
@@ -93,7 +96,7 @@ export class PaymentService {
       // Update payment status
       if (dto.status === 'success') {
         payment.status = 'completed';
-        payment.transactionId = dto.transactionId;
+        payment.transactionId = dto.transactionId || '';
         payment.paidAmount = dto.amount || payment.totalAmount;
         payment.paidAt = new Date();
 
@@ -107,7 +110,7 @@ export class PaymentService {
         );
       } else if (dto.status === 'failed') {
         payment.status = 'failed';
-        payment.failureReason = dto.reason || 'Payment failed';
+        payment.failureReason = dto.failureReason || 'Payment failed';
         payment.failedAt = new Date();
 
         this.logger.log(`❌ Payment failed: ${payment.failureReason}`);
@@ -116,7 +119,7 @@ export class PaymentService {
           payment.id,
           payment.invoiceId,
           'failed',
-          dto.reason || 'Payment failed',
+          dto.failureReason || 'Payment failed',
         );
       }
 

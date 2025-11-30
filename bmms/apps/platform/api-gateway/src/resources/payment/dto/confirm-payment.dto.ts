@@ -1,21 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  COMPLETED = 'completed',
+  SUCCESS = 'success',
   FAILED = 'failed',
 }
 
 export class ConfirmPaymentDto {
-  @ApiProperty({ description: 'Payment ID', example: 'PAY-123' })
-  @IsString()
-  paymentId: string;
+  @ApiProperty({ description: 'Payment ID', example: 1 })
+  @IsNumber()
+  paymentId: number;
 
   @ApiProperty({ 
     description: 'Payment status', 
     enum: PaymentStatus,
-    example: PaymentStatus.COMPLETED 
+    example: PaymentStatus.SUCCESS 
   })
   @IsEnum(PaymentStatus)
   status: PaymentStatus;
@@ -24,6 +23,11 @@ export class ConfirmPaymentDto {
   @IsString()
   @IsOptional()
   transactionId?: string;
+
+  @ApiProperty({ description: 'Payment amount', example: 100000, required: false })
+  @IsNumber()
+  @IsOptional()
+  amount?: number;
 
   @ApiProperty({ description: 'Failure reason if payment failed', required: false })
   @IsString()

@@ -31,7 +31,7 @@ $retailOrder = @{
             productId = 101
             description = "Premium Product"
             quantity = 2
-            unitPrice = 50000
+            price = 50000
         }
     )
     metadata = @{
