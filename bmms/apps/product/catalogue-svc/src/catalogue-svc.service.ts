@@ -223,7 +223,6 @@ export class CatalogueSvcService {
    * Get catalogue items using automatic strategy selection
    */
   async getItemsByModel(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
-    console.log('🎯 Getting catalogue items with STRATEGY pattern');
     return await this.catalogueStrategy.getItemsByModel(params);
   }
 

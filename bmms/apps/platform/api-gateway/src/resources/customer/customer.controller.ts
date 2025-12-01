@@ -10,6 +10,8 @@ import {
   HttpStatus,
   Request,
   UseGuards,
+  NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -59,6 +61,52 @@ export class CustomerController {
     return this.customerService.getAllCustomers(page, limit, segment);
   }
 
+  // ============ Static routes MUST come before dynamic :id route ============
+
+  @Get('segments/thresholds')
+  @ApiOperation({
+    summary: 'Get segment calculation thresholds',
+    description: 'Get the spending thresholds for each customer segment (bronze, silver, gold, platinum)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Segment thresholds retrieved successfully',
+    type: SegmentCalculationDto,
+  })
+  getSegmentThresholds() {
+    return this.customerService.getSegmentThresholds();
+  }
+
+  @Get('email/:email')
+  @ApiOperation({
+    summary: 'Get customer by email',
+    description: 'Find a customer using their email address',
+  })
+  @ApiParam({ name: 'email', type: String, example: 'john.doe@example.com' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer found',
+    type: CustomerResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Customer not found',
+  })
+  async getCustomerByEmail(@Param('email') email: string) {
+    try {
+      const result: any = await this.customerService.getCustomerByEmail(email);
+      return result.customer;
+    } catch (error: any) {
+      // Handle gRPC NOT_FOUND error (code 5)
+      if (error?.code === 5 || error?.details?.includes('not found')) {
+        throw new NotFoundException(`Customer with email ${email} not found`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Internal server error');
+    }
+  }
+
+  // ============ Dynamic :id route MUST come after static routes ============
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get customer by ID',
@@ -79,24 +127,19 @@ export class CustomerController {
     return result.customer;
   }
 
-  @Get('email/:email')
+  @Get(':id/insights')
   @ApiOperation({
-    summary: 'Get customer by email',
-    description: 'Find a customer using their email address',
+    summary: 'Get customer insights and intelligence',
+    description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
   })
-  @ApiParam({ name: 'email', type: String, example: 'john.doe@example.com' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Customer found',
-    type: CustomerResponseDto,
+    description: 'Customer insights retrieved successfully',
+    type: CustomerInsightsDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Customer not found',
-  })
-  async getCustomerByEmail(@Param('email') email: string) {
-    const result: any = await this.customerService.getCustomerByEmail(email);
-    return result.customer;
+  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
+    return this.customerService.getCustomerInsights(id);
   }
 
   @UseGuards(JwtGuard)
@@ -173,36 +216,5 @@ export class CustomerController {
   })
   async deleteCustomer(@Param('id', ParseIntPipe) id: number) {
     return this.customerService.deleteCustomer(id);
-  }
-
-  // ============ CRM Insights Endpoints ============
-
-  @Get(':id/insights')
-  @ApiOperation({
-    summary: 'Get customer insights and intelligence',
-    description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
-  })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Customer insights retrieved successfully',
-    type: CustomerInsightsDto,
-  })
-  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.getCustomerInsights(id);
-  }
-
-  @Get('segments/thresholds')
-  @ApiOperation({
-    summary: 'Get segment calculation thresholds',
-    description: 'Get the spending thresholds for each customer segment (bronze, silver, gold, platinum)',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Segment thresholds retrieved successfully',
-    type: SegmentCalculationDto,
-  })
-  getSegmentThresholds() {
-    return this.customerService.getSegmentThresholds();
   }
 }

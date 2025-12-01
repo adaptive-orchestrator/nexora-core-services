@@ -4,6 +4,39 @@ import { subscriptionSvcService } from './subscription-svc.service';
 import { SubscriptionStatus } from './entities/subscription.entity';
 import * as event from '@bmms/event';
 
+// Interface for subscription payment event (custom event from payment-svc)
+interface SubscriptionPaymentSuccessEvent {
+  eventId: string;
+  eventType: string;
+  timestamp: Date | string;
+  source: string;
+  data: {
+    paymentId: number;
+    subscriptionId: number;
+    customerId: number;
+    amount: number;
+    currency: string;
+    method: string;
+    transactionId: string;
+    planName?: string;
+    paidAt: Date | string;
+  };
+}
+
+interface SubscriptionPaymentFailedEvent {
+  eventId: string;
+  eventType: string;
+  timestamp: Date | string;
+  source: string;
+  data: {
+    subscriptionId: number;
+    customerId: number;
+    amount: number;
+    reason: string;
+    canRetry: boolean;
+  };
+}
+
 @Controller()
 export class SubscriptionEventListener {
   constructor(
@@ -27,6 +60,60 @@ export class SubscriptionEventListener {
       
     } catch (error) {
       console.error('❌ Error handling PAYMENT_SUCCESS:', error);
+    }
+  }
+
+  /** -------- Subscription Payment Events (from payment-svc direct API) -------- */
+
+  @EventPattern('subscription.payment.success')
+  async handleSubscriptionPaymentSuccess(@Payload() eventData: SubscriptionPaymentSuccessEvent) {
+    try {
+      console.log('📥 [subscription-group] Received subscription.payment.success event');
+      this.logEvent(eventData);
+
+      const { subscriptionId, customerId, amount, transactionId, planName } = eventData.data;
+
+      console.log(`💳 Subscription payment succeeded:`);
+      console.log(`   Subscription ID: ${subscriptionId}`);
+      console.log(`   Customer ID: ${customerId}`);
+      console.log(`   Amount: ${amount}`);
+      console.log(`   Transaction: ${transactionId}`);
+      console.log(`   Plan: ${planName || 'N/A'}`);
+
+      // Activate subscription
+      try {
+        await this.subscriptionService.activateSubscription(subscriptionId);
+        console.log(`✅ Subscription ${subscriptionId} activated successfully`);
+      } catch (activateError) {
+        console.error(`❌ Failed to activate subscription ${subscriptionId}:`, activateError.message);
+        // Still log success because payment was received
+      }
+      
+    } catch (error) {
+      console.error('❌ Error handling subscription.payment.success:', error);
+    }
+  }
+
+  @EventPattern('subscription.payment.failed')
+  async handleSubscriptionPaymentFailed(@Payload() eventData: SubscriptionPaymentFailedEvent) {
+    try {
+      console.log('📥 [subscription-group] Received subscription.payment.failed event');
+      this.logEvent(eventData);
+
+      const { subscriptionId, customerId, amount, reason, canRetry } = eventData.data;
+
+      console.log(`❌ Subscription payment failed:`);
+      console.log(`   Subscription ID: ${subscriptionId}`);
+      console.log(`   Customer ID: ${customerId}`);
+      console.log(`   Amount: ${amount}`);
+      console.log(`   Reason: ${reason}`);
+      console.log(`   Can Retry: ${canRetry}`);
+
+      // Optionally mark subscription as payment_failed if it exists
+      // This is useful for retry logic
+      
+    } catch (error) {
+      console.error('❌ Error handling subscription.payment.failed:', error);
     }
   }
 

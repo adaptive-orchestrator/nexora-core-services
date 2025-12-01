@@ -56,10 +56,10 @@ export class InventoryService implements OnModuleInit {
     }
   }
 
-  async getAllInventory() {
+  async getAllInventory(page: number = 1, limit: number = 20) {
     try {
       return await firstValueFrom(
-        this.inventoryGrpcService.getAllInventory({}).pipe(
+        this.inventoryGrpcService.getAllInventory({ page, limit }).pipe(
           catchError(error => {
             throw new HttpException(error.details || 'Failed to get inventory', HttpStatus.INTERNAL_SERVER_ERROR);
           }),

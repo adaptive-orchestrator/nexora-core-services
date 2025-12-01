@@ -4,6 +4,20 @@ import { firstValueFrom } from 'rxjs';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface PaginatedPaymentsResponse {
+  payments: any[];
+  pagination: PaginationMeta;
+}
+
 interface IPaymentGrpcService {
   initiatePayment(data: any): any;
   confirmPayment(data: any): any;
@@ -42,9 +56,21 @@ export class PaymentService implements OnModuleInit {
     return response.payment;
   }
 
-  async getAllPayments() {
-    const response: any = await firstValueFrom(this.paymentService.getAllPayments({}));
-    return response.payments;
+  async getAllPayments(page: number = 1, limit: number = 20): Promise<PaginatedPaymentsResponse> {
+    const response: any = await firstValueFrom(
+      this.paymentService.getAllPayments({ page, limit })
+    );
+    return {
+      payments: response.payments || [],
+      pagination: response.pagination || {
+        page,
+        limit,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
   }
 
   async getPaymentsByInvoice(invoiceId: number) {

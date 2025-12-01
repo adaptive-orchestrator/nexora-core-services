@@ -19,7 +19,7 @@ service SubscriptionService {
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
   
   // Addon operations
-  rpc ListAddons (Empty) returns (AddonListResponse);
+  rpc ListAddons (ListAddonsRequest) returns (AddonListResponse);
   rpc GetAddonByKey (AddonByKeyRequest) returns (AddonResponse);
   rpc CreateAddon (CreateAddonRequest) returns (AddonResponse);
   rpc PurchaseAddons (PurchaseAddonsRequest) returns (UserAddonListResponse);
@@ -140,6 +140,11 @@ message AddonByKeyRequest {
   string key = 1;
 }
 
+message ListAddonsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
 message CreateAddonRequest {
   string addonKey = 1;
   string name = 2;
@@ -157,6 +162,8 @@ message PurchaseAddonsRequest {
 
 message UserAddonsBySubscriptionRequest {
   int32 subscriptionId = 1;
+  int32 page = 2;
+  int32 limit = 3;
 }
 
 message CancelAddonRequest {
@@ -170,7 +177,11 @@ message AddonResponse {
 
 message AddonListResponse {
   repeated Addon addons = 1;
-  string message = 2;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
 }
 
 message UserAddonResponse {
@@ -180,7 +191,11 @@ message UserAddonResponse {
 
 message UserAddonListResponse {
   repeated UserAddon userAddons = 1;
-  string message = 2;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
 }
 
 message SubscriptionStatsResponse {

@@ -151,6 +151,6 @@ export class OrderEventListener {
 
   /** ------------------- Helper ------------------- */
   private logEvent<T extends { eventType: string }>(event: T) {
-    console.log(`📥 Received event [${event.eventType}] at ${new Date().toISOString()}:`, event);
+    //console.log(`📥 Received event [${event.eventType}] at ${new Date().toISOString()}:`, event);
   }
 }

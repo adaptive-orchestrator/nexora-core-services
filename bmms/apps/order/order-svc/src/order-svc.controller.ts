@@ -16,7 +16,7 @@ export class OrderSvcController {
 
   @GrpcMethod('OrderService', 'GetAllOrders')
   async getAllOrders(data: { page?: number; limit?: number; customerId?: string }) {
-    const orders = await this.service.list();
+    const orders = await this.service.list(data.page || 1, data.limit || 10);
     return { orders, total: orders.length, page: data.page || 1, limit: data.limit || 10 };
   }
 
@@ -27,8 +27,8 @@ export class OrderSvcController {
   }
 
   @GrpcMethod('OrderService', 'GetOrdersByCustomer')
-  async getOrdersByCustomer(data: { customerId: string; page?: number; limit?: number }) {
-    const orders = await this.service.getByCustomerId(data.customerId, data.page, data.limit);
+  async getOrdersByCustomer(data: { customerId: number; page?: number; limit?: number }) {
+    const orders = await this.service.listByCustomer(data.customerId);
     return { orders, total: orders.length, page: data.page || 1, limit: data.limit || 10 };
   }
 
@@ -45,11 +45,11 @@ export class OrderSvcController {
   }
 
   @GrpcMethod('OrderService', 'AddItemToOrder')
-  async addItemToOrder(data: { orderId: number; productId: string; quantity: number; unitPrice: number }) {
+  async addItemToOrder(data: { orderId: number; productId: number; quantity: number; price: number }) {
     const order = await this.service.addItem(data.orderId, {
-      productId: Number(data.productId), // Convert string to number
+      productId: data.productId,
       quantity: data.quantity,
-      price: data.unitPrice, // Map unitPrice to price
+      price: data.price,
     });
     return { order };
   }

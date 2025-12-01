@@ -1,5 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import { debug } from '@bmms/common';
 import { CatalogueSvcService } from './catalogue-svc.service';
 
 @Controller()
@@ -23,12 +24,10 @@ export class CatalogueSvcController {
   @GrpcMethod('CatalogueService', 'GetProductById')
   async getProductById(data: { id: number }) {
     try {
-      console.log(`[CatalogueController] GetProductById called with id: ${data.id}`);
       const product = await this.service.findProductById(data.id);
-      console.log(`[CatalogueController] Product found:`, product);
       return { product, message: 'Product found' };
     } catch (error) {
-      console.error(`[CatalogueController] Error getting product ${data.id}:`, error);
+      debug.error(`[CatalogueController] Error getting product ${data.id}:`, error);
       throw error;
     }
   }

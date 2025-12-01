@@ -1,19 +1,29 @@
-import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
+import { Controller, Logger } from '@nestjs/common';
+import { GrpcMethod, RpcException } from '@nestjs/microservices';
+import { status } from '@grpc/grpc-js';
 import { AddonService } from './addon.service';
 
 @Controller()
 export class AddonGrpcController {
+  private readonly logger = new Logger(AddonGrpcController.name);
+
   constructor(private readonly addonService: AddonService) {}
 
   @GrpcMethod('SubscriptionService', 'ListAddons')
-  async listAddons() {
-    const addons = await this.addonService.listAddons();
+  async listAddons(data: { page?: number; limit?: number }) {
+    const page = data?.page || 1;
+    const limit = data?.limit || 20;
+    
+    const result = await this.addonService.listAddons(page, limit);
     return {
-      addons: addons.map((addon) => ({
+      addons: result.addons.map((addon) => ({
         ...addon,
         features: addon.features ? JSON.stringify(addon.features) : '{}',
       })),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
       message: 'Addons retrieved successfully',
     };
   }
@@ -74,22 +84,54 @@ export class AddonGrpcController {
   }
 
   @GrpcMethod('SubscriptionService', 'GetUserAddons')
-  async getUserAddons(data: { subscriptionId: number }) {
-    const userAddons = await this.addonService.getUserAddons(
+  async getUserAddons(data: { subscriptionId: number; page?: number; limit?: number }) {
+    const page = data?.page || 1;
+    const limit = data?.limit || 20;
+    
+    const result = await this.addonService.getUserAddons(
       data.subscriptionId,
+      page,
+      limit,
     );
     return {
-      userAddons,
+      userAddons: result.userAddons,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
       message: 'User addons retrieved successfully',
     };
   }
 
   @GrpcMethod('SubscriptionService', 'CancelAddon')
   async cancelAddon(data: { id: number }) {
-    const userAddon = await this.addonService.cancelAddon(data.id);
-    return {
-      userAddon,
-      message: 'Addon cancelled successfully',
-    };
+    try {
+      if (!data.id || data.id <= 0) {
+        throw new RpcException({
+          code: status.INVALID_ARGUMENT,
+          message: 'Invalid addon id',
+        });
+      }
+
+      const userAddon = await this.addonService.cancelAddon(data.id);
+      return {
+        userAddon,
+        message: 'Addon cancelled successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to cancel addon ${data.id}: ${error.message}`);
+      
+      if (error.name === 'NotFoundException' || error.message?.includes('not found')) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: error.message || `User add-on ${data.id} not found`,
+        });
+      }
+      
+      throw new RpcException({
+        code: status.INTERNAL,
+        message: error.message || 'Failed to cancel addon',
+      });
+    }
   }
 }

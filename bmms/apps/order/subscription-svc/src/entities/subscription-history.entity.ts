@@ -37,7 +37,10 @@ export class SubscriptionHistory {
   @Column({ type: 'json', nullable: true })
   metadata?: Record<string, any>;
 
-  @ManyToOne(() => Subscription, (subscription) => subscription.history)
+  @ManyToOne(() => Subscription, (subscription) => subscription.history, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'subscriptionId' })
   subscription: Subscription;
 

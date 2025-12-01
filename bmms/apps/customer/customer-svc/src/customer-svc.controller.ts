@@ -1,5 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
+import { GrpcMethod, RpcException } from '@nestjs/microservices';
+import { status } from '@grpc/grpc-js';
 import { CustomerSvcService } from './customer-svc.service';
 
 @Controller()
@@ -31,15 +32,39 @@ export class CustomerSvcController {
       return { customer };
     } catch (error) {
       this.logger.error(`GetCustomerById error for id ${data.id}:`, error);
-      throw error;
+      if (error.status === 404 || error.name === 'NotFoundException') {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: `Customer with id ${data.id} not found`,
+        });
+      }
+      throw new RpcException({
+        code: status.INTERNAL,
+        message: error.message || 'Internal server error',
+      });
     }
   }
 
   @GrpcMethod('CustomerService', 'GetCustomerByEmail')
   async getCustomerByEmail(data: { email: string }) {
-    this.logger.log(`GetCustomerByEmail called with email: ${data.email}`);
-    const customer = await this.service.findByEmail(data.email);
-    return { customer };
+    try {
+      this.logger.log(`GetCustomerByEmail called with email: ${data.email}`);
+      const customer = await this.service.findByEmail(data.email);
+      this.logger.log(`GetCustomerByEmail success: ${JSON.stringify(customer)}`);
+      return { customer };
+    } catch (error) {
+      this.logger.error(`GetCustomerByEmail error for email ${data.email}:`, error);
+      if (error.status === 404 || error.name === 'NotFoundException') {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: `Customer with email ${data.email} not found`,
+        });
+      }
+      throw new RpcException({
+        code: status.INTERNAL,
+        message: error.message || 'Internal server error',
+      });
+    }
   }
 
   @GrpcMethod('CustomerService', 'GetCustomerByUserId')

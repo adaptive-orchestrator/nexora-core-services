@@ -1,6 +1,9 @@
 import { ClientProviderOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 
+// 10MB max message size for large order lists
+const MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
+
 export const orderGrpcOptions: ClientProviderOptions = {
   name: 'ORDER_PACKAGE',
   transport: Transport.GRPC,
@@ -14,6 +17,13 @@ export const orderGrpcOptions: ClientProviderOptions = {
       enums: String,
       defaults: true,
       oneofs: true,
+    },
+    channelOptions: {
+      'grpc.max_receive_message_length': MAX_MESSAGE_SIZE,
+      'grpc.max_send_message_length': MAX_MESSAGE_SIZE,
+      'grpc.keepalive_time_ms': 10000,
+      'grpc.keepalive_timeout_ms': 5000,
+      'grpc.keepalive_permit_without_calls': 1,
     },
   },
 };

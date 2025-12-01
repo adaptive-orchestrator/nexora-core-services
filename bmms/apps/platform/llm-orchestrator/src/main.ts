@@ -28,12 +28,6 @@ async function bootstrap() {
   await httpApp.startAllMicroservices();
   await httpApp.listen(httpPort);
   
-  console.log(`🚀 LLM Orchestrator HTTP Server: http://localhost:${httpPort}`);
-  console.log(`🚀 LLM Orchestrator gRPC Server: ${grpcUrl}`);
-  console.log(`✅ Kafka producer ready (topic: k8s.deployment.requests)`);
-  console.log(`📋 HTTP Endpoints:`);
-  console.log(`   POST http://localhost:${httpPort}/llm/chat-and-deploy?dryRun=true`);
-  console.log(`   GET  http://localhost:${httpPort}/rag/health`);
-  console.log(`   POST http://localhost:${httpPort}/rag/search`);
+  console.log(`🚀 LLM Orchestrator HTTP: http://localhost:${httpPort} | gRPC: ${grpcUrl}`);
 }
 bootstrap();

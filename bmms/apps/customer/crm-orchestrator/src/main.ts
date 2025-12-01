@@ -32,9 +32,7 @@ async function bootstrap() {
 
   await app.listen();
   
-  console.log('✅ CRM Orchestrator (Background Service)');
-  console.log('✅ Listening to Kafka events: order.completed, payment.success, crm.check-churn');
-  console.log('🔄 Auto-updating customer segments and lifecycle stages');
+  console.log(`✅ CRM Orchestrator | Kafka: listening (order.completed, payment.success, crm.check-churn)`);
 }
 bootstrap();
 

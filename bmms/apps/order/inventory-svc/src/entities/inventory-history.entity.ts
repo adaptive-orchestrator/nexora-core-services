@@ -1,6 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('inventory_history')
+@Index('idx_history_product', ['productId'])
+@Index('idx_history_product_created', ['productId', 'createdAt'])
 export class InventoryHistory {
   @PrimaryGeneratedColumn()
   id: number;

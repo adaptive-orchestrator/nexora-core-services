@@ -5,6 +5,7 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { ChangePlanDto } from './dto/change-plan.dto';
 import { SubscriptionStatus } from './entities/subscription.entity';
+import { debug } from '@bmms/common';
 
 @Controller()
 export class subscriptionSvcController {
@@ -45,7 +46,7 @@ export class subscriptionSvcController {
         message: 'Subscription created successfully',
       };
     } catch (error) {
-      console.error('❌ [gRPC CreateSubscription] Error:', error);
+      debug.error('❌ [gRPC CreateSubscription] Error:', error);
       throw error;
     }
   }
@@ -289,7 +290,7 @@ export class subscriptionSvcController {
         message: 'All subscriptions retrieved',
       };
     } catch (error) {
-      console.error('❌ [gRPC GetAllSubscriptions] Error:', error);
+      debug.error('❌ [gRPC GetAllSubscriptions] Error:', error);
       throw error;
     }
   }
@@ -297,7 +298,7 @@ export class subscriptionSvcController {
   @GrpcMethod('SubscriptionService', 'CheckTrialExpiry')
   async checkTrialExpiry() {
     try {
-      console.log('🔍 [SubscriptionController] Manual trigger: Checking trial expiry...');
+      debug.log('🔍 [SubscriptionController] Manual trigger: Checking trial expiry...');
       const result = await this.subscriptionSvcService.checkAndProcessTrialExpiry();
       
       return {
@@ -307,7 +308,7 @@ export class subscriptionSvcController {
         message: `Processed ${result.processed} subscriptions. Converted: ${result.converted}, Failed: ${result.failed}`,
       };
     } catch (error) {
-      console.error('❌ [gRPC CheckTrialExpiry] Error:', error);
+      debug.error('❌ [gRPC CheckTrialExpiry] Error:', error);
       throw error;
     }
   }
@@ -318,7 +319,7 @@ export class subscriptionSvcController {
       const stats = await this.subscriptionSvcService.getStats();
       return stats;
     } catch (error) {
-      console.error('❌ [gRPC GetSubscriptionStats] Error:', error);
+      debug.error('❌ [gRPC GetSubscriptionStats] Error:', error);
       throw error;
     }
   }
@@ -326,7 +327,7 @@ export class subscriptionSvcController {
   @GrpcMethod('SubscriptionService', 'ActivateSubscription')
   async activateSubscription(data: { subscriptionId: number }) {
     try {
-      console.log(`🔄 [SubscriptionController] Activating subscription ${data.subscriptionId}...`);
+      debug.log(`🔄 [SubscriptionController] Activating subscription ${data.subscriptionId}...`);
       const subscription = await this.subscriptionSvcService.activateSubscription(data.subscriptionId);
       
       return {
@@ -340,7 +341,7 @@ export class subscriptionSvcController {
         message: 'Subscription activated successfully',
       };
     } catch (error) {
-      console.error('❌ [gRPC ActivateSubscription] Error:', error);
+      debug.error('❌ [gRPC ActivateSubscription] Error:', error);
       throw error;
     }
   }

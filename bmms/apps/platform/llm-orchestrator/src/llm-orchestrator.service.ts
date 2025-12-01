@@ -7,6 +7,7 @@ import { LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
 import { K8sIntegrationService } from './service/k8s-integration.service';
+import { debug } from '@bmms/common';
 
 const LLMReplySchema = z.object({
   proposal_text: z.string(),
@@ -231,9 +232,9 @@ export class LlmOrchestratorService {
       await mkdir(dir, { recursive: true });
       const outputPath = path.join(dir, `${Date.now()}_raw.json`);
       await writeFile(outputPath, cleaned, 'utf8');
-      console.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
+      debug.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
     } catch (err) {
-      console.error('[LLM] Failed to write output file:', err);
+      debug.error('[LLM] Failed to write output file:', err);
     }
 
     // Parse and validate JSON
@@ -259,12 +260,12 @@ export class LlmOrchestratorService {
     
     // Log warnings if any
     if (validationResult.warnings.length > 0) {
-      console.warn('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
+      debug.log('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
     }
     
     // Log metadata
     if (validationResult.metadata) {
-      console.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
+      debug.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
     }
 
     // Convert value to string for gRPC (proto expects string)
@@ -291,12 +292,12 @@ export class LlmOrchestratorService {
         // Trigger deployment in background (don't wait)
         this.k8sIntegrationService.triggerDeployment(response, dryRunDefault)
           .catch(err => {
-            console.error('[LLM] Failed to trigger K8s deployment:', err.message);
+            debug.error('[LLM] Failed to trigger K8s deployment:', err.message);
           });
       }
     } catch (error) {
       // Don't fail the LLM request if deployment trigger fails
-      console.error('[LLM] Error triggering deployment:', error instanceof Error ? error.message : String(error));
+      debug.error('[LLM] Error triggering deployment:', error instanceof Error ? error.message : String(error));
     }
 
     return response;
@@ -346,7 +347,7 @@ Yêu cầu: ${message}`;
     try {
       return await this.callGeminiChat(prompt, context, 'You are a helpful AI assistant. Provide clear, concise, and helpful responses.');
     } catch (error) {
-      console.error('[AI Chat] Error:', error);
+      debug.error('[AI Chat] Error:', error);
       return 'I apologize, but I encountered an error processing your request. Please try again.';
     }
   }
@@ -379,7 +380,7 @@ Always respond in JSON format:
         explanation: parsed.explanation || 'Code generated successfully'
       };
     } catch (error) {
-      console.error('[Code Generation] Error:', error);
+      debug.error('[Code Generation] Error:', error);
       return {
         code: '// Error generating code',
         language: 'text',

@@ -5,12 +5,14 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   UseGuards,
   ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 import { CreateAddonDto } from './dto/create-addon.dto';
 import { PurchaseAddonDto } from './dto/purchase-addon.dto';
@@ -27,15 +29,19 @@ export class AddonController {
   @Get()
   @ApiOperation({
     summary: 'List all available add-ons',
-    description: 'Get a list of all active add-ons that can be purchased by users. These include extra storage, AI features, priority support, etc.',
+    description: 'Get a paginated list of all active add-ons that can be purchased by users.',
   })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
   @ApiResponse({
     status: 200,
     description: 'List of add-ons retrieved successfully',
-    type: [AddonResponseDto],
   })
-  async listAddons(): Promise<AddonResponseDto[]> {
-    return this.addonService.listAddons();
+  async listAddons(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.addonService.listAddons(page, limit);
   }
 
   @Get(':key')
@@ -102,20 +108,25 @@ export class AddonController {
   @Get('user/:subscriptionId')
   @ApiOperation({
     summary: 'Get user active add-ons',
-    description: 'Retrieve all active add-ons for a specific subscription. This shows what extra features the user currently has.',
+    description: 'Retrieve paginated active add-ons for a specific subscription.',
   })
   @ApiParam({
     name: 'subscriptionId',
     description: 'Subscription ID',
     example: 1,
   })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
   @ApiResponse({
     status: 200,
     description: 'User add-ons retrieved successfully',
-    type: [UserAddonResponseDto],
   })
-  async getUserAddons(@Param('subscriptionId', ParseIntPipe) subscriptionId: number): Promise<UserAddonResponseDto[]> {
-    return this.addonService.getUserAddons(subscriptionId);
+  async getUserAddons(
+    @Param('subscriptionId', ParseIntPipe) subscriptionId: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.addonService.getUserAddons(subscriptionId, page, limit);
   }
 
   @Delete('user/:id')

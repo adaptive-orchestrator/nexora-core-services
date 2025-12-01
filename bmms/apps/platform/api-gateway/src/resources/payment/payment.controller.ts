@@ -4,12 +4,14 @@ import {
   Get, 
   Body, 
   Param, 
+  Query,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { PaymentService } from './payment.service';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { PaymentService, PaginatedPaymentsResponse } from './payment.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto, PaymentStatsDto } from './dto/payment-response.dto';
@@ -20,10 +22,15 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all payments' })
+  @ApiOperation({ summary: 'Get all payments with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
   @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
-  async getAllPayments() {
-    return this.paymentService.getAllPayments();
+  async getAllPayments(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<PaginatedPaymentsResponse> {
+    return this.paymentService.getAllPayments(page, limit);
   }
 
   @Get('stats/summary')

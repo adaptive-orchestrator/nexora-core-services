@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { BillingService } from './billing-svc.service';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
@@ -15,8 +15,16 @@ export class BillingController {
   }
 
   @Get()
-  list() {
-    return this.service.list();
+  list(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('includeCancelled') includeCancelled?: string,
+  ) {
+    return this.service.list({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      includeCancelled: includeCancelled === 'true',
+    });
   }
 
   @Get(':id')
@@ -42,14 +50,38 @@ export class BillingController {
   }
 
   @GrpcMethod('BillingService', 'GetAllInvoices')
-  async grpcGetAllInvoices() {
-    const invoices = await this.service.list();
-    return { invoices };
+  async grpcGetAllInvoices(data: { page?: number; limit?: number; includeCancelled?: boolean }) {
+    const result = await this.service.list({
+      page: data?.page || 1,
+      limit: data?.limit || 20,
+      includeCancelled: data?.includeCancelled || false,
+    });
+    return result;
   }
 
   @GrpcMethod('BillingService', 'GetInvoiceById')
   async grpcGetInvoiceById(data: { id: number }) {
     return { invoice: await this.service.getById(data.id) };
+  }
+
+  @GrpcMethod('BillingService', 'GetInvoicesByCustomer')
+  async grpcGetInvoicesByCustomer(data: { customerId: number; page?: number; limit?: number; includeCancelled?: boolean }) {
+    const result = await this.service.listByCustomer(data.customerId, {
+      page: data?.page || 1,
+      limit: data?.limit || 20,
+      includeCancelled: data?.includeCancelled || false,
+    });
+    return result;
+  }
+
+  @GrpcMethod('BillingService', 'GetInvoicesBySubscription')
+  async grpcGetInvoicesBySubscription(data: { subscriptionId: number; page?: number; limit?: number; includeCancelled?: boolean }) {
+    const result = await this.service.listBySubscription(data.subscriptionId, {
+      page: data?.page || 1,
+      limit: data?.limit || 20,
+      includeCancelled: data?.includeCancelled || false,
+    });
+    return result;
   }
 
   @GrpcMethod('BillingService', 'UpdateInvoiceStatus')

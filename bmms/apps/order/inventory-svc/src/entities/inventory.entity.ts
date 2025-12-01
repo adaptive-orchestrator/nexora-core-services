@@ -5,10 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { InventoryReservation } from './inventory-reservation.entity';
 
 @Entity('inventory')
+@Index('idx_inventory_product', ['productId'])
+@Index('idx_inventory_quantity_reorder', ['quantity', 'reorderLevel'])
+@Index('idx_inventory_active', ['isActive'])
 export class Inventory {
   @PrimaryGeneratedColumn()
   id: number;

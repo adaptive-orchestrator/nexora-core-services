@@ -21,6 +21,7 @@ import { AddItemDto } from './dto/add-item.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { createBaseEvent } from '@bmms/event';
+import { debug } from '@bmms/common';
 
 interface ICustomerGrpcService {
   getCustomerById(data: { id: number }): any;
@@ -72,50 +73,50 @@ export class OrderSvcService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    console.log('🔧 [OrderSvcService] onModuleInit called');
-    console.log('🔧 customerClient:', !!this.customerClient);
-    console.log('🔧 catalogueClient:', !!this.catalogueClient);
-    console.log('🔧 inventoryClient:', !!this.inventoryClient);
+    //console.log('🔧 [OrderSvcService] onModuleInit called');
+    //console.log('🔧 customerClient:', !!this.customerClient);
+    //console.log('🔧 catalogueClient:', !!this.catalogueClient);
+    //console.log('🔧 inventoryClient:', !!this.inventoryClient);
     
     this.customerService = this.customerClient.getService<ICustomerGrpcService>('CustomerService');
     this.catalogueService = this.catalogueClient.getService<ICatalogueGrpcService>('CatalogueService');
     this.inventoryService = this.inventoryClient.getService<IInventoryGrpcService>('InventoryService');
     
-    console.log('✅ [OrderSvcService] gRPC services initialized');
-    console.log('✅ customerService:', !!this.customerService);
-    console.log('✅ catalogueService:', !!this.catalogueService);
-    console.log('✅ inventoryService:', !!this.inventoryService);
+    //console.log('✅ [OrderSvcService] gRPC services initialized');
+    //console.log('✅ customerService:', !!this.customerService);
+    //console.log('✅ catalogueService:', !!this.catalogueService);
+    //console.log('✅ inventoryService:', !!this.inventoryService);
   }
 
   // ============= CRUD =============
 
   async create(dto: CreateOrderDto): Promise<Order> {
-    console.log('🔵 [OrderSvc.create] START - dto:', JSON.stringify(dto));
+    //console.log('🔵 [OrderSvc.create] START - dto:', JSON.stringify(dto));
     
     // 1. Validate customer exists
-    console.log('🔵 [OrderSvc.create] Step 1: Validating customer...');
+    //console.log('🔵 [OrderSvc.create] Step 1: Validating customer...');
     await this.validateCustomer(dto.customerId);
-    console.log('✅ [OrderSvc.create] Customer validation passed');
+    //console.log('✅ [OrderSvc.create] Customer validation passed');
 
     // 2. Validate all products exist and get prices
-    console.log('🔵 [OrderSvc.create] Step 2: Validating products...');
+    //console.log('🔵 [OrderSvc.create] Step 2: Validating products...');
     const validatedItems = await this.validateProducts(dto.items);
-    console.log('✅ [OrderSvc.create] Products validated:', validatedItems);
+    //console.log('✅ [OrderSvc.create] Products validated:', validatedItems);
 
     // 3. Generate order number
-    console.log('🔵 [OrderSvc.create] Step 3: Generating order number...');
+    //console.log('🔵 [OrderSvc.create] Step 3: Generating order number...');
     const orderNumber = await this.generateOrderNumber();
-    console.log('✅ [OrderSvc.create] Order number generated:', orderNumber);
+    //  console.log('✅ [OrderSvc.create] Order number generated:', orderNumber);
 
     // 4. Calculate totals
     const subtotal = validatedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    console.log('✅ [OrderSvc.create] Subtotal calculated:', subtotal);
+    //console.log('✅ [OrderSvc.create] Subtotal calculated:', subtotal);
 
     // 5. Create order
-    console.log('🔵 [OrderSvc.create] Step 4: Creating order in DB...');
+    //console.log('🔵 [OrderSvc.create] Step 4: Creating order in DB...');
     const order = await this.orderRepo.save(
       this.orderRepo.create({
         orderNumber,
@@ -128,7 +129,7 @@ export class OrderSvcService implements OnModuleInit {
         status: 'pending',
       }),
     );
-    console.log('✅ [OrderSvc.create] Order created:', order.id);
+    //console.log('✅ [OrderSvc.create] Order created:', order.id);
 
     // 6. Add items
     const items = await Promise.all(
@@ -179,10 +180,19 @@ export class OrderSvcService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting order.created event:', orderCreatedEvent);
+    //console.log('🚀 Emitting order.created event:', orderCreatedEvent);
     this.kafka.emit('order.created', orderCreatedEvent);
 
     return order;
+  }
+  // Trong OrderSvcService
+  async list(page: number = 1, limit: number = 10): Promise<Order[]> {
+    return this.orderRepo.find({
+      relations: ['items'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
   }
 
   /**
@@ -198,13 +208,18 @@ export class OrderSvcService implements OnModuleInit {
       }
     } catch (error) {
       // Log full error to help debugging gRPC/internal failures
-      console.error('[OrderSvc] validateCustomer error:', error);
+      debug.error('[OrderSvc] validateCustomer error:', error);
 
       if (error instanceof NotFoundException) throw error;
 
+      // Check for gRPC NOT_FOUND error code
+      if (error?.code === 5 || error?.details?.includes('not found')) {
+        throw new NotFoundException(`Customer ${customerId} not found`);
+      }
+
       // If upstream gRPC call failed (network / unavailable service), surface a clearer message
       // so that API Gateway doesn't just return a vague INTERNAL error.
-      const message = error?.message || 'Failed to validate customer';
+      const message = error?.details || error?.message || 'Failed to validate customer';
       throw new BadRequestException(`Failed to validate customer: ${message}`);
     }
   }
@@ -214,47 +229,40 @@ export class OrderSvcService implements OnModuleInit {
    */
   private async validateProducts(items: Array<{ productId: number; quantity: number; price: number; notes?: string }>): Promise<ValidatedOrderItem[]> {
     const validatedItems: ValidatedOrderItem[] = [];
-
+    
     for (const item of items) {
       try {
-        console.log(`🔵 [validateProducts] Checking product ${item.productId}...`);
+        debug.log(`🔵 [validateProducts] Checking product ${item.productId}...`);
         
         // Get product from catalogue
         const response: any = await firstValueFrom(
           this.catalogueService.getProductById({ id: item.productId })
         );
-        console.log(`✅ [validateProducts] Catalogue response:`, response);
+        debug.log(`✅ [validateProducts] Catalogue response:`, response);
 
         if (!response || !response.product) {
           throw new NotFoundException(`Product ${item.productId} not found in catalogue`);
-        }
-
+      }
+      
         const product = response.product;
 
         // Use catalogue price (ignore client-provided price for security)
-        validatedItems.push({
+      validatedItems.push({
           productId: item.productId,
           quantity: item.quantity,
           price: Number(product.price), // Use price from catalogue
           notes: item.notes,
         });
-        console.log(`✅ [validateProducts] Product ${item.productId} validated with price ${product.price}`);
+        debug.log(`✅ [validateProducts] Product ${item.productId} validated with price ${product.price}`);
 
       } catch (error) {
-        console.error(`❌ [validateProducts] Error validating product ${item.productId}:`, error);
+        debug.error(`❌ [validateProducts] Error validating product ${item.productId}:`, error);
         if (error instanceof NotFoundException) throw error;
         throw new BadRequestException(`Failed to validate product ${item.productId}: ${error.message}`);
       }
     }
 
     return validatedItems;
-  }
-
-  async list(): Promise<Order[]> {
-    return this.orderRepo.find({
-      relations: ['items'],
-      order: { createdAt: 'DESC' },
-    });
   }
 
   async listByCustomer(customerId: number): Promise<Order[]> {
@@ -353,7 +361,7 @@ export class OrderSvcService implements OnModuleInit {
       },
     });
 
-    console.log(`📤 [ORDER-SVC] Emitted ORDER_UPDATED event for order ${updated.orderNumber}`);
+    //console.log(`📤 [ORDER-SVC] Emitted ORDER_UPDATED event for order ${updated.orderNumber}`);
 
     return updated;
   }
@@ -463,31 +471,36 @@ export class OrderSvcService implements OnModuleInit {
         `Cannot add items to order in ${order.status} status`,
       );
     }
-
+    
+    // Ensure numeric values
+    const productId = Number(dto.productId);
+    const quantity = Number(dto.quantity);
+    const price = Number(dto.price);
+    
     // Check if product already in order
-    const existingItem = order.items.find((i) => i.productId === dto.productId);
+    const existingItem = order.items.find((i) => i.productId === productId);
 
     if (existingItem) {
-      existingItem.quantity += dto.quantity;
-      existingItem.subtotal = existingItem.calculateSubtotal();
+      existingItem.quantity += quantity;
+      existingItem.subtotal = Number(existingItem.quantity) * Number(existingItem.price);
       await this.itemRepo.save(existingItem);
     } else {
       const newItem = await this.itemRepo.save(
         this.itemRepo.create({
           orderId: order.id,
-          productId: dto.productId,
-          quantity: dto.quantity,
-          price: dto.price,
-          subtotal: dto.price * dto.quantity,
+          productId: productId,
+          quantity: quantity,
+          price: price,
+          subtotal: price * quantity,
           notes: dto.notes,
         }),
       );
       order.items.push(newItem);
     }
 
-    // Recalculate totals
+    // Recalculate totals - ensure numeric conversion to avoid string concatenation
     order.subtotal = order.items.reduce(
-      (sum, item) => sum + item.subtotal,
+      (sum, item) => sum + Number(item.subtotal),
       0,
     );
     order.totalAmount = order.calculateTotal();
@@ -502,7 +515,7 @@ export class OrderSvcService implements OnModuleInit {
         notes: `Added ${dto.quantity} x product ${dto.productId}`,
       }),
     );
-
+    //console.log(`🔵 [OrderSvc.addItem] Added item to order ${id}:`, dto)  ;
     return updated;
   }
 
@@ -525,10 +538,10 @@ export class OrderSvcService implements OnModuleInit {
 
     await this.itemRepo.delete(itemId);
 
-    // Recalculate totals
+    // Recalculate totals - ensure numeric conversion to avoid string concatenation
     order.items = order.items.filter((i) => i.id !== itemId);
     order.subtotal = order.items.reduce(
-      (sum, item) => sum + item.subtotal,
+      (sum, item) => sum + Number(item.subtotal),
       0,
     );
     order.totalAmount = order.calculateTotal();
@@ -561,27 +574,12 @@ export class OrderSvcService implements OnModuleInit {
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
 
-    // Get latest order number for this month
-    const latestOrder = await this.orderRepo
-      .createQueryBuilder('order')
-      .where('order.orderNumber LIKE :pattern', {
-        pattern: `ORD-${year}-${month}-%`,
-      })
-      .orderBy('order.orderNumber', 'DESC')
-      .take(1)
-      .getOne();
-
-    let sequence = 1;
-    if (latestOrder) {
-      const lastSequence = parseInt(
-        latestOrder.orderNumber.split('-')[3],
-        10,
-      );
-      sequence = lastSequence + 1;
-    }
-
-    const sequenceStr = String(sequence).padStart(5, '0');
-    return `ORD-${year}-${month}-${sequenceStr}`;
+    // Generate unique order number using timestamp + random suffix
+    // This prevents race conditions during high-concurrency scenarios
+    const timestamp = Date.now().toString(36).toUpperCase(); // Base36 timestamp
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4 random chars
+    
+    return `ORD-${year}-${month}-${timestamp}-${randomSuffix}`;
   }
 
   async getOrderStats(customerId: number): Promise<any> {

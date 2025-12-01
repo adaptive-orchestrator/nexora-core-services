@@ -21,6 +21,7 @@ import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
 import { ReserveInventoryDto } from './dto/reserve-inventory.dto';
 import { ReleaseInventoryDto } from './dto/release-inventory.dto';
 import { BulkReserveDto } from './dto/bulk-reserve.dto';
+import { debug } from '@bmms/common';
 
 // ✅ Import types và functions từ @bmms/event
 import {
@@ -75,7 +76,7 @@ export class InventoryService implements OnModuleInit {
       );
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      console.warn(`⚠️ Unable to validate product ${productId} with catalogue service`);
+      debug.log(`⚠️ Unable to validate product ${productId} with catalogue service`);
       // Continue anyway if catalogue service is down
     }
   }
@@ -119,7 +120,7 @@ export class InventoryService implements OnModuleInit {
     // Find inventory
     let inventory = await this.inventoryRepo.findOne({ where: { productId } });
     if (!inventory) {
-    console.warn(`⚠️ Inventory not found for product ${productId}, creating with 0 stock...`);
+    debug.log(`⚠️ Inventory not found for product ${productId}, creating with 0 stock...`);
     
     // ✅ Auto-create inventory record with 0 stock
     inventory = await this.createInventoryForProduct(productId, 0, 10);
@@ -166,7 +167,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting inventory.reserved event:', event);
+    debug.log('🚀 Emitting inventory.reserved event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RESERVED, event);
 
     return savedReservation;
@@ -236,7 +237,7 @@ export class InventoryService implements OnModuleInit {
         },
       };
 
-      console.log('🚀 Emitting inventory.released event:', event);
+      debug.log('🚀 Emitting inventory.released event:', event);
       this.kafka.emit(EventTopics.INVENTORY_RELEASED, event);
     }
   }
@@ -267,7 +268,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting inventory.created event:', event);
+    debug.log('🚀 Emitting inventory.created event:', event);
     this.kafka.emit(EventTopics.INVENTORY_CREATED, event);
 
     return inventory;
@@ -286,8 +287,29 @@ export class InventoryService implements OnModuleInit {
     return inventory;
   }
 
-  async listAll(): Promise<Inventory[]> {
-    return this.inventoryRepo.find({ relations: ['reservations'] });
+  async listAll(page: number = 1, limit: number = 20): Promise<{
+    items: Inventory[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const skip = (page - 1) * limit;
+    
+    const [items, total] = await this.inventoryRepo.findAndCount({
+      relations: ['reservations'],
+      skip,
+      take: limit,
+      order: { id: 'DESC' },
+    });
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getLowStockItems(): Promise<Inventory[]> {
@@ -341,7 +363,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting inventory.adjusted event:', event);
+    debug.log('🚀 Emitting inventory.adjusted event:', event);
     this.kafka.emit(EventTopics.INVENTORY_ADJUSTED, event);
 
     return updated;
@@ -395,7 +417,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting inventory.reserved event:', event);
+    debug.log('🚀 Emitting inventory.reserved event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RESERVED, event);
 
     return reservation;
@@ -479,7 +501,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    console.log('🚀 Emitting inventory.released event:', event);
+    debug.log('🚀 Emitting inventory.released event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RELEASED, event);
 
     return updated;
@@ -517,6 +539,6 @@ export class InventoryService implements OnModuleInit {
       });
     }
 
-    console.log(`🧹 Cleaned up ${expired.length} expired reservations`);
+    debug.log(`🧹 Cleaned up ${expired.length} expired reservations`);
   }
 }

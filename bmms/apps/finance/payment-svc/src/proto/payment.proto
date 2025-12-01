@@ -7,7 +7,7 @@ service PaymentService {
   rpc InitiatePayment (InitiatePaymentRequest) returns (PaymentResponse);
   rpc ConfirmPayment (ConfirmPaymentRequest) returns (PaymentResponse);
   rpc GetPaymentById (PaymentIdRequest) returns (PaymentResponse);
-  rpc GetAllPayments (Empty) returns (PaymentListResponse);
+  rpc GetAllPayments (PaginationRequest) returns (PaginatedPaymentListResponse);
   rpc GetPaymentsByInvoice (InvoiceIdRequest) returns (PaymentListResponse);
   rpc GetPaymentStats (Empty) returns (PaymentStatsResponse);
   rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
@@ -15,6 +15,21 @@ service PaymentService {
 
 // Common messages
 message Empty {}
+
+// Pagination messages
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PaginationMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int32 total = 3;
+  int32 totalPages = 4;
+  bool hasNext = 5;
+  bool hasPrev = 6;
+}
 
 // Payment messages
 message Payment {
@@ -41,10 +56,11 @@ message InitiatePaymentRequest {
 }
 
 message ConfirmPaymentRequest {
-  string paymentId = 1;
+  int32 paymentId = 1;
   string status = 2;
   optional string transactionId = 3;
-  optional string failureReason = 4;
+  optional double amount = 4;
+  optional string failureReason = 5;
 }
 
 message PaymentIdRequest {
@@ -61,6 +77,11 @@ message PaymentResponse {
 
 message PaymentListResponse {
   repeated Payment payments = 1;
+}
+
+message PaginatedPaymentListResponse {
+  repeated Payment payments = 1;
+  PaginationMeta pagination = 2;
 }
 
 message PaymentStatsResponse {

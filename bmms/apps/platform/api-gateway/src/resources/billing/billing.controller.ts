@@ -5,11 +5,15 @@ import {
   Patch, 
   Body, 
   Param, 
-  ParseIntPipe 
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { CreateSubscriptionInvoiceDto } from './dto/create-subscription-invoice.dto';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 import { InvoiceResponseDto } from './dto/invoice-response.dto';
 
@@ -26,10 +30,21 @@ export class BillingController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all invoices' })
+  @ApiOperation({ summary: 'Get all invoices with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20, max: 100)' })
+  @ApiQuery({ name: 'includeCancelled', required: false, type: Boolean, description: 'Include cancelled invoices (default: false)' })
   @ApiResponse({ status: 200, description: 'Invoices retrieved successfully' })
-  async getAllInvoices() {
-    return this.billingService.getAllInvoices();
+  async getAllInvoices(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('includeCancelled') includeCancelled?: string,
+  ) {
+    return this.billingService.getAllInvoices({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      includeCancelled: includeCancelled === 'true',
+    });
   }
 
   @Get(':id')

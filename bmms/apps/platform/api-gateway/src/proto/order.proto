@@ -4,9 +4,9 @@ package order;
 
 service OrderService {
   rpc CreateOrder (CreateOrderRequest) returns (OrderResponse);
-  rpc GetAllOrders (GetAllOrdersRequest) returns (OrderListResponse);
+  rpc GetAllOrders (GetAllOrdersRequest) returns (GetAllOrdersResponse);
   rpc GetOrderById (GetOrderByIdRequest) returns (OrderResponse);
-  rpc GetOrdersByCustomer (GetOrdersByCustomerRequest) returns (OrderListResponse);
+  rpc GetOrdersByCustomer (GetOrdersByCustomerRequest) returns (GetAllOrdersResponse);
   rpc UpdateOrderStatus (UpdateOrderStatusRequest) returns (OrderResponse);
   rpc CancelOrder (CancelOrderRequest) returns (OrderResponse);
   rpc AddItemToOrder (AddItemToOrderRequest) returns (OrderResponse);
@@ -41,15 +41,15 @@ message GetOrderByIdRequest {
 }
 
 message GetOrdersByCustomerRequest {
-  string customerId = 1;
-  int32 page = 2;
-  int32 limit = 3;
+  int32 customerId = 1;
+  optional int32 page = 2;
+  optional int32 limit = 3;
 }
 
 message UpdateOrderStatusRequest {
   int32 id = 1;
   string status = 2;
-  string notes = 3;
+  optional string notes = 3;
 }
 
 message CancelOrderRequest {
@@ -59,18 +59,21 @@ message CancelOrderRequest {
 
 message AddItemToOrderRequest {
   int32 orderId = 1;
-  string productId = 2;
+  int32 productId = 2;
   int32 quantity = 3;
-  double unitPrice = 4;
+  double price = 4;
+  optional string notes = 5;
 }
 
 message OrderResponse {
   Order order = 1;
 }
 
-message OrderListResponse {
+message GetAllOrdersResponse {
   repeated Order orders = 1;
   int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
 }
 
 message Order {

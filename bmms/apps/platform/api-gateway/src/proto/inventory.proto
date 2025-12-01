@@ -6,7 +6,7 @@ service InventoryService {
   // Inventory CRUD
   rpc CreateInventory (CreateInventoryRequest) returns (InventoryResponse);
   rpc GetInventoryByProduct (ProductIdRequest) returns (InventoryResponse);
-  rpc GetAllInventory (Empty) returns (InventoryListResponse);
+  rpc GetAllInventory (PaginationRequest) returns (InventoryListResponse);
   rpc UpdateInventory (UpdateInventoryRequest) returns (InventoryResponse);
   
   // Stock Management
@@ -26,6 +26,11 @@ service InventoryService {
 
 // Common messages
 message Empty {}
+
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
 
 message MessageResponse {
   string message = 1;
@@ -76,6 +81,9 @@ message InventoryResponse {
 message InventoryListResponse {
   repeated Inventory items = 1;
   int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
 }
 
 // Stock adjustment messages

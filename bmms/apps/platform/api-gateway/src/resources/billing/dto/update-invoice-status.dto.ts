@@ -2,10 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum } from 'class-validator';
 
 export enum InvoiceStatus {
-  PENDING = 'pending',
+  DRAFT = 'draft',
+  SENT = 'sent',
+  VIEWED = 'viewed',
   PAID = 'paid',
+  OVERDUE = 'overdue',
   CANCELLED = 'cancelled',
-  REFUNDED = 'refunded',
 }
 
 export class UpdateInvoiceStatusDto {

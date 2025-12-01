@@ -4,10 +4,15 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 import { Inventory } from './inventory.entity';
 
 @Entity('inventory_reservations')
+@Index('idx_reservation_product', ['productId'])
+@Index('idx_reservation_order', ['orderId'])
+@Index('idx_reservation_status', ['status'])
+@Index('idx_reservation_product_order_status', ['productId', 'orderId', 'status'])
 export class InventoryReservation {
   @PrimaryGeneratedColumn()
   id: number;

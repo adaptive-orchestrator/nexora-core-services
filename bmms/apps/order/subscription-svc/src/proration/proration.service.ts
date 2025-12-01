@@ -54,18 +54,42 @@ export class ProrationService {
     // Ensure dates are Date objects
     const periodStart = new Date(currentPeriodStart);
     const periodEnd = new Date(currentPeriodEnd);
-    const effectiveDate = new Date(changeDate);
+    let effectiveDate = new Date(changeDate);
 
-    // Validate dates
-    if (effectiveDate < periodStart || effectiveDate > periodEnd) {
-      throw new Error('Change date must be within current billing period');
+    // Nới lỏng validation: Nếu changeDate nằm ngoài period, điều chỉnh về trong period
+    if (effectiveDate < periodStart) {
+      effectiveDate = periodStart;
+    }
+    if (effectiveDate > periodEnd) {
+      // Nếu đã qua period end, tạo period mới từ hôm nay
+      const newPeriodStart = new Date();
+      const newPeriodEnd = new Date();
+      if (billingCycle === 'monthly') {
+        newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
+      } else {
+        newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1);
+      }
+      
+      return {
+        creditAmount: 0,
+        creditDays: 0,
+        chargeAmount: this.roundToTwoDecimals(newAmount),
+        chargeDays: billingCycle === 'monthly' ? 30 : 365,
+        netAmount: this.roundToTwoDecimals(newAmount),
+        oldPlanDailyRate: 0,
+        newPlanDailyRate: this.roundToTwoDecimals(newAmount / (billingCycle === 'monthly' ? 30 : 365)),
+        remainingDays: billingCycle === 'monthly' ? 30 : 365,
+        totalDaysInPeriod: billingCycle === 'monthly' ? 30 : 365,
+        effectiveDate: newPeriodStart,
+        nextBillingDate: newPeriodEnd,
+      };
     }
 
     // Calculate total days in billing period
-    const totalDaysInPeriod = this.getDaysDifference(periodStart, periodEnd);
+    const totalDaysInPeriod = Math.max(1, this.getDaysDifference(periodStart, periodEnd));
 
     // Calculate remaining days from change date to period end
-    const remainingDays = this.getDaysDifference(effectiveDate, periodEnd);
+    const remainingDays = Math.max(0, this.getDaysDifference(effectiveDate, periodEnd));
 
     // Calculate daily rates
     const oldPlanDailyRate = oldAmount / totalDaysInPeriod;

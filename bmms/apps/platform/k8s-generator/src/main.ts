@@ -28,9 +28,6 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.listen(port);
   
-  console.log(`🚀 K8s Generator Service running on: http://localhost:${port}`);
-  console.log(`📥 Kafka consumer listening on: ${kafkaBroker}`);
-  console.log(`👥 Consumer group: k8s-generator-group`);
-  console.log(`📬 Topic: k8s.deployment.requests`);
+  console.log(`✅ K8s Generator Service | HTTP: http://localhost:${port} | Kafka: listening`);
 }
 bootstrap();

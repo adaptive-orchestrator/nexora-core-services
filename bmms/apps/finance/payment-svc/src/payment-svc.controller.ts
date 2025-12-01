@@ -5,15 +5,18 @@ import {
   Post,
   Body,
   Param,
+  Query,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PaymentService } from './payment-svc.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
+import { SubscriptionPaymentDto, SubscriptionPaymentResponseDto } from './dto/subscription-payment.dto';
 import { Payment } from './entities/payment.entity';
 
 @ApiTags('Payments')
@@ -25,9 +28,14 @@ export class PaymentController {
   // ⚠️ IMPORTANT: Route phải được order sao cho specific routes trước generic routes
   // Nếu `@Get()` đứng trước `@Get(':id')` sẽ không parse được :id
   @Get()
-  @ApiOperation({ summary: 'Danh sách tất cả các thanh toán' })
-  async list(): Promise<Payment[]> {
-    return this.paymentService.list();
+  @ApiOperation({ summary: 'Danh sách tất cả các thanh toán với pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang (mặc định: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số item mỗi trang (mặc định: 20, tối đa: 100)' })
+  async list(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.paymentService.list(page, limit);
   }
 
   // =================== PAYMENT STATISTICS ===================
@@ -46,6 +54,26 @@ export class PaymentController {
     @Param('invoiceId', ParseIntPipe) invoiceId: number,
   ): Promise<Payment[]> {
     return this.paymentService.getByInvoice(invoiceId);
+  }
+
+  // =================== SUBSCRIPTION PAYMENT ===================
+  // API thanh toán subscription - gọi trực tiếp từ frontend
+  // Sau này sẽ thay bằng VNPay/Momo integration
+  @Post('subscription/pay')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ 
+    summary: 'Thanh toán subscription',
+    description: 'API thanh toán subscription trực tiếp. Tạo invoice, xử lý thanh toán và emit event để activate subscription.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Thanh toán thành công', 
+    type: SubscriptionPaymentResponseDto 
+  })
+  async paySubscription(
+    @Body() dto: SubscriptionPaymentDto,
+  ): Promise<SubscriptionPaymentResponseDto> {
+    return this.paymentService.processSubscriptionPayment(dto);
   }
 
   // =================== GET PAYMENT BY ID ===================
@@ -207,9 +235,14 @@ export class PaymentController {
   }
 
   @GrpcMethod('PaymentService', 'GetAllPayments')
-  async grpcGetAllPayments() {
-    const payments = await this.paymentService.list();
-    return { payments };
+  async grpcGetAllPayments(data: { page?: number; limit?: number }) {
+    const page = data?.page || 1;
+    const limit = data?.limit || 20;
+    const result = await this.paymentService.list(page, limit);
+    return { 
+      payments: result.payments,
+      pagination: result.pagination,
+    };
   }
 
   @GrpcMethod('PaymentService', 'GetPaymentsByInvoice')

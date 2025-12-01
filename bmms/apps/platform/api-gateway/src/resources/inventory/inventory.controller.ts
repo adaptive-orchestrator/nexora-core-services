@@ -30,10 +30,17 @@ export class InventoryController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all inventory', description: 'Retrieve all inventory items' })
+  @ApiOperation({ summary: 'Get all inventory', description: 'Retrieve all inventory items with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
   @ApiOkResponse({ type: InventoryListResponseDto, description: 'Inventory items retrieved' })
-  async getAllInventory() {
-    return this.inventoryService.getAllInventory();
+  async getAllInventory(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? Number(page) : 1;
+    const limitNum = limit ? Number(limit) : 20;
+    return this.inventoryService.getAllInventory(pageNum, limitNum);
   }
 
   @Get('product/:productId')

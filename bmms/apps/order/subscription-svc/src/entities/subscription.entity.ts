@@ -75,9 +75,7 @@ export class Subscription {
   @Column({ type: 'json', nullable: true })
   metadata?: Record<string, any>;
 
-  @OneToMany(() => SubscriptionHistory, (history) => history.subscription, {
-    cascade: true,
-  })
+  @OneToMany(() => SubscriptionHistory, (history) => history.subscription)
   history: SubscriptionHistory[];
 
   @CreateDateColumn()

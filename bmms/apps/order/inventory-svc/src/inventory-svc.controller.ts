@@ -23,9 +23,11 @@ export class InventoryController {
   }
 
   @GrpcMethod('InventoryService', 'GetAllInventory')
-  async getAllInventory() {
-    const items = await this.service.listAll();
-    return { items, total: items.length };
+  async getAllInventory(data: { page?: number; limit?: number }) {
+    const page = data.page || 1;
+    const limit = data.limit || 20;
+    const result = await this.service.listAll(page, limit);
+    return result;
   }
 
   @GrpcMethod('InventoryService', 'AdjustStock')

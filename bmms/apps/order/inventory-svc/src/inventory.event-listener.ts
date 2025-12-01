@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import * as event from '@bmms/event';
+import { debug } from '@bmms/common';
 import { InventoryService } from './inventory-svc.service';
 
 @Controller()
@@ -12,17 +13,26 @@ export class InventoryEventListener {
   /** -------- Product Events -------- */
 
   @EventPattern(event.EventTopics.PRODUCT_CREATED)
-  async handleProductCreated(@Payload() event: event.ProductCreatedEvent) {
+  async handleProductCreated(@Payload() payload: any) {
     try {
-      this.logEvent(event);
-      const { id: productId, name } = event.data;
+      // Handle both wrapped event format and direct data format from Kafka
+      const eventData = payload?.data || payload?.value?.data || payload;
+      
+      if (!eventData || !eventData.id) {
+        debug.log('⚠️ PRODUCT_CREATED event missing data, skipping:', JSON.stringify(payload));
+        return;
+      }
+
+      const { id: productId, name } = eventData;
+      
+      debug.log(`📦 [INVENTORY] Processing PRODUCT_CREATED for product: ${name} (ID: ${productId})`);
 
       // Create initial inventory record
       await this.inventoryService.createInventoryForProduct(productId, 0, 10);
 
-      console.log(`✅ Inventory initialized for new product: ${name} (ID: ${productId})`);
+      debug.log(`✅ Inventory initialized for new product: ${name} (ID: ${productId})`);
     } catch (error) {
-      console.error('❌ Error handling PRODUCT_CREATED:', error);
+      debug.error('❌ Error handling PRODUCT_CREATED:', error);
     }
   }
 
@@ -34,7 +44,7 @@ export class InventoryEventListener {
       this.logEvent(event);
       const { orderId, orderNumber, items, customerId } = event.data;
 
-      console.log(`📦 Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
+      debug.log(`📦 Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
 
       const reservations: any[] = [];
       const reservedItems: Array<{ productId: number; quantity: number; reservationId: number }> = [];
@@ -59,35 +69,35 @@ export class InventoryEventListener {
             reservationId: reservation.id,
           });
 
-          console.log(`✅ Reserved ${quantity} units of product ${productId} for order ${orderNumber}`);
+          debug.log(`✅ Reserved ${quantity} units of product ${productId} for order ${orderNumber}`);
         } catch (error) {
-          console.error(`❌ Failed to reserve product ${productId} for order ${orderNumber}:`, error.message);
+          debug.error(`❌ Failed to reserve product ${productId} for order ${orderNumber}:`, error.message);
           
           // Compensation: Release already reserved items
           if (reservedItems.length > 0) {
-            console.log(`🔄 Rolling back ${reservedItems.length} reservations...`);
+            debug.log(`🔄 Rolling back ${reservedItems.length} reservations...`);
             try {
               await this.inventoryService.releaseReservations(orderId, 'reservation_failed');
             } catch (rollbackError) {
-              console.error('❌ Failed to rollback reservations:', rollbackError);
+              debug.error('❌ Failed to rollback reservations:', rollbackError);
             }
           }
           
           // Log failure (Order service should handle timeout and update status)
-          console.error(`🚨 Reservation failed for order ${orderNumber}. Order service should handle this.`);
+          debug.error(`🚨 Reservation failed for order ${orderNumber}. Order service should handle this.`);
           
           throw error;
         }
       }
 
-      console.log(`✅ All inventory reserved successfully for order ${orderNumber}`);
-      console.log(`📊 Total reservations: ${reservations.length}, Total items: ${reservedItems.length}`);
+      debug.log(`✅ All inventory reserved successfully for order ${orderNumber}`);
+      debug.log(`📊 Total reservations: ${reservations.length}, Total items: ${reservedItems.length}`);
       
       // Note: Individual inventory.reserved events already emitted by reserveStock()
       // Billing service will listen to those events
       
     } catch (error) {
-      console.error('❌ Error handling ORDER_CREATED:', error);
+      debug.error('❌ Error handling ORDER_CREATED:', error);
       // Error already logged and compensation already executed
     }
   }
@@ -101,9 +111,9 @@ export class InventoryEventListener {
       // Complete all reservations for order (convert reserved -> actual deduction)
       await this.inventoryService.completeReservations(orderId);
 
-      console.log(`✅ Completed inventory reservations for order ${orderId}`);
+      debug.log(`✅ Completed inventory reservations for order ${orderId}`);
     } catch (error) {
-      console.error('❌ Error handling ORDER_COMPLETED:', error);
+      debug.error('❌ Error handling ORDER_COMPLETED:', error);
     }
   }
 
@@ -116,19 +126,24 @@ export class InventoryEventListener {
       // Release all reserved inventory back to available stock
       await this.inventoryService.releaseReservations(orderId, 'order_cancelled');
 
-      console.log(`✅ Released inventory for cancelled order ${orderId} (Reason: ${reason})`);
+      debug.log(`✅ Released inventory for cancelled order ${orderId} (Reason: ${reason})`);
     } catch (error) {
-      console.error('❌ Error handling ORDER_CANCELLED:', error);
+      debug.error('❌ Error handling ORDER_CANCELLED:', error);
     }
   }
 
-   private logEvent<T extends { eventType: string; timestamp: Date | string }>(event: T) {
-    const timestamp = typeof event.timestamp === 'string'
-      ? new Date(event.timestamp).toISOString()
-      : event.timestamp.toISOString();
+   private logEvent<T extends { eventType: string; timestamp?: Date | string }>(event: T) {
+    let timestamp: string;
+    if (!event.timestamp) {
+      timestamp = new Date().toISOString();
+    } else if (typeof event.timestamp === 'string') {
+      timestamp = new Date(event.timestamp).toISOString();
+    } else {
+      timestamp = event.timestamp.toISOString();
+    }
 
-    console.log(
-      `🔥 [BILLING] Received event [${event.eventType}] at ${timestamp}`,
+    debug.log(
+      `🔥 [INVENTORY] Received event [${event.eventType}] at ${timestamp}`,
     );
   }
 }
