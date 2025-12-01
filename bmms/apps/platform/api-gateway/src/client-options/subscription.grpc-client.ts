@@ -2,8 +2,13 @@ import { ClientProviderOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { ChannelOptions } from '@grpc/grpc-js';
 
+// 10MB max message size
+const MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
+
 // 🚀 gRPC Channel Options for high concurrency
 const grpcChannelOptions: ChannelOptions = {
+  'grpc.max_receive_message_length': MAX_MESSAGE_SIZE,
+  'grpc.max_send_message_length': MAX_MESSAGE_SIZE,
   'grpc.keepalive_time_ms': 10000,           // Send keepalive every 10s
   'grpc.keepalive_timeout_ms': 5000,         // Wait 5s for keepalive response
   'grpc.keepalive_permit_without_calls': 1,  // Allow keepalive pings even without active calls

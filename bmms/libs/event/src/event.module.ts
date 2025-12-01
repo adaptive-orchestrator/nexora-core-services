@@ -1,6 +1,7 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { debug } from '@bmms/common';
 
 export interface EventModuleOptions {
   clientId: string; // Tên service (vd: 'customer-svc', 'order-svc')
@@ -25,9 +26,9 @@ export class EventModule {
                 .get<string>('KAFKA_BROKER', 'localhost:9092')
                 .split(',');
 
-              console.log(`🔗 Kafka Config for [${clientId}]:`);
-              console.log('Brokers:', brokers);
-              console.log('Consumer Group:', consumerGroupId);
+              debug.log(`🔗 Kafka Config for [${clientId}]:`);
+              debug.log('Brokers:', brokers);
+              debug.log('Consumer Group:', consumerGroupId);
 
               return {
                 transport: Transport.KAFKA,

@@ -26,7 +26,6 @@ export class AuthSvcController {
       if (signupDto.password.length < 8) {
         throw new RpcException('Password must be at least 8 characters long');
       }
-      console.log('Signup DTO received in controller:', signupDto);
       const result = await this.authService.signup(signupDto);
       return { message: 'User created successfully', user: result };
     } catch (error) {

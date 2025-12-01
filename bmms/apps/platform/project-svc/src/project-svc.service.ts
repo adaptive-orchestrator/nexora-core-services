@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
 import { Task } from './entities/task.entity';
+import { debug } from '@bmms/common';
 
 @Injectable()
 export class ProjectSvcService {
@@ -14,7 +15,7 @@ export class ProjectSvcService {
   ) {}
 
   async createProject(data: any) {
-    console.log('📝 [ProjectSvc] createProject data:', JSON.stringify(data));
+    debug.log('📝 [ProjectSvc] createProject data:', JSON.stringify(data));
     
     // Ensure ownerId is set - default to 1 if not provided
     const ownerId = data.user_id || data.userId || 1;
@@ -47,7 +48,7 @@ export class ProjectSvcService {
   }
 
   async getProjectById(id: number, userId: number) {
-    console.log(`📝 [ProjectSvc] getProjectById id=${id}, userId=${userId}`);
+    debug.log(`📝 [ProjectSvc] getProjectById id=${id}, userId=${userId}`);
     
     const project = await this.projectRepository.findOne({
       where: { id: Number(id) },
@@ -59,7 +60,7 @@ export class ProjectSvcService {
 
     // Compare as numbers to avoid type mismatch
     if (Number(project.ownerId) !== Number(userId)) {
-      console.log(`⚠️ [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
+      debug.log(`⚠️ [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -269,7 +270,7 @@ export class ProjectSvcService {
         startDate = project.startDate;
       }
     } catch (e) {
-      console.log('Error parsing startDate:', e);
+      debug.log('Error parsing startDate:', e);
     }
     
     try {
@@ -279,7 +280,7 @@ export class ProjectSvcService {
         endDate = project.endDate;
       }
     } catch (e) {
-      console.log('Error parsing endDate:', e);
+      debug.log('Error parsing endDate:', e);
     }
     
     return {
@@ -310,7 +311,7 @@ export class ProjectSvcService {
         dueDate = task.dueDate;
       }
     } catch (e) {
-      console.log('Error parsing dueDate:', e);
+      debug.log('Error parsing dueDate:', e);
     }
     
     return {

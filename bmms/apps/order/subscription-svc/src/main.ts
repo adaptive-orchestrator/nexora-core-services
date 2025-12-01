@@ -3,18 +3,14 @@ import { subscriptionSvcModule } from './subscription-svc.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
-import { ServerCredentials } from '@grpc/grpc-js';
 
 async function bootstrap() {
-  console.log('⏳ Starting Subscription Service...');
-  
   const app = await NestFactory.create(subscriptionSvcModule);
   const configService = app.get(ConfigService);
   
   const grpcUrl = configService.get<string>('GRPC_LISTEN_SUBSCRIPTION_URL') || '0.0.0.0:50059';
 
-  // ⭐ Connect Kafka microservice for events
-  console.log('⏳ Connecting Kafka consumer...');
+  // Connect Kafka microservice for events
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -28,17 +24,14 @@ async function bootstrap() {
       },
     },
   });
-  console.log('✅ Kafka consumer configured');
 
-  // ⭐ Connect gRPC microservice for API Gateway
-  console.log('⏳ Starting gRPC server...');
+  // Connect gRPC microservice for API Gateway
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
       package: 'subscription',
       protoPath: join(__dirname, './proto/subscription.proto'),
       url: grpcUrl,
-      // 🚀 gRPC Server Options for high concurrency
       channelOptions: {
         'grpc.max_concurrent_streams': 1000,
         'grpc.max_connection_idle_ms': 300000,
@@ -51,15 +44,11 @@ async function bootstrap() {
       },
     },
   });
-  console.log(`✅ gRPC server configured on ${grpcUrl}`);
 
   await app.startAllMicroservices();
   await app.init();
   
-  console.log(`🚀 Subscription Service is running!`);
-  console.log(`   gRPC: ${grpcUrl}`);
-  console.log(`   Kafka: listening for events`);
-  console.log(`🔧 Configured with high-concurrency settings (max_concurrent_streams: 1000)`);
+  console.log(`✅ Subscription Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 
 bootstrap();

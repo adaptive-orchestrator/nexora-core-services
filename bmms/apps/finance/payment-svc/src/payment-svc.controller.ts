@@ -5,12 +5,14 @@ import {
   Post,
   Body,
   Param,
+  Query,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PaymentService } from './payment-svc.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
@@ -26,9 +28,14 @@ export class PaymentController {
   // ⚠️ IMPORTANT: Route phải được order sao cho specific routes trước generic routes
   // Nếu `@Get()` đứng trước `@Get(':id')` sẽ không parse được :id
   @Get()
-  @ApiOperation({ summary: 'Danh sách tất cả các thanh toán' })
-  async list(): Promise<Payment[]> {
-    return this.paymentService.list();
+  @ApiOperation({ summary: 'Danh sách tất cả các thanh toán với pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang (mặc định: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số item mỗi trang (mặc định: 20, tối đa: 100)' })
+  async list(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.paymentService.list(page, limit);
   }
 
   // =================== PAYMENT STATISTICS ===================
@@ -228,9 +235,14 @@ export class PaymentController {
   }
 
   @GrpcMethod('PaymentService', 'GetAllPayments')
-  async grpcGetAllPayments() {
-    const payments = await this.paymentService.list();
-    return { payments };
+  async grpcGetAllPayments(data: { page?: number; limit?: number }) {
+    const page = data?.page || 1;
+    const limit = data?.limit || 20;
+    const result = await this.paymentService.list(page, limit);
+    return { 
+      payments: result.payments,
+      pagination: result.pagination,
+    };
   }
 
   @GrpcMethod('PaymentService', 'GetPaymentsByInvoice')

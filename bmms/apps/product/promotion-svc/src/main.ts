@@ -4,6 +4,8 @@ import { join } from 'path';
 import { PromotionSvcModule } from './promotion-svc.module';
 
 async function bootstrap() {
+  const grpcUrl = process.env.GRPC_LISTEN_PROMOTION_URL || '0.0.0.0:50061';
+  
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     PromotionSvcModule,
     {
@@ -11,13 +13,13 @@ async function bootstrap() {
       options: {
         package: 'promotion',
         protoPath: join(__dirname, './proto/promotion.proto'),
-        url: process.env.GRPC_LISTEN_PROMOTION_URL || '0.0.0.0:50061',
+        url: grpcUrl,
       },
     },
   );
 
   await app.listen();
-  console.log('🚀 Promotion Service is running on gRPC port 50061');
+  console.log(`✅ Promotion Service | gRPC: ${grpcUrl}`);
 }
 
 bootstrap();

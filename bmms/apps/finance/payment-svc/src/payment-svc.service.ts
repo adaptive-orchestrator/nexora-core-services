@@ -273,16 +273,49 @@ export class PaymentService {
 
   // =================== LIST ALL PAYMENTS ===================
   /**
-   * Danh sách tất cả các thanh toán
+   * Danh sách tất cả các thanh toán với pagination
    */
-  async list(): Promise<Payment[]> {
+  async list(page: number = 1, limit: number = 20): Promise<{
+    payments: Payment[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
     try {
+      // Ensure valid pagination params
+      const pageNum = Math.max(1, page);
+      const limitNum = Math.min(100, Math.max(1, limit)); // Max 100 items per page
+      const skip = (pageNum - 1) * limitNum;
+
+      // Get total count
+      const total = await this.paymentRepository.count();
+      const totalPages = Math.ceil(total / limitNum);
+
+      // Get paginated payments
       const payments = await this.paymentRepository.find({
         order: { createdAt: 'DESC' },
+        skip,
+        take: limitNum,
       });
 
-      this.logger.log(`📋 Retrieved ${payments.length} payments`);
-      return payments;
+      this.logger.log(`📋 Retrieved ${payments.length} payments (page ${pageNum}/${totalPages}, total: ${total})`);
+      
+      return {
+        payments,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1,
+        },
+      };
     } catch (error) {
       this.logger.error(`❌ Error listing payments:`, error);
       throw error;

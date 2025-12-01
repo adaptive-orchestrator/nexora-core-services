@@ -6,6 +6,7 @@ import { ClientKafka } from '@nestjs/microservices';
 import { CreateCustomerDto } from '../dto/create-customer.dto';
 import { UpdateCustomerDto } from '../dto/update-customer.dto';
 import { createBaseEvent, CustomerCreatedEvent, SegmentChangedEvent } from '@bmms/event';
+import { debug } from '@bmms/common';
 
 @Injectable()
 export class CustomerSvcService {
@@ -33,7 +34,7 @@ export class CustomerSvcService {
       },
     };
 
-    console.log('🚀 Emitting customer.created event:', event);
+    debug.log('🚀 Emitting customer.created event:', event);
     this.kafka.emit('customer.created', event);
 
     return customer;
@@ -114,7 +115,7 @@ export class CustomerSvcService {
       },
     };
 
-    console.log(`🚀 Emitting segment.changed event: ${previousSegment} → ${segment}`);
+    debug.log(`🚀 Emitting segment.changed event: ${previousSegment} → ${segment}`);
     this.kafka.emit('segment.changed', event);
 
     return saved;

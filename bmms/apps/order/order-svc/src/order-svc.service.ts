@@ -21,6 +21,7 @@ import { AddItemDto } from './dto/add-item.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { createBaseEvent } from '@bmms/event';
+import { debug } from '@bmms/common';
 
 interface ICustomerGrpcService {
   getCustomerById(data: { id: number }): any;
@@ -207,7 +208,7 @@ export class OrderSvcService implements OnModuleInit {
       }
     } catch (error) {
       // Log full error to help debugging gRPC/internal failures
-      console.error('[OrderSvc] validateCustomer error:', error);
+      debug.error('[OrderSvc] validateCustomer error:', error);
 
       if (error instanceof NotFoundException) throw error;
 
@@ -231,13 +232,13 @@ export class OrderSvcService implements OnModuleInit {
     
     for (const item of items) {
       try {
-        console.log(`🔵 [validateProducts] Checking product ${item.productId}...`);
+        debug.log(`🔵 [validateProducts] Checking product ${item.productId}...`);
         
         // Get product from catalogue
         const response: any = await firstValueFrom(
           this.catalogueService.getProductById({ id: item.productId })
         );
-        console.log(`✅ [validateProducts] Catalogue response:`, response);
+        debug.log(`✅ [validateProducts] Catalogue response:`, response);
 
         if (!response || !response.product) {
           throw new NotFoundException(`Product ${item.productId} not found in catalogue`);
@@ -252,10 +253,10 @@ export class OrderSvcService implements OnModuleInit {
           price: Number(product.price), // Use price from catalogue
           notes: item.notes,
         });
-        console.log(`✅ [validateProducts] Product ${item.productId} validated with price ${product.price}`);
+        debug.log(`✅ [validateProducts] Product ${item.productId} validated with price ${product.price}`);
 
       } catch (error) {
-        console.error(`❌ [validateProducts] Error validating product ${item.productId}:`, error);
+        debug.error(`❌ [validateProducts] Error validating product ${item.productId}:`, error);
         if (error instanceof NotFoundException) throw error;
         throw new BadRequestException(`Failed to validate product ${item.productId}: ${error.message}`);
       }

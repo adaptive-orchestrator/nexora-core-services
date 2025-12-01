@@ -1,6 +1,7 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { debug } from '@bmms/common';
 
 export interface DbModuleOptions {
   prefix: string; // Prefix cho env variables (vd: CUSTOMER_SVC, ORDER_SVC)
@@ -25,11 +26,11 @@ export class DbModule {
             const password = configService.get(`${prefix}_DB_PASS`);
             const database = configService.get(`${prefix}_DB_NAME`);
             
-            console.log(`🔍 DB Config for [${prefix}]:`);
-            console.log('Host:', host);
-            console.log('Port:', port);
-            console.log('User:', username);
-            console.log('Database:', database);
+            debug.log(`🔍 DB Config for [${prefix}]:`);
+            debug.log('Host:', host);
+            debug.log('Port:', port);
+            debug.log('User:', username);
+            debug.log('Database:', database);
             
             // Validate required fields
             if (!host || !username || !password || !database) {

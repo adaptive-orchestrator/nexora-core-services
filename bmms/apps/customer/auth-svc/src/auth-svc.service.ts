@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 import { createBaseEvent, UserCreatedEvent } from '@bmms/event';
+import { debug } from '@bmms/common';
 
 
 
@@ -37,7 +38,6 @@ export class AuthSvcService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', passwordMatch);
 
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid credentials');
