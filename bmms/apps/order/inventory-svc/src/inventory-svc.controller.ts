@@ -1,10 +1,15 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { InventoryService } from './inventory-svc.service';
 
 @Controller()
 export class InventoryController {
   constructor(private readonly service: InventoryService) {}
+
+  @Get('health')
+  health() {
+    return { status: 'ok', service: 'inventory-svc', timestamp: new Date().toISOString() };
+  }
 
   @GrpcMethod('InventoryService', 'CreateInventory')
   async createInventory(data: any) {

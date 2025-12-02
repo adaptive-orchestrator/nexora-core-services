@@ -35,8 +35,11 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.init();
-  
-  console.log(`✅ Inventory Service | gRPC: ${grpcUrl} | Kafka: listening`);
+
+  // Start HTTP server for health checks
+  const port = configService.get<number>('PORT') || 3013;
+  await app.listen(port);
+
+  console.log(`✅ Inventory Service | HTTP: ${port} | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();
