@@ -20,6 +20,9 @@ COPY --from=builder /usr/bmms/dist/apps/platform/code-indexer ./dist/apps/platfo
 COPY --from=builder /usr/bmms/dist/libs ./dist/libs/
 # COPY .env ./
 
+ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+
 ARG JWT_SECRET
 ENV JWT_SECRET=$JWT_SECRET
 
