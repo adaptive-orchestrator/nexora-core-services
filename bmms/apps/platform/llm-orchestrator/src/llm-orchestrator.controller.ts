@@ -231,4 +231,13 @@ export class LlmOrchestratorController {
   async listHelmReleases() {
     return this.helmIntegrationService.listHelmReleases();
   }
+
+  /**
+   * Get Helm configuration (for debugging)
+   * Returns configured paths for helm charts and changesets
+   */
+  @Get('/helm/config')
+  getHelmConfiguration() {
+    return this.helmIntegrationService.getConfiguration();
+  }
 }

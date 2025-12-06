@@ -64,6 +64,27 @@ export class HelmIntegrationService {
       'AUTO_DEPLOY_ENABLED',
       false,
     );
+
+    // Log configuration on startup
+    this.logger.log(`🔧 Helm Charts Path: ${this.helmChartsPath}`);
+    this.logger.log(`🔧 Changesets Path: ${this.changesetsPath}`);
+    this.logger.log(`🔧 Auto Deploy: ${this.autoDeployEnabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+
+  /**
+   * Get current Helm configuration paths
+   * Useful for debugging and health checks
+   */
+  getConfiguration(): {
+    helmChartsPath: string;
+    changesetsPath: string;
+    autoDeployEnabled: boolean;
+  } {
+    return {
+      helmChartsPath: this.helmChartsPath,
+      changesetsPath: this.changesetsPath,
+      autoDeployEnabled: this.autoDeployEnabled,
+    };
   }
 
   /**
