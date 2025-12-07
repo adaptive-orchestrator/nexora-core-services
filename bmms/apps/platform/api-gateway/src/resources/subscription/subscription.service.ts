@@ -48,7 +48,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async getSubscriptionsByCustomer(customerId: number) {
+  async getSubscriptionsByCustomer(customerId: string) {
     try {
       return await firstValueFrom(
         this.subscriptionService.getSubscriptionsByCustomer({ customerId })

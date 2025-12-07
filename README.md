@@ -20,7 +20,7 @@ bmms/
 │  │  ├─ api-gateway/            # REST API Gateway (Port 3000)
 │  │  ├─ llm-orchestrator/       # LLM + Helm Integration (Port 3019, gRPC: 50052)
 │  │  ├─ project-svc/            # Task/Project Management (Port 3021)
-│  │  ├─ rl-scheduler/           # Reinforcement Learning Scheduler
+│  │  ├─ job-scheduler/          # Background Job Scheduler (Renewals, Invoices)
 │  │  └─ code-indexer/           # Code Indexing for RAG
 │  │
 │  ├─ customer/                  # Customer Domain

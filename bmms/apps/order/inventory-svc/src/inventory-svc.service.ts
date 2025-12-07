@@ -34,7 +34,7 @@ import {
 } from '@bmms/event';
 
 interface CatalogueGrpcService {
-  getProductById(data: { id: number }): any;
+  getProductById(data: { id: string }): any;
 }
 
 @Injectable()
@@ -65,7 +65,7 @@ export class InventoryService implements OnModuleInit {
   /**
    * Validate product exists in catalogue
    */
-  private async validateProduct(productId: number): Promise<void> {
+  private async validateProduct(productId: string): Promise<void> {
     try {
       await firstValueFrom(
         this.catalogueGrpcService.getProductById({ id: productId }).pipe(
@@ -87,7 +87,7 @@ export class InventoryService implements OnModuleInit {
  * Create initial inventory for a new product
  */
   async createInventoryForProduct(
-    productId: number,
+    productId: string,
     initialQuantity: number = 0,
     reorderLevel: number = 10,
     ownerId?: string,
@@ -122,10 +122,10 @@ export class InventoryService implements OnModuleInit {
  * Reserve stock for an order
  */
   async reserveStock(
-    productId: number,
+    productId: string,
     quantity: number,
-    orderId: number,
-    customerId: number,
+    orderId: string,
+    customerId: string,
   ): Promise<InventoryReservation> {
     // Validate product exists in catalogue
     await this.validateProduct(productId);
@@ -189,7 +189,7 @@ export class InventoryService implements OnModuleInit {
   /**
  * Complete reservations when order is completed
  */
-  async completeReservations(orderId: number): Promise<void> {
+  async completeReservations(orderId: string): Promise<void> {
     const reservations = await this.reservationRepo.find({
       where: { orderId, status: 'active' }, // Đổi từ 'reserved' thành 'active'
     });
@@ -217,7 +217,7 @@ export class InventoryService implements OnModuleInit {
   /**
  * Release reservations when order is cancelled
  */
-  async releaseReservations(orderId: number, reason: string): Promise<void> {
+  async releaseReservations(orderId: string, reason: string): Promise<void> {
     const reservations = await this.reservationRepo.find({
       where: { orderId, status: 'active' }, // Đổi từ 'reserved' thành 'active'
     });
@@ -313,7 +313,7 @@ export class InventoryService implements OnModuleInit {
     return inventory;
   }
 
-  async getByProduct(productId: number, ownerId?: string): Promise<Inventory> {
+  async getByProduct(productId: string, ownerId?: string): Promise<Inventory> {
     const whereCondition: any = { productId };
     if (ownerId) {
       whereCondition.ownerId = ownerId;
@@ -372,7 +372,7 @@ export class InventoryService implements OnModuleInit {
   // ============= ADJUST STOCK =============
 
   async adjust(
-    productId: number,
+    productId: string,
     dto: AdjustInventoryDto,
   ): Promise<Inventory> {
     const inventory = await this.getByProduct(productId);
@@ -559,12 +559,12 @@ export class InventoryService implements OnModuleInit {
 
   // ============= UTILITIES =============
 
-  async checkStock(productId: number, requiredQuantity: number): Promise<boolean> {
+  async checkStock(productId: string, requiredQuantity: number): Promise<boolean> {
     const inventory = await this.getByProduct(productId);
     return inventory.getAvailableQuantity() >= requiredQuantity;
   }
 
-  async getInventoryHistory(productId: number, limit = 50): Promise<InventoryHistory[]> {
+  async getInventoryHistory(productId: string, limit = 50): Promise<InventoryHistory[]> {
     return this.historyRepo.find({
       where: { productId },
       order: { createdAt: 'DESC' },

@@ -7,16 +7,16 @@ import { BillingService } from './billing-svc.service';
 import * as event from '@bmms/event';
 
 interface IOrderGrpcService {
-  getOrderById(data: { id: number }): any;
+  getOrderById(data: { id: string }): any;
 }
 
 @Controller()
 export class BillingEventListener implements OnModuleInit {
   // Track reserved items by orderId for aggregation
-  private orderReservations: Map<number, Array<{
-    productId: number;
+  private orderReservations: Map<string, Array<{
+    productId: string;
     quantity: number;
-    reservationId: number;
+    reservationId: string;
   }>> = new Map();
 
   private orderService: IOrderGrpcService;
@@ -82,7 +82,7 @@ export class BillingEventListener implements OnModuleInit {
   /**
    * Try to create invoice if all reservations for order are ready
    */
-  private async tryCreateInvoiceForOrder(orderId: number, customerId: number) {
+  private async tryCreateInvoiceForOrder(orderId: string, customerId: string) {
     try {
       const reservations = this.orderReservations.get(orderId);
       

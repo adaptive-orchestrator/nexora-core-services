@@ -10,7 +10,7 @@ USE subscription_db;
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS addons (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   addon_key VARCHAR(100) UNIQUE NOT NULL COMMENT 'Unique identifier: extra_storage, ai_assistant, etc.',
   name VARCHAR(255) NOT NULL COMMENT 'Display name',
   description TEXT COMMENT 'Feature description',
@@ -30,10 +30,10 @@ CREATE TABLE IF NOT EXISTS addons (
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS user_addons (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  subscription_id INT NOT NULL COMMENT 'Reference to subscriptions table',
-  addon_id INT NOT NULL COMMENT 'Reference to addons table',
-  customer_id INT NOT NULL COMMENT 'Reference to customers table',
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  subscription_id CHAR(36) NOT NULL COMMENT 'Reference to subscriptions table',
+  addon_id CHAR(36) NOT NULL COMMENT 'Reference to addons table',
+  customer_id CHAR(36) NOT NULL COMMENT 'Reference to customers table',
   price DECIMAL(10, 2) NOT NULL COMMENT 'Price at time of purchase (locked)',
   status ENUM('active', 'cancelled', 'expired') DEFAULT 'active',
   purchased_at TIMESTAMP NOT NULL COMMENT 'When user purchased this addon',

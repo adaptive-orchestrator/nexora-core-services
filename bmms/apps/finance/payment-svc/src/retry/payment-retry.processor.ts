@@ -97,7 +97,7 @@ export class PaymentRetryProcessor {
    * 
    * @param retryId - Retry record ID
    */
-  private async processRetry(retryId: number): Promise<void> {
+  private async processRetry(retryId: string): Promise<void> {
     // Mark as processing
     await this.retryManager.markProcessing(retryId);
 

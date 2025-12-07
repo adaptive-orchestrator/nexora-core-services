@@ -16,7 +16,7 @@ export interface BaseEvent {
 export interface UserCreatedEvent extends BaseEvent {
   eventType: 'user.created';
   data: {
-    id: number;
+    id: string;
     email: string;
     name: string;
     createdAt: Date;
@@ -27,7 +27,7 @@ export interface UserCreatedEvent extends BaseEvent {
 export interface CustomerCreatedEvent extends BaseEvent {
   eventType: 'customer.created';
   data: {
-    id: number;
+    id: string;
     name: string;
     email: string;
     createdAt: Date;
@@ -38,7 +38,7 @@ export interface CustomerCreatedEvent extends BaseEvent {
 export interface CustomerUpdatedEvent extends BaseEvent {
   eventType: 'customer.updated';
   data: {
-    customerId: number;
+    customerId: string;
     changes: Record<string, any>;
   };
 }
@@ -46,7 +46,7 @@ export interface CustomerUpdatedEvent extends BaseEvent {
 export interface SegmentChangedEvent extends BaseEvent {
   eventType: 'segment.changed';
   data: {
-    customerId: number;
+    customerId: string;
     segment: string;
   };
 }
@@ -57,7 +57,7 @@ export interface SegmentChangedEvent extends BaseEvent {
 export interface ProductCreatedEvent extends BaseEvent {
   eventType: 'product.created';
   data: {
-    id: number;
+    id: string;
     name: string;
     price: number;
     sku: string;
@@ -69,7 +69,7 @@ export interface ProductCreatedEvent extends BaseEvent {
 export interface ProductUpdatedEvent extends BaseEvent {
   eventType: 'product.updated';
   data: {
-    productId: number;
+    productId: string;
     changes: Record<string, any>;
   };
 }
@@ -77,7 +77,7 @@ export interface ProductUpdatedEvent extends BaseEvent {
 export interface ProductDeletedEvent extends BaseEvent {
   eventType: 'product.deleted';
   data: {
-    productId: number;
+    productId: string;
   };
 }
 
@@ -87,11 +87,11 @@ export interface ProductDeletedEvent extends BaseEvent {
 export interface PlanCreatedEvent extends BaseEvent {
   eventType: 'plan.created';
   data: {
-    id: number;
+    id: string;
     name: string;
     price: number;
     billingCycle: 'monthly' | 'yearly';
-    featureIds: number[];
+    featureIds: string[];
     createdAt: Date;
   };
 }
@@ -99,7 +99,7 @@ export interface PlanCreatedEvent extends BaseEvent {
 export interface PlanUpdatedEvent extends BaseEvent {
   eventType: 'plan.updated';
   data: {
-    planId: number;
+    planId: string;
     changes: Record<string, any>;
   };
 }
@@ -107,7 +107,7 @@ export interface PlanUpdatedEvent extends BaseEvent {
 export interface PlanDeletedEvent extends BaseEvent {
   eventType: 'plan.deleted';
   data: {
-    planId: number;
+    planId: string;
   };
 }
 
@@ -117,7 +117,7 @@ export interface PlanDeletedEvent extends BaseEvent {
 export interface FeatureCreatedEvent extends BaseEvent {
   eventType: 'feature.created';
   data: {
-    id: number;
+    id: string;
     name: string;
     code: string;
     createdAt: Date;
@@ -127,7 +127,7 @@ export interface FeatureCreatedEvent extends BaseEvent {
 export interface FeatureUpdatedEvent extends BaseEvent {
   eventType: 'feature.updated';
   data: {
-    featureId: number;
+    featureId: string;
     changes: Record<string, any>;
   };
 }
@@ -135,7 +135,7 @@ export interface FeatureUpdatedEvent extends BaseEvent {
 export interface FeatureDeletedEvent extends BaseEvent {
   eventType: 'feature.deleted';
   data: {
-    featureId: number;
+    featureId: string;
   };
 }
 
@@ -145,8 +145,8 @@ export interface FeatureDeletedEvent extends BaseEvent {
 export interface InventoryCreatedEvent extends BaseEvent {
   eventType: 'inventory.created';
   data: {
-    id: number;
-    productId: number;
+    id: string;
+    productId: string;
     quantity: number;
     createdAt: Date;
   };
@@ -155,7 +155,7 @@ export interface InventoryCreatedEvent extends BaseEvent {
 export interface InventoryAdjustedEvent extends BaseEvent {
   eventType: 'inventory.adjusted';
   data: {
-    productId: number;
+    productId: string;
     previousQuantity: number;
     currentQuantity: number;
     adjustment: number;
@@ -166,20 +166,20 @@ export interface InventoryAdjustedEvent extends BaseEvent {
 export interface InventoryReservedEvent extends BaseEvent {
   eventType: 'inventory.reserved';
   data: {
-    reservationId: number;
-    productId: number;
+    reservationId: string;
+    productId: string;
     quantity: number;
-    orderId: number;
-    customerId: number;
+    orderId: string;
+    customerId: string;
   };
 }
 
 export interface InventoryReleasedEvent extends BaseEvent {
   eventType: 'inventory.released';
   data: {
-    productId: number;
+    productId: string;
     quantity: number;
-    orderId: number;
+    orderId: string;
     reason: 'order_cancelled' | 'order_completed' | 'manual_release';
   };
 }
@@ -187,7 +187,7 @@ export interface InventoryReleasedEvent extends BaseEvent {
 export interface InventoryLowStockEvent extends BaseEvent {
   eventType: 'inventory.low_stock';
   data: {
-    productId: number;
+    productId: string;
     currentQuantity: number;
     reorderLevel: number;
   };
@@ -199,11 +199,11 @@ export interface InventoryLowStockEvent extends BaseEvent {
 export interface OrderCreatedEvent extends BaseEvent {
   eventType: 'order.created';
   data: {
-    orderId: number;
+    orderId: string;
     orderNumber: string; 
-    customerId: number;
+    customerId: string;
     items: Array<{
-      productId: number;
+      productId: string;
       quantity: number;
       price: number;
     }>;
@@ -216,9 +216,9 @@ export interface OrderCreatedEvent extends BaseEvent {
 export interface OrderUpdatedEvent extends BaseEvent {
   eventType: 'order.updated';
   data: {
-    orderId: number;
+    orderId: string;
     orderNumber: string;
-    customerId: number;
+    customerId: string;
     previousStatus: string;
     newStatus: string;
     changes?: {
@@ -233,9 +233,9 @@ export interface OrderUpdatedEvent extends BaseEvent {
 export interface OrderCompletedEvent extends BaseEvent {
   eventType: 'order.completed';
   data: {
-    orderId: number;
+    orderId: string;
     orderNumber: string;
-    customerId: number;
+    customerId: string;
     totalAmount: number;
     completedAt: Date;
   };
@@ -244,9 +244,9 @@ export interface OrderCompletedEvent extends BaseEvent {
 export interface OrderCancelledEvent extends BaseEvent {
   eventType: 'order.cancelled';
   data: {
-    orderId: number;
+    orderId: string;
     orderNumber: string;
-    customerId: number;
+    customerId: string;
     reason: string;
   };
 }
@@ -258,11 +258,11 @@ export interface OrderCancelledEvent extends BaseEvent {
 export interface PaymentInitiatedEvent extends BaseEvent {
   eventType: 'payment.initiated';
   data: {
-    paymentId: number;
-    invoiceId: number;
+    paymentId: string;
+    invoiceId: string;
     invoiceNumber: string;
-    orderId: number;
-    customerId: number;
+    orderId: string;
+    customerId: string;
     amount: number;
     currency: string;
     method: string; // 'vnpay' | 'momo' | 'bank_transfer' | 'cash'
@@ -273,10 +273,10 @@ export interface PaymentInitiatedEvent extends BaseEvent {
 export interface PaymentSuccessEvent extends BaseEvent {
   eventType: 'payment.success';
   data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number;
-    customerId: number;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string;
+    customerId: string;
     amount: number;
     method: string;
     transactionId: string; // Transaction ID from payment gateway (VNPay, etc.)
@@ -287,10 +287,10 @@ export interface PaymentSuccessEvent extends BaseEvent {
 export interface PaymentFailedEvent extends BaseEvent {
   eventType: 'payment.failed';
   data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number;
-    customerId: number;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string;
+    customerId: string;
     amount: number;
     method: string;
     reason: string;
@@ -302,10 +302,10 @@ export interface PaymentFailedEvent extends BaseEvent {
 export interface PaymentRetryEvent extends BaseEvent {
   eventType: 'payment.retry';
   data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number;
-    customerId: number;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string;
+    customerId: string;
     amount: number;
     retryCount: number;
     previousFailureReason: string;
@@ -315,10 +315,10 @@ export interface PaymentRetryEvent extends BaseEvent {
 export interface PaymentRefundedEvent extends BaseEvent {
   eventType: 'payment.refunded';
   data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number;
-    customerId: number;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string;
+    customerId: string;
     refundAmount: number;
     reason: string;
     refundedAt: Date;
@@ -331,11 +331,11 @@ export interface PaymentRefundedEvent extends BaseEvent {
 export interface InvoiceCreatedEvent extends BaseEvent {
   eventType: 'invoice.created';
   data: {
-    invoiceId: number;
+    invoiceId: string;
     invoiceNumber: string;
-    orderId: number;
+    orderId: string;
     orderNumber: string;
-    customerId: number;
+    customerId: string;
     totalAmount: number;
     dueDate: Date;
     status: string;
@@ -346,9 +346,9 @@ export interface InvoiceCreatedEvent extends BaseEvent {
 export interface InvoiceUpdatedEvent extends BaseEvent {
   eventType: 'invoice.updated';
   data: {
-    invoiceId: number;
+    invoiceId: string;
     invoiceNumber: string;
-    customerId: number;
+    customerId: string;
     previousStatus: string;
     newStatus: string;
   };
@@ -357,9 +357,9 @@ export interface InvoiceUpdatedEvent extends BaseEvent {
 export interface InvoiceOverdueEvent extends BaseEvent {
   eventType: 'invoice.overdue';
   data: {
-    invoiceId: number;
+    invoiceId: string;
     invoiceNumber: string;
-    customerId: number;
+    customerId: string;
     dueAmount: number;
     dueDate: Date;
   };
@@ -371,9 +371,9 @@ export interface InvoiceOverdueEvent extends BaseEvent {
 export interface SubscriptionCreatedEvent extends BaseEvent {
   eventType: 'subscription.created';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     planName: string;
     status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
     currentPeriodStart: Date;
@@ -388,8 +388,8 @@ export interface SubscriptionCreatedEvent extends BaseEvent {
 export interface SubscriptionUpdatedEvent extends BaseEvent {
   eventType: 'subscription.updated';
   data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     changes: Record<string, any>;
     previousStatus?: string;
     newStatus?: string;
@@ -399,9 +399,9 @@ export interface SubscriptionUpdatedEvent extends BaseEvent {
 export interface SubscriptionRenewedEvent extends BaseEvent {
   eventType: 'subscription.renewed';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     previousPeriodEnd: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
@@ -413,9 +413,9 @@ export interface SubscriptionRenewedEvent extends BaseEvent {
 export interface SubscriptionCancelledEvent extends BaseEvent {
   eventType: 'subscription.cancelled';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     cancelledAt: Date;
     cancelAtPeriodEnd: boolean;
     reason?: string;
@@ -425,9 +425,9 @@ export interface SubscriptionCancelledEvent extends BaseEvent {
 export interface SubscriptionExpiredEvent extends BaseEvent {
   eventType: 'subscription.expired';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     expiredAt: Date;
     reason: 'trial_ended' | 'payment_failed' | 'cancelled' | 'admin_action';
   };
@@ -436,9 +436,9 @@ export interface SubscriptionExpiredEvent extends BaseEvent {
 export interface SubscriptionTrialStartedEvent extends BaseEvent {
   eventType: 'subscription.trial.started';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     trialStart: Date;
     trialEnd: Date;
     trialDays: number;
@@ -448,9 +448,9 @@ export interface SubscriptionTrialStartedEvent extends BaseEvent {
 export interface SubscriptionTrialEndingEvent extends BaseEvent {
   eventType: 'subscription.trial.ending';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     trialEnd: Date;
     daysRemaining: number;
   };
@@ -459,9 +459,9 @@ export interface SubscriptionTrialEndingEvent extends BaseEvent {
 export interface SubscriptionTrialEndedEvent extends BaseEvent {
   eventType: 'subscription.trial.ended';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    planId: number;
+    subscriptionId: string;
+    customerId: string;
+    planId: string;
     trialEnd: Date;
     convertedToActive: boolean;
   };
@@ -470,10 +470,10 @@ export interface SubscriptionTrialEndedEvent extends BaseEvent {
 export interface SubscriptionPlanChangedEvent extends BaseEvent {
   eventType: 'subscription.plan.changed';
   data: {
-    subscriptionId: number;
-    customerId: number;
-    previousPlanId: number;
-    newPlanId: number;
+    subscriptionId: string;
+    customerId: string;
+    previousPlanId: string;
+    newPlanId: string;
     previousAmount: number;
     newAmount: number;
     changeType: 'upgrade' | 'downgrade';
@@ -487,7 +487,7 @@ export interface SubscriptionPlanChangedEvent extends BaseEvent {
 export interface PromotionCreatedEvent extends BaseEvent {
   eventType: 'promotion.created';
   data: {
-    promotionId: number;
+    promotionId: string;
     code: string;
     type: 'percentage' | 'fixed_amount' | 'trial_extension';
     value: number;
@@ -500,11 +500,11 @@ export interface PromotionCreatedEvent extends BaseEvent {
 export interface PromotionAppliedEvent extends BaseEvent {
   eventType: 'promotion.applied';
   data: {
-    promotionId: number;
+    promotionId: string;
     code: string;
-    customerId: number;
-    subscriptionId?: number;
-    invoiceId?: number;
+    customerId: string;
+    subscriptionId?: string;
+    invoiceId?: string;
     discountAmount: number;
     appliedAt: Date;
   };
@@ -513,7 +513,7 @@ export interface PromotionAppliedEvent extends BaseEvent {
 export interface PromotionExpiredEvent extends BaseEvent {
   eventType: 'promotion.expired';
   data: {
-    promotionId: number;
+    promotionId: string;
     code: string;
     expiredAt: Date;
   };

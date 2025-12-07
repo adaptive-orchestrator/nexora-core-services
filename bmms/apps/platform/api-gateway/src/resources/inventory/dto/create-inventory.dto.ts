@@ -1,15 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsPositive, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, IsUUID } from 'class-validator';
 
 export class CreateInventoryDto {
   @ApiProperty({
     description: 'Product ID from catalogue',
-    example: 1,
-    type: Number,
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    type: String,
   })
-  @IsInt()
-  @IsPositive()
-  productId: number;
+  @IsUUID()
+  productId: string;
 
   @ApiProperty({
     description: 'Initial quantity',
@@ -38,7 +37,6 @@ export class CreateInventoryDto {
   })
   @IsOptional()
   @IsInt()
-  @IsPositive()
   reorderLevel?: number;
 
   @ApiPropertyOptional({
@@ -49,6 +47,5 @@ export class CreateInventoryDto {
   })
   @IsOptional()
   @IsInt()
-  @IsPositive()
   maxStock?: number;
 }

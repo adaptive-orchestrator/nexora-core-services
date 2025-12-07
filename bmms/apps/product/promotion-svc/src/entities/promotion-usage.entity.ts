@@ -10,21 +10,21 @@ import { Promotion } from './promotion.entity';
 
 @Entity('promotion_usage')
 export class PromotionUsage {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
-  promotionId: number;
+  promotionId: string;
 
   @ManyToOne(() => Promotion)
   @JoinColumn({ name: 'promotionId' })
   promotion: Promotion;
 
   @Column()
-  customerId: number;
+  customerId: string;
 
   @Column({ nullable: true })
-  subscriptionId: number;
+  subscriptionId: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   discountAmount: number; // Số tiền đã giảm

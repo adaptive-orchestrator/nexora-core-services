@@ -253,13 +253,13 @@
         ]
       }
     },
-    "rl-scheduler": {
+    "job-scheduler": {
       "type": "application",
-      "root": "apps/platform/rl-scheduler",
+      "root": "apps/platform/job-scheduler",
       "entryFile": "main",
-      "sourceRoot": "apps/platform/rl-scheduler/src",
+      "sourceRoot": "apps/platform/job-scheduler/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/platform/rl-scheduler/tsconfig.app.json"
+        "tsConfigPath": "apps/platform/job-scheduler/tsconfig.app.json"
       }
     },
     "subscription-svc": {

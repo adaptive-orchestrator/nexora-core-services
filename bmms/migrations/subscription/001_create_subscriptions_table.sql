@@ -9,9 +9,9 @@ USE subscription_db;
 
 -- Create subscriptions table
 CREATE TABLE IF NOT EXISTS subscriptions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    customerId INT NOT NULL,
-    planId INT NOT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    customerId CHAR(36) NOT NULL,
+    planId CHAR(36) NOT NULL,
     planName VARCHAR(255) NULL,
     amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
     billingCycle ENUM('monthly', 'yearly') NOT NULL DEFAULT 'monthly',

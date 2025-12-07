@@ -37,9 +37,9 @@ export class PaymentRetryManager {
    * @returns Created retry record
    */
   async scheduleRetry(
-    paymentId: number,
-    invoiceId: number,
-    subscriptionId: number,
+    paymentId: string,
+    invoiceId: string,
+    subscriptionId: string,
     failureReason: string,
   ): Promise<PaymentRetry> {
     this.logger.log(`[Payment] Scheduling retry for payment ${paymentId}`);
@@ -98,7 +98,7 @@ export class PaymentRetryManager {
    * @returns Updated retry record
    */
   async recordAttempt(
-    retryId: number,
+    retryId: string,
     success: boolean,
     error?: string,
   ): Promise<PaymentRetry> {
@@ -210,7 +210,7 @@ export class PaymentRetryManager {
    * 
    * @param retryId - Retry record ID
    */
-  async markProcessing(retryId: number): Promise<void> {
+  async markProcessing(retryId: string): Promise<void> {
     await this.retryRepository.update(retryId, {
       status: 'retrying',
     });
@@ -222,7 +222,7 @@ export class PaymentRetryManager {
    * @param paymentId - Payment ID
    * @returns Updated retry record
    */
-  async cancelRetry(paymentId: number): Promise<PaymentRetry | null> {
+  async cancelRetry(paymentId: string): Promise<PaymentRetry | null> {
     const retry = await this.retryRepository.findOne({
       where: { paymentId },
     });
@@ -247,7 +247,7 @@ export class PaymentRetryManager {
    * @param paymentId - Payment ID
    * @returns Retry status or null
    */
-  async getRetryStatus(paymentId: number) {
+  async getRetryStatus(paymentId: string) {
     const retry = await this.retryRepository.findOne({
       where: { paymentId },
     });
@@ -271,7 +271,7 @@ export class PaymentRetryManager {
    * @param subscriptionId - Subscription ID
    * @returns List of retry records
    */
-  async getSubscriptionRetries(subscriptionId: number): Promise<PaymentRetry[]> {
+  async getSubscriptionRetries(subscriptionId: string): Promise<PaymentRetry[]> {
     return this.retryRepository.find({
       where: { subscriptionId },
       order: { createdAt: 'DESC' },

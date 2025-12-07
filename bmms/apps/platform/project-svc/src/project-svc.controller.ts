@@ -12,13 +12,13 @@ export class ProjectSvcController {
   }
 
   @GrpcMethod('ProjectService', 'GetProjectsByUser')
-  async getProjectsByUser(data: { user_id: number }) {
+  async getProjectsByUser(data: { user_id: string }) {
     const projects = await this.projectService.getProjectsByUser(data.user_id);
     return { projects };
   }
 
   @GrpcMethod('ProjectService', 'GetProjectById')
-  async getProjectById(data: { id: number; user_id: number }) {
+  async getProjectById(data: { id: string; user_id: string }) {
     return this.projectService.getProjectById(data.id, data.user_id);
   }
 
@@ -28,7 +28,7 @@ export class ProjectSvcController {
   }
 
   @GrpcMethod('ProjectService', 'DeleteProject')
-  async deleteProject(data: { id: number; user_id: number }) {
+  async deleteProject(data: { id: string; user_id: string }) {
     await this.projectService.deleteProject(data.id, data.user_id);
     return { message: 'Project deleted successfully' };
   }
@@ -41,7 +41,7 @@ export class ProjectSvcController {
   }
 
   @GrpcMethod('ProjectService', 'GetProjectTasks')
-  async getProjectTasks(data: { project_id: number; user_id: number }) {
+  async getProjectTasks(data: { project_id: string; user_id: string }) {
     const tasks = await this.projectService.getProjectTasks(data.project_id, data.user_id);
     return { tasks };
   }
@@ -52,13 +52,13 @@ export class ProjectSvcController {
   }
 
   @GrpcMethod('ProjectService', 'DeleteTask')
-  async deleteTask(data: { id: number; user_id: number }) {
+  async deleteTask(data: { id: string; user_id: string }) {
     await this.projectService.deleteTask(data.id, data.user_id);
     return { message: 'Task deleted successfully' };
   }
 
   @GrpcMethod('ProjectService', 'GetProjectAnalytics')
-  async getProjectAnalytics(data: { id: number; user_id: number }) {
+  async getProjectAnalytics(data: { id: string; user_id: string }) {
     return this.projectService.getProjectAnalytics(data.id, data.user_id);
   }
 }

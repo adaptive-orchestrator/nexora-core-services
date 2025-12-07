@@ -2,6 +2,7 @@ import { Module, DynamicModule } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { debug } from '@bmms/common';
+import { Partitioners } from 'kafkajs';
 
 export interface EventModuleOptions {
   clientId: string; // Tên service (vd: 'customer-svc', 'order-svc')
@@ -43,6 +44,7 @@ export class EventModule {
                   },
                   producer: {
                     allowAutoTopicCreation: true,
+                    createPartitioner: Partitioners.LegacyPartitioner,
                   },
                 },
               };
@@ -71,6 +73,7 @@ export class EventModule {
                   },
                   producer: {
                     allowAutoTopicCreation: true,
+                    createPartitioner: Partitioners.LegacyPartitioner,
                   },
                 },
               };

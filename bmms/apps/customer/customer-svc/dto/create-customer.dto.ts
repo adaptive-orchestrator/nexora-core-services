@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateCustomerDto {
   @IsNotEmpty()
@@ -9,8 +9,8 @@ export class CreateCustomerDto {
   email!: string;
 
   @IsOptional()
-  @IsNumber()
-  userId?: number;
+  @IsUUID()
+  userId?: string;
 
   @IsOptional()
   @IsString()

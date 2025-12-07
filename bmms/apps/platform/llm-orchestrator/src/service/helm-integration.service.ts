@@ -52,18 +52,34 @@ export class HelmIntegrationService {
   private readonly helmChartsPath: string;
   private readonly changesetsPath: string;
   private readonly autoDeployEnabled: boolean;
+  private readonly defaultDryRun: boolean;
 
   constructor(private configService: ConfigService) {
-    // Path to helm charts (can be configured via env)
+    // Path to helm charts in infrastructure repo
+    // Mount path: /app/helm-charts → infrastructure/aws/project-1/Cloudformation/k8s-generated/helm
     this.helmChartsPath = this.configService.get<string>(
       'HELM_CHARTS_PATH',
-      '/app/helm-charts', // Default path in container
+      '/app/helm-charts',
     );
+    // Changesets directory for switch-to-{model}.yaml files
     this.changesetsPath = join(this.helmChartsPath, 'changesets');
+    
+    // Auto-deploy: if true, will execute helm upgrade commands
     this.autoDeployEnabled = this.configService.get<boolean>(
       'AUTO_DEPLOY_ENABLED',
       false,
     );
+    
+    // Default dry-run mode: if true, triggerDeployment defaults to dry-run
+    this.defaultDryRun = this.configService.get<boolean>(
+      'DEFAULT_DRY_RUN',
+      true,
+    );
+    
+    this.logger.log(`[HelmIntegration] Initialized with:`);
+    this.logger.log(`  - HELM_CHARTS_PATH: ${this.helmChartsPath}`);
+    this.logger.log(`  - AUTO_DEPLOY_ENABLED: ${this.autoDeployEnabled}`);
+    this.logger.log(`  - DEFAULT_DRY_RUN: ${this.defaultDryRun}`);
   }
 
   /**
@@ -159,14 +175,17 @@ export class HelmIntegrationService {
 
   /**
    * Save changeset YAML to file
+   * Saves to helmChartsPath/changesets/ with format switch-to-{model}.yaml
+   * Compatible with infrastructure repo's update_model.sh script
    * @param changeset - Helm changeset
    * @param filename - Optional custom filename
    * @returns Path to saved file
    */
   async saveChangeset(changeset: HelmChangeset, filename?: string): Promise<string> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const file = filename || `changeset-${changeset.global.businessModel}-${timestamp}.yaml`;
-    const outputDir = join(process.cwd(), 'helm_changesets');
+    // Use switch-to-{model}.yaml format to be compatible with infrastructure scripts
+    const file = filename || `switch-to-${changeset.global.businessModel}.yaml`;
+    // Save to changesets/ directory inside helmChartsPath
+    const outputDir = this.changesetsPath;
     const filePath = join(outputDir, file);
 
     // Create directory if not exists
@@ -188,10 +207,12 @@ export class HelmIntegrationService {
   /**
    * Trigger Helm deployment using shell command
    * @param llmResponse - LLM response containing changeset
-   * @param dryRun - If true, only generate files without deploying
+   * @param dryRun - If true, only generate files without deploying (uses DEFAULT_DRY_RUN env if not specified)
    */
-  async triggerDeployment(llmResponse: any, dryRun = false): Promise<any> {
-    const mode = dryRun ? 'DRY-RUN' : 'DEPLOY';
+  async triggerDeployment(llmResponse: any, dryRun?: boolean): Promise<any> {
+    // Use provided dryRun value, or fall back to defaultDryRun config
+    const isDryRun = dryRun ?? this.defaultDryRun;
+    const mode = isDryRun ? 'DRY-RUN' : 'DEPLOY';
     this.logger.log(`[LLM] [${mode}] Starting Helm deployment...`);
 
     try {
@@ -202,14 +223,14 @@ export class HelmIntegrationService {
       const changesetPath = await this.saveChangeset(changeset);
 
       // 3. If dry run, just return the changeset
-      if (dryRun) {
-        this.logger.log(`[LLM] [DRY-RUN] Changeset generated successfully`);
+      if (isDryRun) {
+        this.logger.log(`[LLM] [DRY-RUN] Changeset generated and saved to: ${changesetPath}`);
         return {
           success: true,
           dryRun: true,
           changeset,
           changesetPath,
-          message: 'Changeset generated (dry-run mode)',
+          message: `Changeset generated (dry-run mode). File saved to: ${changesetPath}`,
         };
       }
 

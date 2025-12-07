@@ -10,11 +10,11 @@ import { Subscription } from './subscription.entity';
 
 @Entity('subscription_history')
 export class SubscriptionHistory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  subscriptionId: number;
+  @Column('uuid')
+  subscriptionId: string;
 
   @Column()
   action: string; // 'created', 'renewed', 'cancelled', 'status_changed', 'plan_changed', etc.
@@ -25,11 +25,11 @@ export class SubscriptionHistory {
   @Column({ nullable: true })
   newStatus?: string;
 
-  @Column({ nullable: true })
-  previousPlanId?: number;
+  @Column({ type: 'uuid', nullable: true })
+  previousPlanId?: string;
 
-  @Column({ nullable: true })
-  newPlanId?: number;
+  @Column({ type: 'uuid', nullable: true })
+  newPlanId?: string;
 
   @Column({ type: 'text', nullable: true })
   details?: string;

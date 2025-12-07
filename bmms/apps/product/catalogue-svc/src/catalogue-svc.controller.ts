@@ -29,7 +29,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetProductById')
-  async getProductById(data: { id: number }) {
+  async getProductById(data: { id: string }) {
     try {
       const product = await this.service.findProductById(data.id);
       return { product, message: 'Product found' };
@@ -60,7 +60,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetPlanById')
-  async getPlanById(data: { id: number }) {
+  async getPlanById(data: { id: string }) {
     const plan = await this.service.findPlanById(data.id);
     return { plan, message: 'Plan found' };
   }
@@ -79,7 +79,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetFeatureById')
-  async getFeatureById(data: { id: number }) {
+  async getFeatureById(data: { id: string }) {
     const feature = await this.service.findFeatureById(data.id);
     return { feature, message: 'Feature found' };
   }

@@ -40,7 +40,7 @@ export class LlmOutputValidator {
     'APIGatewayService',
     'LLMOrchestratorService',
     'CodeIndexerService',
-    'RLSchedulerService',
+    'JobSchedulerService',
   ];
 
   // Business model to required services mapping

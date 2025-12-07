@@ -55,7 +55,7 @@ export class InventoryController {
     @Param('productId') productId: string,
   ) {
     const ownerId = String(getUserIdAsCustomerId(user));
-    return this.inventoryService.getInventoryByProduct(Number(productId), ownerId);
+    return this.inventoryService.getInventoryByProduct(productId, ownerId);
   }
 
   @Post('my')
@@ -113,7 +113,7 @@ export class InventoryController {
   @ApiOkResponse({ type: CreateInventoryResponseDto, description: 'Inventory retrieved' })
   @ApiNotFoundResponse({ type: InventoryErrorResponseDto, description: 'Inventory not found' })
   async getInventoryByProduct(@Param('productId') productId: string) {
-    return this.inventoryService.getInventoryByProduct(Number(productId));
+    return this.inventoryService.getInventoryByProduct(productId);
   }
 
   @Post('product/:productId/adjust')
@@ -126,7 +126,7 @@ export class InventoryController {
   @ApiBadRequestResponse({ type: InventoryErrorResponseDto, description: 'Invalid adjustment' })
   async adjustStock(@Param('productId') productId: string, @Body(ValidationPipe) body: AdjustStockDto) {
     return this.inventoryService.adjustStock({
-      productId: Number(productId),
+      productId: productId,
       ...body,
     });
   }
@@ -150,7 +150,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Release reservation', description: 'Release a stock reservation' })
   @ApiOkResponse({ description: 'Reservation released' })
   async releaseReservation(@Param('reservationId') reservationId: string) {
-    return this.inventoryService.releaseStock(Number(reservationId));
+    return this.inventoryService.releaseStock(reservationId);
   }
 
   @Get('check-availability/:productId')
@@ -164,7 +164,7 @@ export class InventoryController {
     @Param('productId') productId: string,
     @Query('quantity') quantity: string,
   ) {
-    return this.inventoryService.checkAvailability(Number(productId), Number(quantity));
+    return this.inventoryService.checkAvailability(productId, Number(quantity));
   }
 
   @Get('product/:productId/history')
@@ -174,7 +174,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Get inventory history', description: 'Retrieve inventory adjustment history' })
   @ApiOkResponse({ description: 'History retrieved' })
   async getInventoryHistory(@Param('productId') productId: string) {
-    return this.inventoryService.getInventoryHistory(Number(productId));
+    return this.inventoryService.getInventoryHistory(productId);
   }
 
   @Get('low-stock')

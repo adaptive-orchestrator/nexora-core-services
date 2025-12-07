@@ -11,9 +11,9 @@ interface SubscriptionPaymentSuccessEvent {
   timestamp: Date | string;
   source: string;
   data: {
-    paymentId: number;
-    subscriptionId: number;
-    customerId: number;
+    paymentId: string;
+    subscriptionId: string;
+    customerId: string;
     amount: number;
     currency: string;
     method: string;
@@ -29,8 +29,8 @@ interface SubscriptionPaymentFailedEvent {
   timestamp: Date | string;
   source: string;
   data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     amount: number;
     reason: string;
     canRetry: boolean;

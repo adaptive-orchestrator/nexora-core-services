@@ -21,31 +21,31 @@ export class OrderSvcController {
   }
 
   @GrpcMethod('OrderService', 'GetOrderById')
-  async getOrderById(data: { id: number }) {
+  async getOrderById(data: { id: string }) {
     const order = await this.service.getById(data.id);
     return { order };
   }
 
   @GrpcMethod('OrderService', 'GetOrdersByCustomer')
-  async getOrdersByCustomer(data: { customerId: number; page?: number; limit?: number }) {
+  async getOrdersByCustomer(data: { customerId: string; page?: number; limit?: number }) {
     const orders = await this.service.listByCustomer(data.customerId);
     return { orders, total: orders.length, page: data.page || 1, limit: data.limit || 10 };
   }
 
   @GrpcMethod('OrderService', 'UpdateOrderStatus')
-  async updateOrderStatus(data: { id: number; status: string }) {
+  async updateOrderStatus(data: { id: string; status: string }) {
     const order = await this.service.updateStatus(data.id, { status: data.status } as UpdateStatusDto);
     return { order };
   }
 
   @GrpcMethod('OrderService', 'CancelOrder')
-  async cancelOrder(data: { id: number; reason?: string }) {
+  async cancelOrder(data: { id: string; reason?: string }) {
     const order = await this.service.cancel(data.id, data.reason);
     return { order };
   }
 
   @GrpcMethod('OrderService', 'AddItemToOrder')
-  async addItemToOrder(data: { orderId: number; productId: number; quantity: number; price: number }) {
+  async addItemToOrder(data: { orderId: string; productId: string; quantity: number; price: number }) {
     const order = await this.service.addItem(data.orderId, {
       productId: data.productId,
       quantity: data.quantity,

@@ -167,7 +167,7 @@ export class SubscriptionController {
     summary: 'Get all subscriptions for a customer',
     description: 'Retrieve all subscriptions (active, cancelled, expired) for a specific customer'
   })
-  @ApiParam({ name: 'customerId', description: 'Customer ID', example: 1 })
+  @ApiParam({ name: 'customerId', description: 'Customer ID (UUID)', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   @ApiResponse({ 
     status: 200, 
     description: 'Customer subscriptions retrieved successfully',
@@ -187,7 +187,7 @@ export class SubscriptionController {
   })
   async getSubscriptionsByCustomer(
     @CurrentUser() user: JwtUserPayload,
-    @Param('customerId', ParseIntPipe) customerId: number,
+    @Param('customerId') customerId: string,
   ) {
     // Only admin or the customer themselves can access subscriptions
     if (user.role !== 'admin' && user.userId !== customerId) {

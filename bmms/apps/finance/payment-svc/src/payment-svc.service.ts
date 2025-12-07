@@ -153,7 +153,7 @@ export class PaymentService {
 
       // Create payment record
       const payment = this.paymentRepository.create({
-        invoiceId: 0, // Will be updated when billing creates invoice
+        invoiceId: '', // Will be updated when billing creates invoice
         invoiceNumber: invoiceNumber,
         customerId: dto.customerId,
         totalAmount: dto.amount,
@@ -170,7 +170,7 @@ export class PaymentService {
       // Log payment history
       await this.logPaymentHistory(
         savedPayment.id,
-        0, // No invoice ID yet
+        '', // No invoice ID yet
         'success',
         `Subscription payment for ${dto.planName || 'subscription'} - Transaction: ${transactionId}`,
       );
@@ -204,7 +204,7 @@ export class PaymentService {
         message: 'Thanh toán thành công',
         transactionId: transactionId,
         paymentId: savedPayment.id,
-        invoiceId: 0, // Will be created by billing service
+        invoiceId: '', // Will be created by billing service
         paidAt: new Date(),
       };
 
@@ -234,7 +234,7 @@ export class PaymentService {
   /**
    * Lấy thông tin thanh toán theo ID
    */
-  async getById(id: number): Promise<Payment> {
+  async getById(id: string): Promise<Payment> {
     try {
       const payment = await this.paymentRepository.findOne({
         where: { id },
@@ -255,7 +255,7 @@ export class PaymentService {
   /**
    * Lấy danh sách thanh toán theo hóa đơn
    */
-  async getByInvoice(invoiceId: number): Promise<Payment[]> {
+  async getByInvoice(invoiceId: string): Promise<Payment[]> {
     try {
       this.logger.log(`[Payment] Getting payments for invoice ${invoiceId}`);
 
@@ -385,10 +385,10 @@ export class PaymentService {
    * Xử lý event INVOICE_CREATED từ Billing service
    */
   async registerInvoice(invoiceData: {
-    invoiceId: number;
+    invoiceId: string;
     invoiceNumber: string;
-    orderId?: number | null;  // Optional orderId
-    customerId: number;
+    orderId?: string | null;  // Optional orderId
+    customerId: string;
     totalAmount: number;
     dueDate: Date;
   }) {
@@ -443,7 +443,7 @@ export class PaymentService {
   /**
    * Tìm payment record theo invoice ID
    */
-  async findByInvoiceId(invoiceId: number) {
+  async findByInvoiceId(invoiceId: string) {
     return this.paymentRepository.findOne({
       where: { invoiceId },
     });
@@ -453,8 +453,8 @@ export class PaymentService {
    * Đánh dấu thanh toán thành công
    */
   async markPaymentSuccess(data: {
-    paymentId: number;
-    invoiceId: number;
+    paymentId: string;
+    invoiceId: string;
     amount: number;
     method?: string;  // Optional
     transactionId: string;
@@ -502,8 +502,8 @@ export class PaymentService {
    * Đánh dấu thanh toán thất bại
    */
   async markPaymentFailed(data: {
-    paymentId: number;
-    invoiceId: number;
+    paymentId: string;
+    invoiceId: string;
     reason: string;
     errorCode?: string;  // Optional
   }) {
@@ -545,7 +545,7 @@ export class PaymentService {
   /**
    * Cập nhật trạng thái hóa đơn
    */
-  async updateInvoiceStatus(invoiceId: number, status: string) {
+  async updateInvoiceStatus(invoiceId: string, status: string) {
     try {
       this.logger.log(
         `[Payment] Updating invoice ${invoiceId} status to ${status}`,
@@ -569,8 +569,8 @@ export class PaymentService {
    * Log payment history
    */
   private async logPaymentHistory(
-    paymentId: number,
-    invoiceId: number,
+    paymentId: string,
+    invoiceId: string,
     action: 'initiated' | 'processing' | 'success' | 'failed' | 'refunded',
     details?: string,
   ) {
@@ -598,10 +598,10 @@ export class PaymentService {
    * Create pending payment (stub for event listener)
    */
   async createPendingPayment(data: {
-    invoiceId: number;
+    invoiceId: string;
     invoiceNumber: string;
-    orderId: number | null;
-    customerId: number;
+    orderId: string | null;
+    customerId: string;
     amount: number;
     currency: string;
     method: string;
@@ -632,10 +632,10 @@ export class PaymentService {
    * Create retry payment attempt (stub for future VNPay integration)
    */
   async createRetryPayment(data: {
-    originalPaymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    originalPaymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     amount: number;
     retryCount: number;
   }): Promise<Payment> {
@@ -644,7 +644,7 @@ export class PaymentService {
     // TODO: Implement retry payment creation logic
     const payment = this.paymentRepository.create({
       invoiceId: data.invoiceId,
-      customerId: data.customerId || 0, // Use 0 as default if null
+      customerId: data.customerId || '', // Use empty string as default if null
       totalAmount: data.amount,
       status: 'initiated',
       createdAt: new Date(),
@@ -661,19 +661,17 @@ export class PaymentService {
    */
   async markPaymentRefunded(data: {
     paymentId: string;
-    invoiceId: number;
+    invoiceId: string;
     refundAmount: number;
     reason: string;
     refundedAt?: Date;  // Add optional refundedAt
   }): Promise<void> {
     this.logger.log(`[Payment] Marking payment ${data.paymentId} as refunded`);
     
-    const paymentId = parseInt(data.paymentId, 10);
-    
     // TODO: Implement refund logic
     // For now, mark as failed (since refunded is not in enum)
     await this.paymentRepository.update(
-      { id: paymentId },
+      { id: data.paymentId },
       { 
         status: 'failed', // Use 'failed' as closest enum value
         failureReason: `REFUNDED: ${data.reason}`,
@@ -682,7 +680,7 @@ export class PaymentService {
     );
 
     await this.logPaymentHistory(
-      paymentId,
+      data.paymentId,
       data.invoiceId,
       'refunded',
       `Refunded ${data.refundAmount} VND. Reason: ${data.reason}`,
@@ -697,10 +695,10 @@ export class PaymentService {
    * Emit payment.success event (for testing flow)
    */
   async emitPaymentSuccess(data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     amount: number;
     method: string;
     transactionId: string;
@@ -732,10 +730,10 @@ export class PaymentService {
    * Emit payment.failed event (for testing flow)
    */
   async emitPaymentFailed(data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     amount: number;
     method: string;
     reason: string;
@@ -769,10 +767,10 @@ export class PaymentService {
    * Emit payment.retry event (for testing flow)
    */
   async emitPaymentRetry(data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     amount: number;
     retryCount: number;
     previousFailureReason: string;
@@ -802,10 +800,10 @@ export class PaymentService {
    * Emit payment.initiated event (called from event listener)
    */
   async emitPaymentInitiated(data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     amount: number;
     currency: string;
     method: string;
@@ -838,10 +836,10 @@ export class PaymentService {
    * Emit payment.refunded event (for testing flow)
    */
   async emitPaymentRefunded(data: {
-    paymentId: number;
-    invoiceId: number;
-    orderId: number | null;
-    customerId: number | null;
+    paymentId: string;
+    invoiceId: string;
+    orderId: string | null;
+    customerId: string | null;
     refundAmount: number;
     reason: string;
     refundedAt?: Date;

@@ -1,13 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { IsOptional, IsBoolean, IsUUID } from 'class-validator';
 
 export class ChangePlanDto {
   @ApiProperty({
     description: 'New plan ID',
-    example: 3,
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   })
-  @IsNumber()
-  newPlanId: number;
+  @IsUUID()
+  newPlanId: string;
 
   @ApiProperty({
     description: 'Apply change immediately (true) or at end of billing period (false)',
