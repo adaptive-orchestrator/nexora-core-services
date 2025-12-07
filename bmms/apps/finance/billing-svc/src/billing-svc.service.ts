@@ -312,8 +312,22 @@ export class BillingService {
   // ============= STATUS MANAGEMENT =============
 
   async updateStatus(id: string, dto: UpdateInvoiceStatusDto): Promise<Invoice> {
-    const invoice = await this.getById(id);
+    // Don't load relations to avoid cascade update issues
+    const invoice = await this.invoiceRepo.findOne({ where: { id } });
+    
+    if (!invoice) {
+      throw new NotFoundException(`Invoice ${id} not found`);
+    }
+    
     const previousStatus = invoice.status;
+
+    // Validate status transitions
+    if (previousStatus === 'paid' && dto.status !== 'paid') {
+      throw new BadRequestException(`Cannot change status from 'paid' to '${dto.status}'`);
+    }
+    if (previousStatus === 'cancelled' && dto.status !== 'cancelled') {
+      throw new BadRequestException(`Cannot change status from 'cancelled' to '${dto.status}'`);
+    }
 
     invoice.status = dto.status;
 

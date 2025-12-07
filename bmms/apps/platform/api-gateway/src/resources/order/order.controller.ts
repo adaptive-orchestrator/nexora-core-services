@@ -7,7 +7,6 @@ import {
   Body, 
   Param, 
   Query,
-  ParseIntPipe,
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
@@ -35,11 +34,8 @@ export class OrderController {
     @Body() dto: CreateOrderDto,
     @CurrentUser() user: JwtUserPayload,
   ) {
-    // Ensure the order is created for the authenticated user's customer
-    // If customerId is not provided, use the userId as customerId
-    if (!dto.customerId && user) {
-      dto.customerId = user.userId;
-    }
+    console.log('[OrderController] Creating order for user:', user.userId);
+    console.log('[OrderController] Order customerId:', dto.customerId);
     return this.orderService.createOrder(dto);
   }
 
@@ -58,8 +54,7 @@ export class OrderController {
     @Query('limit') limit?: number,
   ) {
     // Get orders only for the authenticated user
-    const customerId = String(user.userId);
-    return this.orderService.getOrdersByCustomer(customerId, page, limit);
+    return this.orderService.getOrdersForUser(user.userId, page, limit);
   }
 
   @Get('my/:id')
@@ -71,7 +66,7 @@ export class OrderController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async getMyOrderById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const order: any = await this.orderService.getOrderById(id);
     
@@ -110,7 +105,7 @@ export class OrderController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async getOrderById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const order: any = await this.orderService.getOrderById(id);
     
@@ -150,7 +145,7 @@ export class OrderController {
   @ApiResponse({ status: 200, description: 'Order status updated', type: OrderResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
   async updateOrderStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.orderService.updateOrderStatus(id, dto);
@@ -165,7 +160,7 @@ export class OrderController {
   @ApiResponse({ status: 403, description: 'Cannot cancel other user orders' })
   async cancelOrder(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Query('reason') reason?: string,
   ) {
     // Verify the order belongs to the user before cancelling
@@ -185,7 +180,7 @@ export class OrderController {
   @ApiResponse({ status: 403, description: 'Cannot modify other user orders' })
   async addItemToOrder(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) orderId: number,
+    @Param('id') orderId: string,
     @Body() body: { productId: number | string; quantity: number; price?: number; unitPrice?: number },
   ) {
     // Verify the order belongs to the user before adding items

@@ -42,11 +42,12 @@ export class BillingService implements OnModuleInit {
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const invoiceData = {
-      orderId: dto.orderId || 0,
+      // orderId and ids are UUID strings in the new model
+      orderId: dto.orderId || '',
       orderNumber: dto.orderNumber || `INV-${Date.now()}`,
       customerId: dto.customerId,
       items: dto.items.map(item => ({
-        productId: item.productId || 0,
+        productId: item.productId,
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -76,12 +77,12 @@ export class BillingService implements OnModuleInit {
     return response;
   }
 
-  async getInvoiceById(id: number) {
+  async getInvoiceById(id: string) {
     const response: any = await firstValueFrom(this.billingService.getInvoiceById({ id }));
     return response.invoice;
   }
 
-  async updateInvoiceStatus(id: number, dto: UpdateInvoiceStatusDto) {
+  async updateInvoiceStatus(id: string, dto: UpdateInvoiceStatusDto) {
     const response: any = await firstValueFrom(
       this.billingService.updateInvoiceStatus({ 
         id, 
@@ -91,7 +92,7 @@ export class BillingService implements OnModuleInit {
     return response.invoice;
   }
 
-  async retryPayment(id: number) {
+  async retryPayment(id: string) {
     return firstValueFrom(this.billingService.retryPayment({ id }));
   }
 
@@ -133,7 +134,7 @@ export class BillingService implements OnModuleInit {
   /**
    * Get all invoices for a customer
    */
-  async getInvoicesByCustomer(customerId: number) {
+  async getInvoicesByCustomer(customerId: string) {
     try {
       const response: any = await firstValueFrom(
         this.billingService.getInvoicesByCustomer({ customerId })
@@ -147,7 +148,7 @@ export class BillingService implements OnModuleInit {
   /**
    * Get all invoices for a subscription
    */
-  async getInvoicesBySubscription(subscriptionId: number) {
+  async getInvoicesBySubscription(subscriptionId: string) {
     try {
       const response: any = await firstValueFrom(
         this.billingService.getInvoicesBySubscription({ subscriptionId })

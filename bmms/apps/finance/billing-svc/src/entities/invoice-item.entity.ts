@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Invoice } from './invoice.entity';
 
@@ -31,6 +32,7 @@ export class InvoiceItem {
   totalPrice: number;
 
   @ManyToOne(() => Invoice, (invoice) => invoice.items, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invoiceId' })
   invoice: Invoice;
 
   @CreateDateColumn()

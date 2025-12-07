@@ -10,6 +10,9 @@ export class OrderSvcController {
 
   @GrpcMethod('OrderService', 'CreateOrder')
   async createOrder(data: any) {
+    console.log('[OrderController] Received data:', JSON.stringify(data));
+    console.log('[OrderController] customerId:', data.customerId);
+    console.log('[OrderController] customerId type:', typeof data.customerId);
     const order = await this.service.create(data);
     return { order };
   }

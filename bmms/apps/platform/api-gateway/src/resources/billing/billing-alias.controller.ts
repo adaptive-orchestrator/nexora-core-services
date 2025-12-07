@@ -40,9 +40,9 @@ export class BillingAliasController {
     summary: 'Get all invoices for a customer',
     description: 'Retrieve all invoices for a specific customer'
   })
-  @ApiParam({ name: 'customerId', description: 'Customer ID', example: 1 })
+  @ApiParam({ name: 'customerId', description: 'Customer ID', example: '1402b11d-7939-4f1a-9cc0-ad5d89fa8009' })
   @ApiResponse({ status: 200, description: 'Invoices retrieved successfully' })
-  async getInvoicesByCustomer(@Param('customerId', ParseIntPipe) customerId: number) {
+  async getInvoicesByCustomer(@Param('customerId') customerId: string) {
     return this.billingService.getInvoicesByCustomer(customerId);
   }
 
@@ -51,9 +51,9 @@ export class BillingAliasController {
     summary: 'Get all invoices for a subscription',
     description: 'Retrieve all invoices for a specific subscription'
   })
-  @ApiParam({ name: 'subscriptionId', description: 'Subscription ID', example: 1 })
+  @ApiParam({ name: 'subscriptionId', description: 'Subscription ID', example: 'sub-uuid-example' })
   @ApiResponse({ status: 200, description: 'Invoices retrieved successfully' })
-  async getInvoicesBySubscription(@Param('subscriptionId', ParseIntPipe) subscriptionId: number) {
+  async getInvoicesBySubscription(@Param('subscriptionId') subscriptionId: string) {
     return this.billingService.getInvoicesBySubscription(subscriptionId);
   }
 }

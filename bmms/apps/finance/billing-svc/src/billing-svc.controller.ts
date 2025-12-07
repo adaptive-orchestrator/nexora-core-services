@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { BillingService } from './billing-svc.service';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
@@ -28,17 +28,17 @@ export class BillingController {
   }
 
   @Get(':id')
-  getById(@Param('id') id: string) {
+  getById(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.getById(id);
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body('status') status: UpdateInvoiceStatusDto) {
-    return this.service.updateStatus(id, status);
+  updateStatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceStatusDto) {
+    return this.service.updateStatus(id, dto);
   }
 
   @Post(':id/retry')
-  retryPayment(@Param('id') id: string) {
+  retryPayment(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.retryPayment(id);
   }
 

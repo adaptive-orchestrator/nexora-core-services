@@ -91,12 +91,14 @@ export class OrderSvcService implements OnModuleInit {
   // ============= CRUD =============
 
   async create(dto: CreateOrderDto): Promise<Order> {
-    //console.log('[OrderSvc] create START - dto:', JSON.stringify(dto));
+    console.log('[OrderSvc] create START - dto:', JSON.stringify(dto));
+    console.log('[OrderSvc] create dto.customerId:', dto.customerId);
+    console.log('[OrderSvc] create dto.customerId type:', typeof dto.customerId);
     
     // 1. Validate customer exists
-    //console.log('[OrderSvc] create Step 1: Validating customer...');
+    console.log('[OrderSvc] create Step 1: Validating customer...');
     await this.validateCustomer(dto.customerId);
-    //console.log('[OrderSvc] create Customer validation passed');
+    console.log('[OrderSvc] create Customer validation passed');
 
     // 2. Validate all products exist and get prices
     //console.log('[OrderSvc] create Step 2: Validating products...');
@@ -199,6 +201,9 @@ export class OrderSvcService implements OnModuleInit {
    * Validate customer exists
    */
   private async validateCustomer(customerId: string): Promise<void> {
+    console.log('[OrderSvc] validateCustomer called with customerId:', customerId);
+    console.log('[OrderSvc] validateCustomer customerId type:', typeof customerId);
+    console.log('[OrderSvc] Calling getCustomerById with payload:', JSON.stringify({ id: customerId }));
     try {
       const response: any = await firstValueFrom(
         this.customerService.getCustomerById({ id: customerId })

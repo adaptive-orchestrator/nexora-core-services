@@ -5,8 +5,7 @@ import {
   Patch,
   Body,
   Param,
-  ParseIntPipe,
-  HttpCode,
+    HttpCode,
   HttpStatus,
   UseGuards,
   ForbiddenException,
@@ -112,7 +111,7 @@ export class SubscriptionController {
   })
   async getMySubscriptionById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     
@@ -148,7 +147,7 @@ export class SubscriptionController {
   })
   async getSubscriptionById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     
@@ -223,7 +222,7 @@ export class SubscriptionController {
   })
   async cancelSubscription(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: CancelSubscriptionDto,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
@@ -261,7 +260,7 @@ export class SubscriptionController {
   })
   async renewSubscription(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     if (user.role !== 'admin' && subscription?.subscription?.customerId !== user.userId) {
@@ -298,7 +297,7 @@ export class SubscriptionController {
   })
   async activateSubscription(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     if (user.role !== 'admin' && subscription?.subscription?.customerId !== user.userId) {
@@ -334,7 +333,7 @@ export class SubscriptionController {
   })
   async changePlan(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: ChangePlanDto,
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
@@ -392,3 +391,5 @@ export class SubscriptionController {
     return this.subscriptionService.checkTrialExpiry();
   }
 }
+
+
