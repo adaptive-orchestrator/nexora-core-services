@@ -10,8 +10,8 @@ import { Task } from './task.entity';
 
 @Entity('projects')
 export class Project {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;
@@ -23,7 +23,7 @@ export class Project {
   status: string;
 
   @Column({ name: 'owner_id' })
-  ownerId: number;
+  ownerId: string;
 
   @Column({ name: 'owner_name', nullable: true })
   ownerName: string;

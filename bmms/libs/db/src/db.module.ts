@@ -57,8 +57,6 @@ export class DbModule {
                 queueLimit: 1000,           // Tăng queue lên 1000 để buffer requests
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 10000,
-                acquireTimeout: 120000,     // 120s timeout
-                timeout: 120000,
                 maxIdle: 50,                // Keep 50 idle connections
                 idleTimeout: 60000,
                 connectTimeout: 60000,      // Connection timeout

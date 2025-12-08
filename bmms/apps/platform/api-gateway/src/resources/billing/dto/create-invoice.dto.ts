@@ -1,12 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsString, IsOptional, IsArray, ValidateNested, IsDateString, IsEnum } from 'class-validator';
+import { IsNumber, IsString, IsOptional, IsArray, ValidateNested, IsDateString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class InvoiceItemInputDto {
-  @ApiPropertyOptional({ description: 'Product ID', example: 1 })
-  @IsNumber()
+  @ApiPropertyOptional({ description: 'Product ID', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @IsUUID()
   @IsOptional()
-  productId?: number;
+  productId?: string;
 
   @ApiProperty({ description: 'Item description', example: 'Product A' })
   @IsString()
@@ -26,19 +26,19 @@ export class InvoiceItemInputDto {
 }
 
 export class CreateInvoiceDto {
-  @ApiPropertyOptional({ description: 'Order ID (for retail orders)', example: 1 })
-  @IsNumber()
+  @ApiPropertyOptional({ description: 'Order ID (for retail orders)', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @IsUUID()
   @IsOptional()
-  orderId?: number;
+  orderId?: string;
 
   @ApiPropertyOptional({ description: 'Order Number', example: 'ORD-2025-001' })
   @IsString()
   @IsOptional()
   orderNumber?: string;
 
-  @ApiProperty({ description: 'Customer ID', example: 100 })
-  @IsNumber()
-  customerId: number;
+  @ApiProperty({ description: 'Customer ID', example: 'b2c3d4e5-f6a7-8901-bcde-f23456789012' })
+  @IsUUID()
+  customerId: string;
 
   @ApiProperty({ description: 'Invoice items', type: [InvoiceItemInputDto] })
   @IsArray()

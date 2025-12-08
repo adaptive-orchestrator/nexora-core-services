@@ -77,7 +77,7 @@ export class FreemiumPromotionStrategy implements IPromotionStrategy {
       // Check if promotion applies to these add-ons
       const eligibleAddonIds = promotion.specificPlanIds || [];
       const hasEligibleAddon = params.addonIds.some((id) =>
-        eligibleAddonIds.includes(Number(id)),
+        eligibleAddonIds.includes(String(id)),
       );
 
       if (eligibleAddonIds.length > 0 && !hasEligibleAddon) {

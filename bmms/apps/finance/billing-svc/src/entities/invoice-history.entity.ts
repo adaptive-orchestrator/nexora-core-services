@@ -2,11 +2,11 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 
 @Entity('invoice_history')
 export class InvoiceHistory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  invoiceId: number;
+  @Column('uuid')
+  invoiceId: string;
 
   @Column()
   invoiceNumber: string;

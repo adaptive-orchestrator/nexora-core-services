@@ -22,11 +22,11 @@ import { ProrationService } from './proration/proration.service';
 import { debug } from '@bmms/common';
 
 interface ICatalogueGrpcService {
-  getPlanById(data: { id: number }): any;
+  getPlanById(data: { id: string }): any;
 }
 
 interface ICustomerGrpcService {
-  getCustomerById(data: { id: number }): any;
+  getCustomerById(data: { id: string }): any;
 }
 
 @Injectable()
@@ -206,7 +206,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Get all subscriptions for a customer
    */
-  async listByCustomer(customerId: number): Promise<Subscription[]> {
+  async listByCustomer(customerId: string): Promise<Subscription[]> {
     return this.subscriptionRepo.find({
       where: { customerId },
       order: { createdAt: 'DESC' },
@@ -216,7 +216,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Get subscription by ID
    */
-  async findById(id: number): Promise<Subscription> {
+  async findById(id: string): Promise<Subscription> {
     const subscription = await this.subscriptionRepo.findOne({
       where: { id },
       relations: ['history'],
@@ -232,7 +232,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Activate a pending subscription (called after payment success)
    */
-  async activateSubscription(subscriptionId: number): Promise<Subscription> {
+  async activateSubscription(subscriptionId: string): Promise<Subscription> {
     const subscription = await this.findById(subscriptionId);
 
     if (subscription.status !== SubscriptionStatus.PENDING) {
@@ -349,7 +349,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Cancel a subscription
    */
-  async cancel(id: number, dto: CancelSubscriptionDto): Promise<Subscription> {
+  async cancel(id: string, dto: CancelSubscriptionDto): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (subscription.isCancelled()) {
@@ -403,7 +403,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Renew a subscription (called by scheduler or payment success event)
    */
 
-  async renew(id: number): Promise<Subscription> {
+  async renew(id: string): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.shouldBill()) {
@@ -461,7 +461,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Change plan (upgrade/downgrade)
    */
 
-  async changePlan(id: number, dto: ChangePlanDto): Promise<Subscription> {
+  async changePlan(id: string, dto: ChangePlanDto): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.isActive()) {
@@ -624,7 +624,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Update subscription status (used by event listeners)
    */
   async updateStatus(
-    id: number,
+    id: string,
     newStatus: SubscriptionStatus,
     reason?: string
   ): Promise<Subscription> {
@@ -681,7 +681,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Convert trial to active (called when payment succeeds after trial)
    */
-  async convertTrialToActive(id: number): Promise<Subscription> {
+  async convertTrialToActive(id: string): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.isOnTrial()) {

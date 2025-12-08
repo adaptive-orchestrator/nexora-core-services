@@ -40,7 +40,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async getSubscriptionById(id: number) {
+  async getSubscriptionById(id: string) {
     try {
       return await firstValueFrom(this.subscriptionService.getSubscriptionById({ id }));
     } catch (error) {
@@ -48,7 +48,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async getSubscriptionsByCustomer(customerId: number) {
+  async getSubscriptionsByCustomer(customerId: string) {
     try {
       return await firstValueFrom(
         this.subscriptionService.getSubscriptionsByCustomer({ customerId })
@@ -58,7 +58,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async cancelSubscription(id: number, dto: CancelSubscriptionDto) {
+  async cancelSubscription(id: string, dto: CancelSubscriptionDto) {
     try {
       const result = await firstValueFrom(
         this.subscriptionService.cancelSubscription({
@@ -73,7 +73,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async renewSubscription(id: number) {
+  async renewSubscription(id: string) {
     try {
       const result = await firstValueFrom(this.subscriptionService.renewSubscription({ id }));
       return result;
@@ -82,7 +82,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async changePlan(id: number, dto: ChangePlanDto) {
+  async changePlan(id: string, dto: ChangePlanDto) {
     try {
       const result = await firstValueFrom(
         this.subscriptionService.changePlan({
@@ -97,7 +97,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async updateSubscriptionStatus(id: number, newStatus: string, reason?: string) {
+  async updateSubscriptionStatus(id: string, newStatus: string, reason?: string) {
     try {
       return await firstValueFrom(
         this.subscriptionService.updateSubscriptionStatus({
@@ -132,7 +132,7 @@ export class SubscriptionService implements OnModuleInit {
     }
   }
 
-  async activateSubscription(subscriptionId: number) {
+  async activateSubscription(subscriptionId: string) {
     try {
       const result = await firstValueFrom(
         this.subscriptionService.activateSubscription({ subscriptionId })

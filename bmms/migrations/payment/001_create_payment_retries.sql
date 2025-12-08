@@ -7,12 +7,12 @@ USE payment_db;
 
 -- Create payment_retries table
 CREATE TABLE IF NOT EXISTS payment_retries (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   
   -- Payment identifiers
-  paymentId INT NOT NULL COMMENT 'Reference to payment record',
-  invoiceId BIGINT NOT NULL COMMENT 'Invoice being paid',
-  subscriptionId BIGINT NOT NULL COMMENT 'Related subscription',
+  paymentId CHAR(36) NOT NULL COMMENT 'Reference to payment record',
+  invoiceId CHAR(36) NOT NULL COMMENT 'Invoice being paid',
+  subscriptionId CHAR(36) NOT NULL COMMENT 'Related subscription',
   
   -- Retry tracking
   attemptNumber INT NOT NULL DEFAULT 0 COMMENT 'Current attempt number (0-based)',
@@ -106,9 +106,9 @@ INSERT INTO payment_retries (
   retryHistory,
   metadata
 ) VALUES (
-  1,
-  100,
-  200,
+  UUID(),
+  UUID(),
+  UUID(),
   0,
   7,
   'pending',

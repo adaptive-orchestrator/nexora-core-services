@@ -58,7 +58,7 @@ export class PromotionSvcService {
     return await this.promotionRepo.save(promotion);
   }
 
-  async findById(id: number): Promise<Promotion> {
+  async findById(id: string): Promise<Promotion> {
     const promotion = await this.promotionRepo.findOne({ where: { id } });
 
     if (!promotion) {
@@ -100,7 +100,7 @@ export class PromotionSvcService {
     return { promotions, total };
   }
 
-  async update(id: number, dto: UpdatePromotionDto): Promise<Promotion> {
+  async update(id: string, dto: UpdatePromotionDto): Promise<Promotion> {
     const promotion = await this.findById(id);
 
     // If code is being changed, check uniqueness
@@ -126,7 +126,7 @@ export class PromotionSvcService {
     return await this.promotionRepo.save(promotion);
   }
 
-  async delete(id: number): Promise<{ success: boolean; message: string }> {
+  async delete(id: string): Promise<{ success: boolean; message: string }> {
     const promotion = await this.findById(id);
 
     // Soft delete by setting status to inactive
@@ -214,7 +214,7 @@ export class PromotionSvcService {
     error?: string;
     promotion?: Promotion;
     discount?: any;
-    usageId?: number;
+    usageId?: string;
   }> {
     // First validate
     const validation = await this.validate(dto);
@@ -273,8 +273,8 @@ export class PromotionSvcService {
   // ============ Usage History ============
 
   async getUsageHistory(
-    promotionId?: number,
-    customerId?: number,
+    promotionId?: string,
+    customerId?: string,
     limit: number = 50,
     offset: number = 0,
   ): Promise<{ usages: PromotionUsage[]; total: number }> {
@@ -420,9 +420,9 @@ export class PromotionSvcService {
    */
   async validatePromotionByEnv(params: {
     promotionCode: string;
-    userId?: number;
-    subscriptionPlanId?: number;
-    addonIds?: number[];
+    userId?: string;
+    subscriptionPlanId?: string;
+    addonIds?: string[];
   }) {
     return this.strategyService.validatePromotionByEnv(params);
   }
@@ -442,9 +442,9 @@ export class PromotionSvcService {
     businessModel: string,
     params: {
       promotionCode: string;
-      userId?: number;
-      subscriptionPlanId?: number;
-      addonIds?: number[];
+      userId?: string;
+      subscriptionPlanId?: string;
+      addonIds?: string[];
     },
   ) {
     return this.strategyService.validatePromotionByModel(businessModel, params);

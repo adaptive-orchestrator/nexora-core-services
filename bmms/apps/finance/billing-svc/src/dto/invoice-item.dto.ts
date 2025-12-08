@@ -1,5 +1,5 @@
 export class InvoiceItemDto {
-  productId: number;
+  productId: string;
   description: string;
   quantity: number;
   unitPrice: number;

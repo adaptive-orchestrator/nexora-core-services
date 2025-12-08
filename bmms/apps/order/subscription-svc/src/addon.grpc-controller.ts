@@ -68,8 +68,8 @@ export class AddonGrpcController {
 
   @GrpcMethod('SubscriptionService', 'PurchaseAddons')
   async purchaseAddons(data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     addonKeys: string[];
   }) {
     const userAddons = await this.addonService.purchaseAddons(
@@ -84,7 +84,7 @@ export class AddonGrpcController {
   }
 
   @GrpcMethod('SubscriptionService', 'GetUserAddons')
-  async getUserAddons(data: { subscriptionId: number; page?: number; limit?: number }) {
+  async getUserAddons(data: { subscriptionId: string; page?: number; limit?: number }) {
     const page = data?.page || 1;
     const limit = data?.limit || 20;
     
@@ -104,9 +104,9 @@ export class AddonGrpcController {
   }
 
   @GrpcMethod('SubscriptionService', 'CancelAddon')
-  async cancelAddon(data: { id: number }) {
+  async cancelAddon(data: { id: string }) {
     try {
-      if (!data.id || data.id <= 0) {
+      if (!data.id) {
         throw new RpcException({
           code: status.INVALID_ARGUMENT,
           message: 'Invalid addon id',

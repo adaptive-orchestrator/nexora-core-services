@@ -52,7 +52,7 @@ export class subscriptionSvcController {
   }
 
   @GrpcMethod('SubscriptionService', 'GetSubscriptionById')
-  async getSubscriptionById(data: { id: number }) {
+  async getSubscriptionById(data: { id: string }) {
     try {
       const subscription = await this.subscriptionSvcService.findById(data.id);
 
@@ -85,7 +85,7 @@ export class subscriptionSvcController {
   }
 
   @GrpcMethod('SubscriptionService', 'GetSubscriptionsByCustomer')
-  async getSubscriptionsByCustomer(data: { customerId: number }) {
+  async getSubscriptionsByCustomer(data: { customerId: string }) {
     try {
       const subscriptions = await this.subscriptionSvcService.listByCustomer(data.customerId);
 
@@ -155,7 +155,7 @@ export class subscriptionSvcController {
   }
 
   @GrpcMethod('SubscriptionService', 'RenewSubscription')
-  async renewSubscription(data: { id: number }) {
+  async renewSubscription(data: { id: string }) {
     try {
       const subscription = await this.subscriptionSvcService.renew(data.id);
 
@@ -325,7 +325,7 @@ export class subscriptionSvcController {
   }
 
   @GrpcMethod('SubscriptionService', 'ActivateSubscription')
-  async activateSubscription(data: { subscriptionId: number }) {
+  async activateSubscription(data: { subscriptionId: string }) {
     try {
       debug.log(`[SubscriptionController] Activating subscription ${data.subscriptionId}...`);
       const subscription = await this.subscriptionSvcService.activateSubscription(data.subscriptionId);

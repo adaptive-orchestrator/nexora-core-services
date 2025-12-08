@@ -170,8 +170,8 @@ export class AddonService {
    * - Async Kafka emit
    */
   async purchaseAddons(
-    subscriptionId: number,
-    customerId: number,
+    subscriptionId: string,
+    customerId: string,
     addonKeys: string[],
   ): Promise<UserAddon[]> {
     if (!addonKeys || addonKeys.length === 0) {
@@ -276,7 +276,7 @@ export class AddonService {
    * Get user's active add-ons with pagination
    */
   async getUserAddons(
-    subscriptionId: number,
+    subscriptionId: string,
     page: number = 1,
     limit: number = 20,
   ): Promise<{ userAddons: UserAddon[]; total: number; page: number; limit: number; totalPages: number }> {
@@ -306,7 +306,7 @@ export class AddonService {
   /**
    * Cancel add-on
    */
-  async cancelAddon(userAddonId: number): Promise<UserAddon> {
+  async cancelAddon(userAddonId: string): Promise<UserAddon> {
     const userAddon = await this.userAddonRepo.findOne({
       where: { id: userAddonId },
       select: ['id', 'subscriptionId', 'addonId', 'customerId', 'price', 'status', 'purchasedAt', 'expiresAt', 'nextBillingDate', 'cancelledAt'],

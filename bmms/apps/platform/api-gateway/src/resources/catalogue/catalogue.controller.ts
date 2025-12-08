@@ -47,7 +47,7 @@ export class CatalogueController {
     @CurrentUser() user: JwtUserPayload,
     @Param('id') id: string,
   ) {
-    const result = await this.catalogueService.getProductById(Number(id)) as { product?: { id: number; ownerId?: string } };
+    const result = await this.catalogueService.getProductById(id) as { product?: { id: string; ownerId?: string } };
     const ownerId = String(getUserIdAsCustomerId(user));
     
     // Check ownership
@@ -101,7 +101,7 @@ export class CatalogueController {
     @CurrentUser() user: JwtUserPayload,
     @Param('id') id: string,
   ) {
-    const result = await this.catalogueService.getProductById(Number(id)) as { product?: { id: number; ownerId?: string } };
+    const result = await this.catalogueService.getProductById(id) as { product?: { id: string; ownerId?: string } };
     const ownerId = String(getUserIdAsCustomerId(user));
     
     // Check ownership (allow if no ownerId set or user owns it)
@@ -125,14 +125,14 @@ export class CatalogueController {
     @Body(ValidationPipe) body: CreateProductDto,
   ) {
     // Check ownership first
-    const existing = await this.catalogueService.getProductById(Number(id)) as { product?: { id: number; ownerId?: string } };
+    const existing = await this.catalogueService.getProductById(id) as { product?: { id: string; ownerId?: string } };
     const ownerId = String(getUserIdAsCustomerId(user));
     
     if (existing?.product?.ownerId && existing.product.ownerId !== ownerId && user.role !== 'admin') {
       throw new ForbiddenException('You do not have permission to update this product');
     }
     
-    return this.catalogueService.updateProduct(Number(id), body);
+    return this.catalogueService.updateProduct(id, body);
   }
 
   // ============= PLANS =============
@@ -161,7 +161,7 @@ export class CatalogueController {
   @ApiOkResponse({ description: 'Plan retrieved successfully' })
   @ApiNotFoundResponse({ description: 'Plan not found' })
   async getPlanById(@Param('id') id: string) {
-    return this.catalogueService.getPlanById(Number(id));
+    return this.catalogueService.getPlanById(id);
   }
 
   // ============= FEATURES =============
@@ -190,6 +190,6 @@ export class CatalogueController {
   @ApiOkResponse({ description: 'Feature retrieved successfully' })
   @ApiNotFoundResponse({ description: 'Feature not found' })
   async getFeatureById(@Param('id') id: string) {
-    return this.catalogueService.getFeatureById(Number(id));
+    return this.catalogueService.getFeatureById(id);
   }
 }

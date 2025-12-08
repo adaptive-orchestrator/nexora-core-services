@@ -54,7 +54,7 @@ export class InventoryEventListener {
       debug.log(`[Inventory] Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
 
       const reservations: any[] = [];
-      const reservedItems: Array<{ productId: number; quantity: number; reservationId: number }> = [];
+      const reservedItems: Array<{ productId: string; quantity: number; reservationId: string }> = [];
 
       // Reserve inventory for each item in order
       for (const item of items) {

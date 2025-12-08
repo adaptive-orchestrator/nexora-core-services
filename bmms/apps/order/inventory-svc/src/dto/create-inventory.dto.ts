@@ -1,5 +1,5 @@
 export class CreateInventoryDto {
-  productId: number;
+  productId: string;
   quantity: number;
   ownerId?: string;      // Owner của inventory (user ID)
   warehouseLocation?: string;

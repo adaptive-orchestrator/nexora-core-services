@@ -80,7 +80,7 @@ export class PaymentService implements OnModuleInit {
     return response.payments;
   }
 
-  async getPaymentsByCustomer(customerId: number, page: number = 1, limit: number = 20): Promise<PaginatedPaymentsResponse> {
+  async getPaymentsByCustomer(customerId: string, page: number = 1, limit: number = 20): Promise<PaginatedPaymentsResponse> {
     // Filter payments by customer ID
     // Note: This may need to be implemented in the payment-svc gRPC service
     // For now, we'll get all payments and filter by customerId

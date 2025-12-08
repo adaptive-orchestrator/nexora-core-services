@@ -24,20 +24,20 @@ import { createBaseEvent } from '@bmms/event';
 import { debug } from '@bmms/common';
 
 interface ICustomerGrpcService {
-  getCustomerById(data: { id: number }): any;
+  getCustomerById(data: { id: string }): any;
 }
 
 interface ICatalogueGrpcService {
-  getProductById(data: { id: number }): any;
+  getProductById(data: { id: string }): any;
 }
 
 interface IInventoryGrpcService {
-  checkAvailability(data: { productId: number; quantity: number }): any;
-  reserveStock(data: { productId: number; quantity: number; orderId: number; customerId: number }): any;
+  checkAvailability(data: { productId: string; quantity: number }): any;
+  reserveStock(data: { productId: string; quantity: number; orderId: string; customerId: string }): any;
 }
 
 interface ValidatedOrderItem {
-  productId: number;
+  productId: string;
   quantity: number;
   price: number;
   notes?: string;
@@ -91,12 +91,14 @@ export class OrderSvcService implements OnModuleInit {
   // ============= CRUD =============
 
   async create(dto: CreateOrderDto): Promise<Order> {
-    //console.log('[OrderSvc] create START - dto:', JSON.stringify(dto));
+    console.log('[OrderSvc] create START - dto:', JSON.stringify(dto));
+    console.log('[OrderSvc] create dto.customerId:', dto.customerId);
+    console.log('[OrderSvc] create dto.customerId type:', typeof dto.customerId);
     
     // 1. Validate customer exists
-    //console.log('[OrderSvc] create Step 1: Validating customer...');
+    console.log('[OrderSvc] create Step 1: Validating customer...');
     await this.validateCustomer(dto.customerId);
-    //console.log('[OrderSvc] create Customer validation passed');
+    console.log('[OrderSvc] create Customer validation passed');
 
     // 2. Validate all products exist and get prices
     //console.log('[OrderSvc] create Step 2: Validating products...');
@@ -198,7 +200,10 @@ export class OrderSvcService implements OnModuleInit {
   /**
    * Validate customer exists
    */
-  private async validateCustomer(customerId: number): Promise<void> {
+  private async validateCustomer(customerId: string): Promise<void> {
+    console.log('[OrderSvc] validateCustomer called with customerId:', customerId);
+    console.log('[OrderSvc] validateCustomer customerId type:', typeof customerId);
+    console.log('[OrderSvc] Calling getCustomerById with payload:', JSON.stringify({ id: customerId }));
     try {
       const response: any = await firstValueFrom(
         this.customerService.getCustomerById({ id: customerId })
@@ -227,7 +232,7 @@ export class OrderSvcService implements OnModuleInit {
   /**
    * Validate products exist and return with actual prices from catalogue
    */
-  private async validateProducts(items: Array<{ productId: number; quantity: number; price: number; notes?: string }>): Promise<ValidatedOrderItem[]> {
+  private async validateProducts(items: Array<{ productId: string; quantity: number; price: number; notes?: string }>): Promise<ValidatedOrderItem[]> {
     const validatedItems: ValidatedOrderItem[] = [];
     
     for (const item of items) {
@@ -265,7 +270,7 @@ export class OrderSvcService implements OnModuleInit {
     return validatedItems;
   }
 
-  async listByCustomer(customerId: number): Promise<Order[]> {
+  async listByCustomer(customerId: string): Promise<Order[]> {
     return this.orderRepo.find({
       where: { customerId },
       relations: ['items'],
@@ -275,10 +280,10 @@ export class OrderSvcService implements OnModuleInit {
 
   // Alias for gRPC compatibility
   async getByCustomerId(customerId: string, page?: number, limit?: number): Promise<Order[]> {
-    return this.listByCustomer(Number(customerId));
+    return this.listByCustomer(customerId);
   }
 
-  async getById(id: number): Promise<Order> {
+  async getById(id: string): Promise<Order> {
     const order = await this.orderRepo.findOne({
       where: { id },
       relations: ['items'],
@@ -304,7 +309,7 @@ export class OrderSvcService implements OnModuleInit {
     return order;
   }
 
-  async update(id: number, dto: UpdateOrderDto): Promise<Order> {
+  async update(id: string, dto: UpdateOrderDto): Promise<Order> {
     const order = await this.getById(id);
 
     if (order.status !== 'pending') {
@@ -368,7 +373,7 @@ export class OrderSvcService implements OnModuleInit {
 
   // ============= STATUS MANAGEMENT =============
 
-  async updateStatus(id: number, dto: UpdateStatusDto): Promise<Order> {
+  async updateStatus(id: string, dto: UpdateStatusDto): Promise<Order> {
     const order = await this.getById(id);
     const previousStatus = order.status;
 
@@ -454,7 +459,7 @@ export class OrderSvcService implements OnModuleInit {
   }
 
   // Cancel order shortcut method
-  async cancel(id: number, reason?: string): Promise<Order> {
+  async cancel(id: string, reason?: string): Promise<Order> {
     return this.updateStatus(id, { 
       status: 'cancelled', 
       notes: reason || 'Order cancelled by customer' 
@@ -463,7 +468,7 @@ export class OrderSvcService implements OnModuleInit {
 
   // ============= ITEM MANAGEMENT =============
 
-  async addItem(id: number, dto: AddItemDto): Promise<Order> {
+  async addItem(id: string, dto: AddItemDto): Promise<Order> {
     const order = await this.getById(id);
 
     if (order.status !== 'pending') {
@@ -473,7 +478,7 @@ export class OrderSvcService implements OnModuleInit {
     }
     
     // Ensure numeric values
-    const productId = Number(dto.productId);
+    const productId = dto.productId;
     const quantity = Number(dto.quantity);
     const price = Number(dto.price);
     
@@ -519,7 +524,7 @@ export class OrderSvcService implements OnModuleInit {
     return updated;
   }
 
-  async deleteItem(id: number, itemId: number): Promise<Order> {
+  async deleteItem(id: string, itemId: string): Promise<Order> {
     const order = await this.getById(id);
 
     if (order.status !== 'pending') {
@@ -562,7 +567,7 @@ export class OrderSvcService implements OnModuleInit {
 
   // ============= UTILITIES =============
 
-  async getOrderHistory(id: number): Promise<OrderHistory[]> {
+  async getOrderHistory(id: string): Promise<OrderHistory[]> {
     return this.historyRepo.find({
       where: { orderId: id },
       order: { createdAt: 'DESC' },
@@ -582,7 +587,7 @@ export class OrderSvcService implements OnModuleInit {
     return `ORD-${year}-${month}-${timestamp}-${randomSuffix}`;
   }
 
-  async getOrderStats(customerId: number): Promise<any> {
+  async getOrderStats(customerId: string): Promise<any> {
     const orders = await this.orderRepo.find({
       where: { customerId },
       relations: ['items'],

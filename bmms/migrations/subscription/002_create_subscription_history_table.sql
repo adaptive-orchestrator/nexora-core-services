@@ -9,13 +9,13 @@ USE subscription_db;
 
 -- Create subscription_history table
 CREATE TABLE IF NOT EXISTS subscription_history (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    subscriptionId INT NOT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    subscriptionId CHAR(36) NOT NULL,
     action VARCHAR(100) NOT NULL,
     previousStatus VARCHAR(50) NULL,
     newStatus VARCHAR(50) NULL,
-    previousPlanId INT NULL,
-    newPlanId INT NULL,
+    previousPlanId CHAR(36) NULL,
+    newPlanId CHAR(36) NULL,
     details TEXT NULL,
     metadata JSON NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

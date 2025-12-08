@@ -51,7 +51,7 @@ export class PaymentController {
   @Get('invoice/:invoiceId')
   @ApiOperation({ summary: 'Lấy danh sách thanh toán theo hóa đơn' })
   async getByInvoice(
-    @Param('invoiceId', ParseIntPipe) invoiceId: number,
+    @Param('invoiceId') invoiceId: string,
   ): Promise<Payment[]> {
     return this.paymentService.getByInvoice(invoiceId);
   }
@@ -81,7 +81,7 @@ export class PaymentController {
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin thanh toán theo ID' })
   @ApiResponse({ status: 200, description: 'Trả về thông tin thanh toán', type: Payment })
-  async getById(@Param('id', ParseIntPipe) id: number): Promise<Payment> {
+  async getById(@Param('id') id: string): Promise<Payment> {
     return this.paymentService.getById(id);
   }
 
@@ -108,11 +108,11 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[TEST] Emit payment.success event for testing flow' })
   async testEmitSuccess(
-    @Param('paymentId', ParseIntPipe) paymentId: number,
+    @Param('paymentId') paymentId: string,
     @Body() data: {
-      invoiceId: number;
-      orderId?: number;
-      customerId?: number;
+      invoiceId: string;
+      orderId?: string;
+      customerId?: string;
       amount: number;
       transactionId?: string;
     },
@@ -135,11 +135,11 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[TEST] Emit payment.failed event for testing flow' })
   async testEmitFailed(
-    @Param('paymentId', ParseIntPipe) paymentId: number,
+    @Param('paymentId') paymentId: string,
     @Body() data: {
-      invoiceId: number;
-      orderId?: number;
-      customerId?: number;
+      invoiceId: string;
+      orderId?: string;
+      customerId?: string;
       amount: number;
       reason: string;
       errorCode?: string;
@@ -165,11 +165,11 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[TEST] Emit payment.retry event for testing flow' })
   async testEmitRetry(
-    @Param('paymentId', ParseIntPipe) paymentId: number,
+    @Param('paymentId') paymentId: string,
     @Body() data: {
-      invoiceId: number;
-      orderId?: number;
-      customerId?: number;
+      invoiceId: string;
+      orderId?: string;
+      customerId?: string;
       amount: number;
       retryCount: number;
       previousFailureReason: string;
@@ -192,11 +192,11 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[TEST] Emit payment.refunded event for testing flow' })
   async testEmitRefunded(
-    @Param('paymentId', ParseIntPipe) paymentId: number,
+    @Param('paymentId') paymentId: string,
     @Body() data: {
-      invoiceId: number;
-      orderId?: number;
-      customerId?: number;
+      invoiceId: string;
+      orderId?: string;
+      customerId?: string;
       refundAmount: number;
       reason: string;
     },
@@ -229,7 +229,7 @@ export class PaymentController {
   }
 
   @GrpcMethod('PaymentService', 'GetPaymentById')
-  async grpcGetPaymentById(data: { id: number }) {
+  async grpcGetPaymentById(data: { id: string }) {
     const payment = await this.paymentService.getById(data.id);
     return { payment };
   }
@@ -246,7 +246,7 @@ export class PaymentController {
   }
 
   @GrpcMethod('PaymentService', 'GetPaymentsByInvoice')
-  async grpcGetPaymentsByInvoice(data: { invoiceId: number }) {
+  async grpcGetPaymentsByInvoice(data: { invoiceId: string }) {
     const payments = await this.paymentService.getByInvoice(data.invoiceId);
     return { payments };
   }

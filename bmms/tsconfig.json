@@ -21,6 +21,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "useDefineForClassFields": false,
+    "ignoreDeprecations": "5.0",
     "baseUrl": "./",
     "paths": {
       "@bmms/auth": [

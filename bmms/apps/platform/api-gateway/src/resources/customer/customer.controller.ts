@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Body,
-  ParseIntPipe,
   HttpStatus,
   Request,
   UseGuards,
@@ -120,7 +119,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found for this user ID',
   })
-  async getCustomerByUserId(@Param('userId', ParseIntPipe) userId: number) {
+  async getCustomerByUserId(@Param('userId') userId: string) {
     try {
       const result: any = await this.customerService.getCustomerByUserId(userId);
       return result.customer;
@@ -150,7 +149,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found',
   })
-  async getCustomerById(@Param('id', ParseIntPipe) id: number) {
+  async getCustomerById(@Param('id') id: string) {
     const result: any = await this.customerService.getCustomerById(id);
     return result.customer;
   }
@@ -160,13 +159,13 @@ export class CustomerController {
     summary: 'Get customer insights and intelligence',
     description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer insights retrieved successfully',
     type: CustomerInsightsDto,
   })
-  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
+  async getCustomerInsights(@Param('id') id: string) {
     return this.customerService.getCustomerInsights(id);
   }
 
@@ -204,7 +203,7 @@ export class CustomerController {
     summary: 'Update customer',
     description: 'Update customer profile information (name, email, segment, tenantId)',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer updated successfully',
@@ -215,7 +214,7 @@ export class CustomerController {
     description: 'Customer not found',
   })
   async updateCustomer(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateDto: UpdateCustomerDto,
   ) {
     const result: any = await this.customerService.updateCustomer(id, updateDto);
@@ -227,7 +226,7 @@ export class CustomerController {
     summary: 'Delete customer',
     description: 'Permanently delete a customer from the system',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer deleted successfully',
@@ -242,7 +241,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found',
   })
-  async deleteCustomer(@Param('id', ParseIntPipe) id: number) {
+  async deleteCustomer(@Param('id') id: string) {
     return this.customerService.deleteCustomer(id);
   }
 }

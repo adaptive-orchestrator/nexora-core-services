@@ -17,11 +17,11 @@ import { InventoryReservation } from './inventory-reservation.entity';
 @Index('idx_inventory_quantity_reorder', ['quantity', 'reorderLevel'])
 @Index('idx_inventory_active', ['isActive'])
 export class Inventory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  productId: number;
+  @Column('uuid')
+  productId: string;
 
   @Column({ nullable: true })
   ownerId: string;

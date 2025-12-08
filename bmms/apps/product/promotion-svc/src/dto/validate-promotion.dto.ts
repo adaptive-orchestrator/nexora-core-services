@@ -1,14 +1,14 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsUUID } from 'class-validator';
 
 export class ValidatePromotionDto {
   @IsString()
   code: string;
 
-  @IsNumber()
-  customerId: number;
+  @IsUUID()
+  customerId: string;
 
-  @IsNumber()
-  planId: number;
+  @IsUUID()
+  planId: string;
 
   @IsOptional()
   @IsNumber()
@@ -17,8 +17,8 @@ export class ValidatePromotionDto {
 
 export class ApplyPromotionDto extends ValidatePromotionDto {
   @IsOptional()
-  @IsNumber()
-  subscriptionId?: number;
+  @IsUUID()
+  subscriptionId?: string;
 }
 
 export class PromotionValidationResult {

@@ -53,8 +53,8 @@ export class BillingService {
   // ============= CRUD =============
 
   async create(dto: CreateInvoiceDto): Promise<Invoice> {
-    // Check if invoice already exists for this order (only if orderId is provided and > 0)
-    if (dto.orderId && dto.orderId > 0) {
+    // Check if invoice already exists for this order (only if orderId is provided)
+    if (dto.orderId) {
       const existing = await this.invoiceRepo.findOne({
         where: { orderId: dto.orderId },
       });
@@ -77,7 +77,7 @@ export class BillingService {
     const invoice = await this.invoiceRepo.save(
       this.invoiceRepo.create({
         invoiceNumber,
-        orderId: dto.orderId || 0,
+        orderId: dto.orderId,
         orderNumber: dto.orderNumber,
         customerId: dto.customerId,
         subtotal: dto.subtotal || 0,
@@ -191,7 +191,7 @@ export class BillingService {
     };
   }
 
-  async listByCustomer(customerId: number, options?: {
+  async listByCustomer(customerId: string, options?: {
     page?: number;
     limit?: number;
     includeCancelled?: boolean;
@@ -237,7 +237,7 @@ export class BillingService {
     };
   }
 
-  async listBySubscription(subscriptionId: number, options?: {
+  async listBySubscription(subscriptionId: string, options?: {
     page?: number;
     limit?: number;
     includeCancelled?: boolean;
@@ -283,7 +283,7 @@ export class BillingService {
     };
   }
 
-  async getById(id: number): Promise<Invoice> {
+  async getById(id: string): Promise<Invoice> {
     const invoice = await this.invoiceRepo.findOne({
       where: { id },
       relations: ['items', 'payments'],
@@ -311,9 +311,23 @@ export class BillingService {
 
   // ============= STATUS MANAGEMENT =============
 
-  async updateStatus(id: number, dto: UpdateInvoiceStatusDto): Promise<Invoice> {
-    const invoice = await this.getById(id);
+  async updateStatus(id: string, dto: UpdateInvoiceStatusDto): Promise<Invoice> {
+    // Don't load relations to avoid cascade update issues
+    const invoice = await this.invoiceRepo.findOne({ where: { id } });
+    
+    if (!invoice) {
+      throw new NotFoundException(`Invoice ${id} not found`);
+    }
+    
     const previousStatus = invoice.status;
+
+    // Validate status transitions
+    if (previousStatus === 'paid' && dto.status !== 'paid') {
+      throw new BadRequestException(`Cannot change status from 'paid' to '${dto.status}'`);
+    }
+    if (previousStatus === 'cancelled' && dto.status !== 'cancelled') {
+      throw new BadRequestException(`Cannot change status from 'cancelled' to '${dto.status}'`);
+    }
 
     invoice.status = dto.status;
 
@@ -353,7 +367,7 @@ export class BillingService {
   /**
    * Update invoice status (simple version for internal use)
    */
-  async updateInvoiceStatus(invoiceId: number, status: 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'cancelled'): Promise<void> {
+  async updateInvoiceStatus(invoiceId: string, status: 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'cancelled'): Promise<void> {
     try {
       const invoice = await this.invoiceRepo.findOne({ where: { id: invoiceId } });
       
@@ -408,7 +422,7 @@ export class BillingService {
   /**
    * Emit ORDER_COMPLETED event for inventory to deduct stock
    */
-  async emitOrderCompleted(orderId: number, invoiceId: number): Promise<void> {
+  async emitOrderCompleted(orderId: string, invoiceId: string): Promise<void> {
     try {
       this.kafka.emit(EventTopics.ORDER_COMPLETED, {
         eventId: crypto.randomUUID(),
@@ -428,7 +442,7 @@ export class BillingService {
 
   // ============= PAYMENT MANAGEMENT =============
 
-  async recordPayment(id: number, dto: PaymentRecordDto): Promise<Invoice> {
+  async recordPayment(id: string, dto: PaymentRecordDto): Promise<Invoice> {
     const invoice = await this.getById(id);
 
     if (invoice.isPaid()) {
@@ -493,7 +507,7 @@ export class BillingService {
     return updated;
   }
 
-  async retryPayment(id: number): Promise<Invoice> {
+  async retryPayment(id: string): Promise<Invoice> {
     const invoice = await this.getById(id);
 
     if (invoice.isPaid()) {
@@ -556,7 +570,7 @@ export class BillingService {
     }
   }
 
-  async getInvoiceStats(customerId: number): Promise<any> {
+  async getInvoiceStats(customerId: string): Promise<any> {
     // Get all invoices for stats (include cancelled, no pagination limit)
     const result = await this.listByCustomer(customerId, { 
       page: 1, 
@@ -588,8 +602,8 @@ export class BillingService {
    * Create recurring invoice for subscription
    */
   async createRecurringInvoice(data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     planName: string;
     amount: number;
     periodStart: Date;

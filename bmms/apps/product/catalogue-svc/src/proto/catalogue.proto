@@ -31,7 +31,7 @@ message PaginationRequest {
 
 // Product messages
 message Product {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
@@ -60,11 +60,11 @@ message GetProductsByOwnerRequest {
 }
 
 message ProductByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message UpdateProductRequest {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
@@ -88,7 +88,7 @@ message ProductListResponse {
 
 // Plan messages
 message Plan {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
@@ -105,13 +105,13 @@ message CreatePlanRequest {
   string description = 2;
   double price = 3;
   string billingCycle = 4;
-  repeated int32 featureIds = 5;  // Changed field name and type
+  repeated string featureIds = 5;  // Changed field name and type
   bool trialEnabled = 6;
   int32 trialDays = 7;
 }
 
 message PlanByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message PlanResponse {
@@ -125,7 +125,7 @@ message PlanListResponse {
 
 // Feature messages
 message Feature {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   string code = 4;
@@ -140,7 +140,7 @@ message CreateFeatureRequest {
 }
 
 message FeatureByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message FeatureResponse {

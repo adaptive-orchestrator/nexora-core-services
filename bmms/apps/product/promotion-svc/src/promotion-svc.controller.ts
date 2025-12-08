@@ -18,7 +18,7 @@ export class PromotionSvcController {
   }
 
   @GrpcMethod('PromotionService', 'GetPromotionById')
-  async getPromotionById(data: { id: number }) {
+  async getPromotionById(data: { id: string }) {
     return await this.promotionService.findById(data.id);
   }
 
@@ -42,13 +42,13 @@ export class PromotionSvcController {
   }
 
   @GrpcMethod('PromotionService', 'UpdatePromotion')
-  async updatePromotion(data: UpdatePromotionDto & { id: number }) {
+  async updatePromotion(data: UpdatePromotionDto & { id: string }) {
     const { id, ...dto } = data;
     return await this.promotionService.update(id, dto);
   }
 
   @GrpcMethod('PromotionService', 'DeletePromotion')
-  async deletePromotion(data: { id: number }) {
+  async deletePromotion(data: { id: string }) {
     return await this.promotionService.delete(data.id);
   }
 
@@ -64,8 +64,8 @@ export class PromotionSvcController {
 
   @GrpcMethod('PromotionService', 'GetPromotionUsage')
   async getPromotionUsage(data: {
-    promotionId?: number;
-    customerId?: number;
+    promotionId?: string;
+    customerId?: string;
     limit?: number;
     offset?: number;
   }) {

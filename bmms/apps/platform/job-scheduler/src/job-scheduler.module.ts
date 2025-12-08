@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { rlSchedulerController } from './rl-scheduler.controller';
-import { rlSchedulerService } from './rl-scheduler.service';
+import { JobSchedulerController } from './job-scheduler.controller';
+import { JobSchedulerService } from './job-scheduler.service';
 import { SubscriptionRenewalTask } from './tasks/subscription-renewal.task';
 import { join } from 'path';
 
@@ -30,7 +30,7 @@ import { join } from 'path';
       },
     ]),
   ],
-  controllers: [rlSchedulerController],
-  providers: [rlSchedulerService, SubscriptionRenewalTask],
+  controllers: [JobSchedulerController],
+  providers: [JobSchedulerService, SubscriptionRenewalTask],
 })
-export class rlSchedulerModule {}
+export class JobSchedulerModule {}

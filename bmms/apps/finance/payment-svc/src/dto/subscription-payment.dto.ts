@@ -1,14 +1,14 @@
-import { IsNumber, IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsNumber, IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SubscriptionPaymentDto {
-  @ApiProperty({ example: 1, description: 'Subscription ID' })
-  @IsNumber()
-  subscriptionId: number;
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', description: 'Subscription ID' })
+  @IsUUID()
+  subscriptionId: string;
 
-  @ApiProperty({ example: 1, description: 'Customer ID' })
-  @IsNumber()
-  customerId: number;
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', description: 'Customer ID' })
+  @IsUUID()
+  customerId: string;
 
   @ApiProperty({ example: 49.99, description: 'Payment amount' })
   @IsNumber()
@@ -45,11 +45,11 @@ export class SubscriptionPaymentResponseDto {
   @ApiProperty({ example: 'TXN-1234567890-abcd1234' })
   transactionId: string;
 
-  @ApiProperty({ example: 1 })
-  paymentId: number;
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  paymentId: string;
 
-  @ApiProperty({ example: 1 })
-  invoiceId: number;
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  invoiceId: string;
 
   @ApiProperty({ example: '2025-11-29T12:00:00.000Z' })
   paidAt: Date;

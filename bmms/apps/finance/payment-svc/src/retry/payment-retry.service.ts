@@ -24,8 +24,8 @@ export interface PaymentRetryConfig {
  * Payment Retry Status
  */
 export interface PaymentRetryStatus {
-  subscriptionId: number;
-  invoiceId: number;
+  subscriptionId: string;
+  invoiceId: string;
   attempt: number;
   maxAttempts: number;
   nextRetryAt: Date | null;
@@ -41,8 +41,8 @@ export interface PaymentRetryStatus {
  */
 export interface PaymentRetryResult {
   success: boolean;
-  subscriptionId: number;
-  invoiceId: number;
+  subscriptionId: string;
+  invoiceId: string;
   attempt: number;
   message: string;
   nextRetryAt?: Date;
@@ -195,8 +195,8 @@ export class PaymentRetryService {
    * @returns Retry status
    */
   getRetryStatus(
-    subscriptionId: number,
-    invoiceId: number,
+    subscriptionId: string,
+    invoiceId: string,
     attempt: number,
     firstFailureDate: Date,
     failureReason: string
@@ -351,7 +351,7 @@ export class PaymentRetryService {
    * @param error - Error message if failed
    */
   logRetryAttempt(
-    subscriptionId: number,
+    subscriptionId: string,
     attempt: number,
     success: boolean,
     error?: string

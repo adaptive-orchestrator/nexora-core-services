@@ -19,14 +19,14 @@ export enum SubscriptionStatus {
 
 @Entity('subscriptions')
 export class Subscription {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  customerId: number;
+  @Column('uuid')
+  customerId: string;
 
-  @Column()
-  planId: number;
+  @Column('uuid')
+  planId: string;
 
   @Column({ nullable: true })
   planName?: string;

@@ -4,11 +4,11 @@ import { firstValueFrom } from 'rxjs';
 
 interface ICustomerGrpcService {
   getAllCustomers(data: any): any;
-  getCustomerById(data: { id: number }): any;
+  getCustomerById(data: { id: string }): any;
   getCustomerByEmail(data: { email: string }): any;
-  getCustomerByUserId(data: { userId: number }): any;
+  getCustomerByUserId(data: { userId: string }): any;
   updateCustomer(data: any): any;
-  deleteCustomer(data: { id: number }): any;
+  deleteCustomer(data: { id: string }): any;
 }
 
 @Injectable()
@@ -27,7 +27,7 @@ export class CustomerService implements OnModuleInit {
     );
   }
 
-  async getCustomerById(id: number) {
+  async getCustomerById(id: string) {
     return firstValueFrom(
       this.customerService.getCustomerById({ id }),
     );
@@ -39,19 +39,19 @@ export class CustomerService implements OnModuleInit {
     );
   }
 
-  async getCustomerByUserId(userId: number) {
+  async getCustomerByUserId(userId: string) {
     return firstValueFrom(
       this.customerService.getCustomerByUserId({ userId }),
     );
   }
 
-  async updateCustomer(id: number, updateData: any) {
+  async updateCustomer(id: string, updateData: any) {
     return firstValueFrom(
       this.customerService.updateCustomer({ id, ...updateData }),
     );
   }
 
-  async updateCustomerByUserId(userId: number, updateData: any) {
+  async updateCustomerByUserId(userId: string, updateData: any) {
     // First get customer by userId
     const customerResult: any = await this.getCustomerByUserId(userId);
     const customerId = customerResult.customer.id;
@@ -60,7 +60,7 @@ export class CustomerService implements OnModuleInit {
     return this.updateCustomer(customerId, updateData);
   }
 
-  async deleteCustomer(id: number) {
+  async deleteCustomer(id: string) {
     return firstValueFrom(
       this.customerService.deleteCustomer({ id }),
     );
@@ -69,7 +69,7 @@ export class CustomerService implements OnModuleInit {
   /**
    * Calculate customer insights (CRM logic)
    */
-  async getCustomerInsights(id: number) {
+  async getCustomerInsights(id: string) {
     const response: any = await this.getCustomerById(id);
     const customer = response.customer;
 

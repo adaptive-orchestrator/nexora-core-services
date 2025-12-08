@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { BillingService } from './billing-svc.service';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
@@ -28,17 +28,17 @@ export class BillingController {
   }
 
   @Get(':id')
-  getById(@Param('id') id: number) {
+  getById(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.getById(id);
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: number, @Body('status') status: UpdateInvoiceStatusDto) {
-    return this.service.updateStatus(id, status);
+  updateStatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceStatusDto) {
+    return this.service.updateStatus(id, dto);
   }
 
   @Post(':id/retry')
-  retryPayment(@Param('id') id: number) {
+  retryPayment(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.retryPayment(id);
   }
 
@@ -60,12 +60,12 @@ export class BillingController {
   }
 
   @GrpcMethod('BillingService', 'GetInvoiceById')
-  async grpcGetInvoiceById(data: { id: number }) {
+  async grpcGetInvoiceById(data: { id: string }) {
     return { invoice: await this.service.getById(data.id) };
   }
 
   @GrpcMethod('BillingService', 'GetInvoicesByCustomer')
-  async grpcGetInvoicesByCustomer(data: { customerId: number; page?: number; limit?: number; includeCancelled?: boolean }) {
+  async grpcGetInvoicesByCustomer(data: { customerId: string; page?: number; limit?: number; includeCancelled?: boolean }) {
     const result = await this.service.listByCustomer(data.customerId, {
       page: data?.page || 1,
       limit: data?.limit || 20,
@@ -75,7 +75,7 @@ export class BillingController {
   }
 
   @GrpcMethod('BillingService', 'GetInvoicesBySubscription')
-  async grpcGetInvoicesBySubscription(data: { subscriptionId: number; page?: number; limit?: number; includeCancelled?: boolean }) {
+  async grpcGetInvoicesBySubscription(data: { subscriptionId: string; page?: number; limit?: number; includeCancelled?: boolean }) {
     const result = await this.service.listBySubscription(data.subscriptionId, {
       page: data?.page || 1,
       limit: data?.limit || 20,
@@ -85,12 +85,12 @@ export class BillingController {
   }
 
   @GrpcMethod('BillingService', 'UpdateInvoiceStatus')
-  async grpcUpdateInvoiceStatus(data: { id: number; status: string }) {
+  async grpcUpdateInvoiceStatus(data: { id: string; status: string }) {
     return { invoice: await this.service.updateStatus(data.id, data.status as any) };
   }
 
   @GrpcMethod('BillingService', 'RetryPayment')
-  async grpcRetryPayment(data: { id: number }) {
+  async grpcRetryPayment(data: { id: string }) {
     const result = await this.service.retryPayment(data.id);
     return { message: 'Payment retry initiated', success: true };
   }

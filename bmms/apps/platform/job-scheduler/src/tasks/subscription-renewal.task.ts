@@ -93,7 +93,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
     // Run overdue invoice check every hour
     this.scheduleEvery(60 * 60 * 1000, () => this.handleOverdueInvoices());
 
-    this.logger.log('[RlScheduler] All scheduled tasks started');
+    this.logger.log('[JobScheduler] All scheduled tasks started');
   }
 
   private scheduleDaily(hour: number, minute: number, callback: () => void) {
@@ -122,7 +122,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
     }, timeUntilScheduled);
 
     this.logger.log(
-      `[RlScheduler] Scheduled daily task at ${hour}:${minute.toString().padStart(2, '0')}`,
+      `[JobScheduler] Scheduled daily task at ${hour}:${minute.toString().padStart(2, '0')}`,
     );
   }
 
@@ -133,7 +133,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
     setInterval(callback, intervalMs);
 
     const hours = intervalMs / (60 * 60 * 1000);
-    this.logger.log(`[RlScheduler] Scheduled task every ${hours} hours`);
+    this.logger.log(`[JobScheduler] Scheduled task every ${hours} hours`);
   }
 
   // ============ Task Handlers ============
@@ -142,7 +142,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
    * Run every day at 2 AM - Auto-renew subscriptions ending soon
    */
   async handleSubscriptionRenewals(): Promise<void> {
-    this.logger.log('[RlScheduler] Starting subscription renewal check...');
+    this.logger.log('[JobScheduler] Starting subscription renewal check...');
 
     try {
       const subscriptionsToRenew = await this.getSubscriptionsEndingSoon();
@@ -152,7 +152,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
       for (const subscription of subscriptionsToRenew) {
         try {
           await this.renewSubscription(subscription);
-          this.logger.log(`[RlScheduler] Renewed subscription #${subscription.id}`);
+          this.logger.log(`[JobScheduler] Renewed subscription #${subscription.id}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.logger.error(
@@ -161,7 +161,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
         }
       }
 
-      this.logger.log('[RlScheduler] Subscription renewal check completed');
+      this.logger.log('[JobScheduler] Subscription renewal check completed');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[ERROR] Subscription renewal task failed: ${errorMessage}`);
@@ -186,11 +186,11 @@ export class SubscriptionRenewalTask implements OnModuleInit {
           if (daysOverdue > 7) {
             // Cancel subscription after 7 days overdue
             await this.cancelOverdueSubscription(subscription);
-            this.logger.log(`[RlScheduler] Cancelled overdue subscription #${subscription.id}`);
+            this.logger.log(`[JobScheduler] Cancelled overdue subscription #${subscription.id}`);
           } else {
             // Send reminder
             await this.sendPaymentReminder(subscription, daysOverdue);
-            this.logger.log(`[RlScheduler] Reminder sent for subscription #${subscription.id}`);
+            this.logger.log(`[JobScheduler] Reminder sent for subscription #${subscription.id}`);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -200,7 +200,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
         }
       }
 
-      this.logger.log('[RlScheduler] Overdue subscription check completed');
+      this.logger.log('[JobScheduler] Overdue subscription check completed');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[ERROR] Overdue subscription task failed: ${errorMessage}`);
@@ -211,7 +211,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
    * Run every day at 9 AM - Send trial ending notifications
    */
   async handleTrialEndingNotifications(): Promise<void> {
-    this.logger.log('[RlScheduler] Checking for trials ending soon...');
+    this.logger.log('[JobScheduler] Checking for trials ending soon...');
 
     try {
       const trialsEndingSoon = await this.getTrialsEndingSoon();
@@ -225,7 +225,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
           if (daysUntilEnd === 3 || daysUntilEnd === 1) {
             await this.sendTrialEndingNotification(subscription, daysUntilEnd);
             this.logger.log(
-              `[RlScheduler] Trial ending notification sent for subscription #${subscription.id} (${daysUntilEnd} days left)`,
+              `[JobScheduler] Trial ending notification sent for subscription #${subscription.id} (${daysUntilEnd} days left)`,
             );
           }
         } catch (error) {
@@ -236,7 +236,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
         }
       }
 
-      this.logger.log('[RlScheduler] Trial ending notification check completed');
+      this.logger.log('[JobScheduler] Trial ending notification check completed');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[ERROR] Trial notification task failed: ${errorMessage}`);
@@ -247,7 +247,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
    * Run every hour - Check and send overdue invoice reminders
    */
   async handleOverdueInvoices(): Promise<void> {
-    this.logger.log('[RlScheduler] Checking for overdue invoices...');
+    this.logger.log('[JobScheduler] Checking for overdue invoices...');
 
     try {
       const overdueInvoices = await this.getOverdueInvoices();
@@ -260,7 +260,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
 
           if (daysOverdue === 1 || daysOverdue === 3 || daysOverdue === 7) {
             await this.sendOverdueInvoiceReminder(invoice, daysOverdue);
-            this.logger.log(`[RlScheduler] Overdue invoice reminder sent for #${invoice.id}`);
+            this.logger.log(`[JobScheduler] Overdue invoice reminder sent for #${invoice.id}`);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -270,7 +270,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
         }
       }
 
-      this.logger.log('[RlScheduler] Overdue invoice check completed');
+      this.logger.log('[JobScheduler] Overdue invoice check completed');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[ERROR] Overdue invoice task failed: ${errorMessage}`);
@@ -440,7 +440,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
   ): Promise<void> {
     // TODO: Integrate with notification service (email/SMS)
     this.logger.log(
-      `[RlScheduler] [NOTIFICATION] Trial ending: Subscription #${subscription.id} ` +
+      `[JobScheduler] [NOTIFICATION] Trial ending: Subscription #${subscription.id} ` +
       `(Customer #${subscription.customerId}) expires in ${daysLeft} days. ` +
       `Plan: ${subscription.planName}, Amount: $${subscription.amount}`,
     );
@@ -452,7 +452,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
   ): Promise<void> {
     // TODO: Integrate with notification service (email/SMS)
     this.logger.log(
-      `[RlScheduler] [NOTIFICATION] Overdue invoice: Invoice #${invoice.id} ` +
+      `[JobScheduler] [NOTIFICATION] Overdue invoice: Invoice #${invoice.id} ` +
       `(${invoice.invoiceNumber}) for Customer #${invoice.customerId} ` +
       `is ${daysOverdue} days overdue. Amount due: $${invoice.dueAmount}`,
     );
@@ -464,7 +464,7 @@ export class SubscriptionRenewalTask implements OnModuleInit {
   ): Promise<void> {
     // TODO: Integrate with notification service (email/SMS)
     this.logger.log(
-      `[RlScheduler] [NOTIFICATION] Payment reminder: Subscription #${subscription.id} ` +
+      `[JobScheduler] [NOTIFICATION] Payment reminder: Subscription #${subscription.id} ` +
       `(Customer #${subscription.customerId}) is ${daysOverdue} days overdue. ` +
       `Plan: ${subscription.planName}. Please update payment method.`,
     );

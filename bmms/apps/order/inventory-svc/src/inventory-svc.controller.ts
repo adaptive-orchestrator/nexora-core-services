@@ -25,7 +25,7 @@ export class InventoryController {
   }
 
   @GrpcMethod('InventoryService', 'GetInventoryByProduct')
-  async getInventoryByProduct(data: { productId: number; ownerId?: string }) {
+  async getInventoryByProduct(data: { productId: string; ownerId?: string }) {
     const inventory = await this.service.getByProduct(data.productId, data.ownerId);
     return { inventory, message: 'Inventory retrieved' };
   }
@@ -51,7 +51,7 @@ export class InventoryController {
     const inventory = await this.service.adjust(data.productId, {
       adjustment: data.quantity,
       reason: data.reason || 'adjustment',
-      notes: data.reason,
+      notes: data.notes || data.reason,
     });
     return { inventory, message: 'Stock adjusted successfully' };
   }
@@ -95,7 +95,7 @@ export class InventoryController {
   }
 
   @GrpcMethod('InventoryService', 'CheckAvailability')
-  async checkAvailability(data: { productId: number; requestedQuantity: number }) {
+  async checkAvailability(data: { productId: string; requestedQuantity: number }) {
     const available = await this.service.checkStock(data.productId, data.requestedQuantity);
     const inventory = await this.service.getByProduct(data.productId);
     const availableQty = inventory.getAvailableQuantity();
@@ -110,7 +110,7 @@ export class InventoryController {
   }
 
   @GrpcMethod('InventoryService', 'GetInventoryHistory')
-  async getInventoryHistory(data: { productId: number }) {
+  async getInventoryHistory(data: { productId: string }) {
     const items = await this.service.getInventoryHistory(data.productId);
     return { items, total: items.length };
   }

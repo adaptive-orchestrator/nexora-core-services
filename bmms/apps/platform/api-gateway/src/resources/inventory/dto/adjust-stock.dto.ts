@@ -27,4 +27,13 @@ export class AdjustStockDto {
   @IsOptional()
   @IsString()
   adjustmentType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Additional notes for the adjustment',
+    example: 'Nhập từ nhà cung cấp ABC',
+    type: String,
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

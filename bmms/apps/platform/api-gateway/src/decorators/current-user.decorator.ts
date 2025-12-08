@@ -27,7 +27,7 @@ export const CurrentUser = createParamDecorator(
  * Interface for JWT payload stored in request.user
  */
 export interface JwtUserPayload {
-  userId: number;
+  userId: string;
   email: string;
   name: string;
   role: 'user' | 'admin';
@@ -37,6 +37,6 @@ export interface JwtUserPayload {
  * Helper to get customerId from userId
  * In this system, userId from auth-svc maps to customerId in customer-svc
  */
-export function getUserIdAsCustomerId(user: JwtUserPayload): number {
+export function getUserIdAsCustomerId(user: JwtUserPayload): string {
   return user?.userId;
 }
