@@ -3,17 +3,19 @@ import { IsOptional, IsBoolean, IsString, IsUUID } from 'class-validator';
 
 export class CreateSubscriptionDto {
   @ApiProperty({
-    description: 'Customer ID',
+    description: 'Customer ID (optional, defaults to authenticated user)',
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    required: false,
   })
+  @IsOptional()
   @IsUUID()
-  customerId: string;
+  customerId?: string;
 
   @ApiProperty({
     description: 'Plan ID',
-    example: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
+    example: 'p0000001-0000-0000-0000-000000000001',
   })
-  @IsUUID()
+  @IsString()
   planId: string;
 
   @ApiProperty({

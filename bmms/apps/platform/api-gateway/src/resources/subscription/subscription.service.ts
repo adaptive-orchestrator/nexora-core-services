@@ -9,6 +9,7 @@ interface ISubscriptionGrpcService {
   createSubscription(data: any): any;
   getSubscriptionById(data: any): any;
   getSubscriptionsByCustomer(data: any): any;
+  getSubscriptionsByOwner(data: any): any;
   getAllSubscriptions(data: any): any;
   cancelSubscription(data: any): any;
   renewSubscription(data: any): any;
@@ -52,6 +53,16 @@ export class SubscriptionService implements OnModuleInit {
     try {
       return await firstValueFrom(
         this.subscriptionService.getSubscriptionsByCustomer({ customerId })
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getSubscriptionsByOwner(ownerId: string) {
+    try {
+      return await firstValueFrom(
+        this.subscriptionService.getSubscriptionsByOwner({ ownerId })
       );
     } catch (error) {
       throw error;

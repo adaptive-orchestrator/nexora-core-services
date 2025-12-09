@@ -51,6 +51,9 @@ export class SubscriptionController {
     @Body() dto: CreateSubscriptionDto,
     @CurrentUser() user: JwtUserPayload,
   ) {
+    // Set ownerId from authenticated user
+    (dto as any).ownerId = user.userId;
+    
     // Ensure subscription is created for the authenticated user
     if (!dto.customerId && user) {
       dto.customerId = user.userId;
@@ -69,7 +72,7 @@ export class SubscriptionController {
   @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Get current user subscriptions',
-    description: 'Retrieve all subscriptions for the authenticated user'
+    description: 'Retrieve all subscriptions for the authenticated user (by ownerId)'
   })
   @ApiResponse({ 
     status: 200, 
@@ -85,7 +88,7 @@ export class SubscriptionController {
     }
   })
   async getMySubscriptions(@CurrentUser() user: JwtUserPayload) {
-    return this.subscriptionService.getSubscriptionsByCustomer(user.userId);
+    return this.subscriptionService.getSubscriptionsByOwner(user.userId);
   }
 
   @Get('my/:id')
@@ -115,7 +118,8 @@ export class SubscriptionController {
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     
-    if (subscription?.subscription?.customerId !== user.userId && user.role !== 'admin') {
+    // Check ownerId instead of customerId for access control
+    if (subscription?.subscription?.ownerId !== user.userId && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this subscription');
     }
     
@@ -151,8 +155,8 @@ export class SubscriptionController {
   ) {
     const subscription: any = await this.subscriptionService.getSubscriptionById(id);
     
-    // Admin can access all, regular users can only access their own
-    if (user.role !== 'admin' && subscription?.subscription?.customerId !== user.userId) {
+    // Admin can access all, regular users can only access their own (check ownerId)
+    if (user.role !== 'admin' && subscription?.subscription?.ownerId !== user.userId) {
       throw new ForbiddenException('You do not have access to this subscription');
     }
     

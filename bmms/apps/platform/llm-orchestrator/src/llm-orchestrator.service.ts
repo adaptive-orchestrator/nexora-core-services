@@ -68,7 +68,7 @@ const SYSTEM_PROMPT = `You are an expert business analyst that converts Vietname
 
 **SERVICE MAPPING:**
 - OrderService -> order-svc (namespace: order, port: 3011)
-- InventoryService -> inventory-svc (namespace: order, port: 3013)
+- InventoryService -> inventory-svc (namespace: order, port: 3015)
 - SubscriptionService -> subscription-svc (namespace: order, port: 3012)
 - PromotionService -> promotion-svc (namespace: product, port: 3009)
 - CatalogueService -> catalogue-svc (namespace: product, port: 3007)

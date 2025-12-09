@@ -10,6 +10,7 @@ service PaymentService {
   rpc GetAllPayments (PaginationRequest) returns (PaginatedPaymentListResponse);
   rpc GetPaymentsByInvoice (InvoiceIdRequest) returns (PaymentListResponse);
   rpc GetPaymentStats (Empty) returns (PaymentStatsResponse);
+  rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
 }
 
 // Common messages
@@ -90,4 +91,17 @@ message PaymentStatsResponse {
   int32 pendingPayments = 4;
   double totalAmount = 5;
   double successfulAmount = 6;
+}
+
+message ProcessPaymentRequest {
+  string invoiceId = 1;
+  double amount = 2;
+  string paymentMethod = 3;
+}
+
+message ProcessPaymentResponse {
+  bool success = 1;
+  string message = 2;
+  Payment payment = 3;
+  optional string subscriptionId = 4;
 }

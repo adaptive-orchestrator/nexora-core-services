@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsEnum, IsUUID } from 'class-validator';
 
 export enum PaymentStatus {
   SUCCESS = 'success',
@@ -7,9 +7,9 @@ export enum PaymentStatus {
 }
 
 export class ConfirmPaymentDto {
-  @ApiProperty({ description: 'Payment ID', example: 1 })
-  @IsNumber()
-  paymentId: number;
+  @ApiProperty({ description: 'Payment ID', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @IsUUID()
+  paymentId: string;
 
   @ApiProperty({ 
     description: 'Payment status', 

@@ -7,6 +7,7 @@ service SubscriptionService {
   rpc CreateSubscription (CreateSubscriptionRequest) returns (SubscriptionResponse);
   rpc GetSubscriptionById (SubscriptionByIdRequest) returns (SubscriptionResponse);
   rpc GetSubscriptionsByCustomer (SubscriptionsByCustomerRequest) returns (SubscriptionListResponse);
+  rpc GetSubscriptionsByOwner (SubscriptionsByOwnerRequest) returns (SubscriptionListResponse);
   rpc GetAllSubscriptions (Empty) returns (SubscriptionListResponse);
   rpc CancelSubscription (CancelSubscriptionRequest) returns (SubscriptionResponse);
   rpc RenewSubscription (RenewSubscriptionRequest) returns (SubscriptionResponse);
@@ -49,6 +50,7 @@ message Subscription {
   string cancellationReason = 15;
   string createdAt = 16;
   string updatedAt = 17;
+  string ownerId = 18;
 }
 
 message CreateSubscriptionRequest {
@@ -56,6 +58,7 @@ message CreateSubscriptionRequest {
   string planId = 2;
   string promotionCode = 3;
   bool useTrial = 4;
+  string ownerId = 5;
 }
 
 message SubscriptionByIdRequest {
@@ -64,6 +67,10 @@ message SubscriptionByIdRequest {
 
 message SubscriptionsByCustomerRequest {
   string customerId = 1;
+}
+
+message SubscriptionsByOwnerRequest {
+  string ownerId = 1;
 }
 
 message CancelSubscriptionRequest {

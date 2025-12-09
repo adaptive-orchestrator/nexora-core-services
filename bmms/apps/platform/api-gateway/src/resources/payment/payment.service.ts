@@ -51,7 +51,7 @@ export class PaymentService implements OnModuleInit {
     return response.payment;
   }
 
-  async getPaymentById(id: number) {
+  async getPaymentById(id: string) {
     const response: any = await firstValueFrom(this.paymentService.getPaymentById({ id }));
     return response.payment;
   }
@@ -73,7 +73,7 @@ export class PaymentService implements OnModuleInit {
     };
   }
 
-  async getPaymentsByInvoice(invoiceId: number) {
+  async getPaymentsByInvoice(invoiceId: string) {
     const response: any = await firstValueFrom(
       this.paymentService.getPaymentsByInvoice({ invoiceId })
     );
@@ -115,7 +115,7 @@ export class PaymentService implements OnModuleInit {
     return firstValueFrom(this.paymentService.getPaymentStats({}));
   }
 
-  async processPayment(dto: { invoiceId: number; amount: number; paymentMethod: string }) {
+  async processPayment(dto: { invoiceId: string; amount: number; paymentMethod: string }) {
     const response: any = await firstValueFrom(this.paymentService.processPayment(dto));
     return response;
   }

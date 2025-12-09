@@ -6,6 +6,7 @@ import {
   Param, 
   Query,
   ParseIntPipe,
+  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   DefaultValuePipe,
@@ -54,7 +55,7 @@ export class PaymentController {
   @ApiResponse({ status: 404, description: 'Payment not found' })
   async getMyPaymentById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     const payment: any = await this.paymentService.getPaymentById(id);
     
@@ -99,7 +100,7 @@ export class PaymentController {
   @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
   async getPaymentsByInvoice(
     @CurrentUser() user: JwtUserPayload,
-    @Param('invoiceId', ParseIntPipe) invoiceId: number,
+    @Param('invoiceId', ParseUUIDPipe) invoiceId: string,
   ) {
     // TODO: Verify invoice belongs to user before returning payments
     return this.paymentService.getPaymentsByInvoice(invoiceId);
@@ -114,7 +115,7 @@ export class PaymentController {
   @ApiResponse({ status: 404, description: 'Payment not found' })
   async getPaymentById(
     @CurrentUser() user: JwtUserPayload,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     const payment: any = await this.paymentService.getPaymentById(id);
     
@@ -135,6 +136,9 @@ export class PaymentController {
     @CurrentUser() user: JwtUserPayload,
     @Body() dto: InitiatePaymentDto,
   ) {
+    // Set customerId from authenticated user
+    dto.customerId = user.userId;
+    
     // TODO: Verify invoice belongs to user before initiating payment
     return this.paymentService.initiatePayment(dto);
   }
@@ -161,7 +165,7 @@ export class PaymentController {
   @ApiResponse({ status: 200, description: 'Payment processed successfully', type: PaymentResponseDto })
   async processPayment(
     @CurrentUser() user: JwtUserPayload,
-    @Body() dto: { invoiceId: number; amount: number; paymentMethod: string },
+    @Body() dto: { invoiceId: string; amount: number; paymentMethod: string },
   ) {
     // TODO: Verify invoice belongs to user before processing payment
     return this.paymentService.processPayment(dto);

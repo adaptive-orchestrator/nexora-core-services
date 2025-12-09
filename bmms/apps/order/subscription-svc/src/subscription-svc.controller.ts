@@ -16,6 +16,7 @@ export class subscriptionSvcController {
     try {
       const dto: CreateSubscriptionDto = {
         customerId: data.customerId,
+        ownerId: data.ownerId,
         planId: data.planId,
         promotionCode: data.promotionCode,
         useTrial: data.useTrial,
@@ -27,6 +28,7 @@ export class subscriptionSvcController {
         subscription: {
           id: subscription.id,
           customerId: subscription.customerId,
+          ownerId: subscription.ownerId,
           planId: subscription.planId,
           planName: subscription.planName,
           amount: subscription.amount,
@@ -60,6 +62,7 @@ export class subscriptionSvcController {
         subscription: {
           id: subscription.id,
           customerId: subscription.customerId,
+          ownerId: subscription.ownerId,
           planId: subscription.planId,
           planName: subscription.planName,
           amount: subscription.amount,
@@ -93,6 +96,7 @@ export class subscriptionSvcController {
         subscriptions: subscriptions.map((sub) => ({
           id: sub.id,
           customerId: sub.customerId,
+          ownerId: sub.ownerId,
           planId: sub.planId,
           planName: sub.planName,
           amount: sub.amount,
@@ -112,6 +116,39 @@ export class subscriptionSvcController {
       };
     } catch (error) {
       console.error('[gRPC GetSubscriptionsByCustomer] Error:', error);
+      throw error;
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'GetSubscriptionsByOwner')
+  async getSubscriptionsByOwner(data: { ownerId: string }) {
+    try {
+      const subscriptions = await this.subscriptionSvcService.listByOwner(data.ownerId);
+
+      return {
+        subscriptions: subscriptions.map((sub) => ({
+          id: sub.id,
+          customerId: sub.customerId,
+          ownerId: sub.ownerId,
+          planId: sub.planId,
+          planName: sub.planName,
+          amount: sub.amount,
+          billingCycle: sub.billingCycle,
+          status: sub.status,
+          currentPeriodStart: sub.currentPeriodStart?.toISOString(),
+          currentPeriodEnd: sub.currentPeriodEnd?.toISOString(),
+          isTrialUsed: sub.isTrialUsed,
+          trialStart: sub.trialStart?.toISOString() || '',
+          trialEnd: sub.trialEnd?.toISOString() || '',
+          cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+          cancelledAt: sub.cancelledAt?.toISOString() || '',
+          cancellationReason: sub.cancellationReason || '',
+          createdAt: sub.createdAt?.toISOString(),
+          updatedAt: sub.updatedAt?.toISOString(),
+        })),
+      };
+    } catch (error) {
+      console.error('[gRPC GetSubscriptionsByOwner] Error:', error);
       throw error;
     }
   }

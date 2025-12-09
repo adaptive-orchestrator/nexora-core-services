@@ -67,7 +67,11 @@ export class subscriptionSvcService implements OnModuleInit {
   async create(dto: CreateSubscriptionDto): Promise<Subscription> {
     debug.log('[SubscriptionSvc.create] START - dto:', JSON.stringify(dto));
 
-    // 1. Validate customer exists
+    // 1. Validate customer exists (customerId is required, if not provided it's a validation error)
+    if (!dto.customerId) {
+      throw new BadRequestException('customerId is required');
+    }
+    
     try {
       await firstValueFrom(this.customerService.getCustomerById({ id: dto.customerId }));
     } catch (error) {
@@ -140,6 +144,7 @@ export class subscriptionSvcService implements OnModuleInit {
     const subscription = await this.subscriptionRepo.save(
       this.subscriptionRepo.create({
         customerId: dto.customerId,
+        ownerId: dto.ownerId || dto.customerId, // Set ownerId from DTO or use customerId
         planId: dto.planId,
         planName: plan.name,
         amount: plan.price,
@@ -209,6 +214,16 @@ export class subscriptionSvcService implements OnModuleInit {
   async listByCustomer(customerId: string): Promise<Subscription[]> {
     return this.subscriptionRepo.find({
       where: { customerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Get all subscriptions owned by a user
+   */
+  async listByOwner(ownerId: string): Promise<Subscription[]> {
+    return this.subscriptionRepo.find({
+      where: { ownerId },
       order: { createdAt: 'DESC' },
     });
   }

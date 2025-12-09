@@ -25,6 +25,9 @@ export class Subscription {
   @Column('uuid')
   customerId: string;
 
+  @Column('uuid', { nullable: true })
+  ownerId?: string; // User who created/owns this subscription
+
   @Column('uuid')
   planId: string;
 
