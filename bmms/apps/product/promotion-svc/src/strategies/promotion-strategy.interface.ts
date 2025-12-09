@@ -31,12 +31,12 @@ export interface IPromotionStrategy {
 
 export interface PromotionValidationParams {
   promotionCode: string;
-  customerId?: number;           // Optional in dev mode
-  userId?: number;               // Alternative to customerId
+  customerId?: string;           // Optional in dev mode
+  userId?: string;               // Alternative to customerId
   businessModel?: string;
   orderAmount?: number;          // For retail
-  subscriptionPlanId?: number;   // For subscription
-  addonIds?: string[] | number[]; // For freemium (support both types)
+  subscriptionPlanId?: string;   // For subscription
+  addonIds?: string[];           // For freemium
 }
 
 export interface PromotionValidationResult {

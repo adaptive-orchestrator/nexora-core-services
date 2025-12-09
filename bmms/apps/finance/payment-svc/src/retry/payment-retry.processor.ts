@@ -16,7 +16,7 @@ export class PaymentRetryProcessor {
     private readonly retryManager: PaymentRetryManager,
     private readonly paymentService: PaymentService,
   ) {
-    this.logger.log('⏰ PaymentRetryProcessor initialized');
+    this.logger.log('[Payment] PaymentRetryProcessor initialized');
   }
 
   /**
@@ -25,7 +25,7 @@ export class PaymentRetryProcessor {
    */
   async processRetries(): Promise<void> {
     if (this.isProcessing) {
-      this.logger.warn('⚠️ Retry processing already in progress, skipping...');
+      this.logger.warn('[WARNING] Retry processing already in progress, skipping...');
       return;
     }
 
@@ -33,17 +33,17 @@ export class PaymentRetryProcessor {
     const startTime = Date.now();
 
     try {
-      this.logger.log('🔄 Starting payment retry processing...');
+      this.logger.log('[Payment] Starting payment retry processing...');
 
       // Get all retries that are due
       const dueRetries = await this.retryManager.getDueRetries();
 
       if (dueRetries.length === 0) {
-        this.logger.log('✅ No retries due for processing');
+        this.logger.log('[Payment] No retries due for processing');
         return;
       }
 
-      this.logger.log(`📋 Processing ${dueRetries.length} due retries...`);
+      this.logger.log(`[Payment] Processing ${dueRetries.length} due retries...`);
 
       let succeeded = 0;
       let failed = 0;
@@ -67,7 +67,7 @@ export class PaymentRetryProcessor {
         } catch (error) {
           failed++;
           this.logger.error(
-            `❌ Failed to process retry ${retry.id}: ${error.message}`,
+            `[ERROR] Failed to process retry ${retry.id}: ${error.message}`,
             error.stack,
           );
         }
@@ -75,7 +75,7 @@ export class PaymentRetryProcessor {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `✅ Retry processing complete in ${duration}ms - ` +
+        `[Payment] Retry processing complete in ${duration}ms - ` +
         `Succeeded: ${succeeded}, Failed: ${failed}, Exhausted: ${exhausted}`
       );
 
@@ -84,7 +84,7 @@ export class PaymentRetryProcessor {
 
     } catch (error) {
       this.logger.error(
-        `❌ Error during retry processing: ${error.message}`,
+        `[ERROR] Error during retry processing: ${error.message}`,
         error.stack,
       );
     } finally {
@@ -97,7 +97,7 @@ export class PaymentRetryProcessor {
    * 
    * @param retryId - Retry record ID
    */
-  private async processRetry(retryId: number): Promise<void> {
+  private async processRetry(retryId: string): Promise<void> {
     // Mark as processing
     await this.retryManager.markProcessing(retryId);
 
@@ -107,7 +107,7 @@ export class PaymentRetryProcessor {
     }
 
     this.logger.log(
-      `🔄 Processing retry for subscription ${retry.subscriptionId}, ` +
+      `[Payment] Processing retry for subscription ${retry.subscriptionId}, ` +
       `invoice ${retry.invoiceId} (attempt ${retry.attempt + 1}/${retry.maxAttempts})`
     );
 
@@ -139,7 +139,7 @@ export class PaymentRetryProcessor {
 
       success = true;
       this.logger.log(
-        `✅ Payment retry succeeded for subscription ${retry.subscriptionId}`
+        `[Payment] Payment retry succeeded for subscription ${retry.subscriptionId}`
       );
 
       // TODO: Emit success event
@@ -148,7 +148,7 @@ export class PaymentRetryProcessor {
     } catch (err) {
       error = err.message;
       this.logger.warn(
-        `⚠️ Payment retry failed for subscription ${retry.subscriptionId}: ${error}`
+        `[WARNING] Payment retry failed for subscription ${retry.subscriptionId}: ${error}`
       );
 
       // TODO: Emit failure event
@@ -161,7 +161,7 @@ export class PaymentRetryProcessor {
     // If exhausted, emit exhausted event
     if (updatedRetry.status === 'exhausted') {
       this.logger.error(
-        `❌ Payment retries exhausted for subscription ${retry.subscriptionId}`
+        `[ERROR] Payment retries exhausted for subscription ${retry.subscriptionId}`
       );
 
       // TODO: Emit exhausted event
@@ -176,14 +176,14 @@ export class PaymentRetryProcessor {
    */
   async cleanupOldRetries(): Promise<void> {
     try {
-      this.logger.log('🧹 Starting cleanup of old retry records...');
+      this.logger.log('[Payment] Starting cleanup of old retry records...');
       
       const deleted = await this.retryManager.cleanupOldRetries(90);
       
-      this.logger.log(`✅ Cleaned up ${deleted} old retry records`);
+this.logger.log(`[Payment] Cleaned up ${deleted} old retry records`);
     } catch (error) {
       this.logger.error(
-        `❌ Error during cleanup: ${error.message}`,
+        `[ERROR] Error during cleanup: ${error.message}`,
         error.stack,
       );
     }
@@ -196,7 +196,7 @@ export class PaymentRetryProcessor {
     try {
       const stats = await this.retryManager.getStatistics();
       
-      this.logger.log('📊 Payment Retry Statistics:');
+      this.logger.log('[Payment] Payment Retry Statistics:');
       this.logger.log(`   Total: ${stats.total}`);
       this.logger.log(`   Pending: ${stats.pending}`);
       this.logger.log(`   Retrying: ${stats.retrying}`);
@@ -209,7 +209,7 @@ export class PaymentRetryProcessor {
       // this.kafkaClient.emit('payment.retry.statistics', {...});
     } catch (error) {
       this.logger.error(
-        `❌ Error logging statistics: ${error.message}`,
+        `[ERROR] Error logging statistics: ${error.message}`,
         error.stack,
       );
     }

@@ -5,4 +5,5 @@ export class CreateProductDto {
   sku: string;
   category: string;
   imageUrl?: string;
+  ownerId?: string;
 }

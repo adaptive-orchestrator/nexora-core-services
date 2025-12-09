@@ -4,9 +4,8 @@ import { LlmOrchestratorService } from './llm-orchestrator.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { CodeSearchService } from './service/code-search.service';
-import { K8sIntegrationService } from './service/k8s-integration.service';
+import { HelmIntegrationService } from './service/helm-integration.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
-import { KafkaProducerService } from './service/kafka-producer.service';
 import { EventModule } from '@bmms/event';
 
 @Module({
@@ -37,6 +36,6 @@ import { EventModule } from '@bmms/event';
 
   ],
   controllers: [LlmOrchestratorController],
-  providers: [LlmOrchestratorService, CodeSearchService, K8sIntegrationService, LlmOutputValidator, KafkaProducerService],
+  providers: [LlmOrchestratorService, CodeSearchService, HelmIntegrationService, LlmOutputValidator],
 })
 export class LlmOrchestratorModule { }

@@ -1,7 +1,10 @@
 -- Create plan_features junction table for Many-to-Many relationship
+
+USE catalogue_db;
+
 CREATE TABLE IF NOT EXISTS plan_features (
-    planId INT NOT NULL,
-    featureId INT NOT NULL,
+    planId CHAR(36) NOT NULL,
+    featureId CHAR(36) NOT NULL,
     PRIMARY KEY (planId, featureId),
     FOREIGN KEY (planId) REFERENCES plans(id) ON DELETE CASCADE,
     FOREIGN KEY (featureId) REFERENCES features(id) ON DELETE CASCADE,

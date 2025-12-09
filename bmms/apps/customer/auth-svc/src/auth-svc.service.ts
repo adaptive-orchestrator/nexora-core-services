@@ -124,7 +124,7 @@ export class AuthSvcService {
     return { message: 'Password successfully reset' };
   }
 
-  async getUserById(userId: number) {
+  async getUserById(userId: string) {
     try {
       // Find the user in the database by ID
       const user = await this.userRepo.findOne({ where: { id: userId } });

@@ -80,6 +80,37 @@ export class PaymentService implements OnModuleInit {
     return response.payments;
   }
 
+  async getPaymentsByCustomer(customerId: string, page: number = 1, limit: number = 20): Promise<PaginatedPaymentsResponse> {
+    // Filter payments by customer ID
+    // Note: This may need to be implemented in the payment-svc gRPC service
+    // For now, we'll get all payments and filter by customerId
+    const response: any = await firstValueFrom(
+      this.paymentService.getAllPayments({ page: 1, limit: 1000 }) // Get more to filter
+    );
+    
+    const allPayments = response.payments || [];
+    const filteredPayments = allPayments.filter(
+      (payment: any) => payment.customerId === customerId
+    );
+    
+    // Apply pagination to filtered results
+    const startIndex = (page - 1) * limit;
+    const paginatedPayments = filteredPayments.slice(startIndex, startIndex + limit);
+    const totalPages = Math.ceil(filteredPayments.length / limit);
+    
+    return {
+      payments: paginatedPayments,
+      pagination: {
+        page,
+        limit,
+        total: filteredPayments.length,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
   async getPaymentStats() {
     return firstValueFrom(this.paymentService.getPaymentStats({}));
   }

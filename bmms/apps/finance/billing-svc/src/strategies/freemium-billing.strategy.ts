@@ -27,7 +27,7 @@ export class FreemiumBillingStrategy implements IBillingStrategy {
   }
 
   async calculateAmount(params: BillingCalculationParams): Promise<BillingResult> {
-    this.logger.log(`📊 Calculating FREEMIUM billing for customer ${params.customerId}`);
+    this.logger.log(`[Billing] Calculating FREEMIUM billing for customer ${params.customerId}`);
 
     // Base plan is FREE
     let subtotal = 0;
@@ -44,7 +44,7 @@ export class FreemiumBillingStrategy implements IBillingStrategy {
     const addonCharges: Array<{ addonId: string; amount: number }> = [];
     
     if (params.addons && params.addons.length > 0) {
-      this.logger.log(`💎 Processing ${params.addons.length} add-ons`);
+      this.logger.log(`[Billing] Processing ${params.addons.length} add-ons`);
       
       for (const addon of params.addons) {
         subtotal += addon.price;
@@ -71,7 +71,7 @@ export class FreemiumBillingStrategy implements IBillingStrategy {
       ? 'addon_only' 
       : 'freemium';
 
-    this.logger.log(`✅ Total: ${totalAmount} VND (Base: ${isFreeTier ? 'FREE' : subtotal}, Add-ons: ${addonCharges.length})`);
+    this.logger.log(`[Billing] Total: ${totalAmount} VND (Base: ${isFreeTier ? 'FREE' : subtotal}, Add-ons: ${addonCharges.length})`);
 
     return {
       subtotal,

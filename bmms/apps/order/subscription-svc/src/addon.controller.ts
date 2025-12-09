@@ -50,8 +50,8 @@ export class AddonController {
    */
   @Post('purchase')
   async purchaseAddons(@Body() data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     addonKeys: string[];
   }): Promise<UserAddon[]> {
     return this.addonService.purchaseAddons(
@@ -67,7 +67,7 @@ export class AddonController {
    */
   @Get('user/:subscriptionId')
   async getUserAddons(
-    @Param('subscriptionId', ParseIntPipe) subscriptionId: number,
+    @Param('subscriptionId') subscriptionId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ): Promise<{ userAddons: UserAddon[]; total: number; page: number; limit: number; totalPages: number }> {
@@ -79,7 +79,7 @@ export class AddonController {
    * Cancel add-on
    */
   @Delete('user/:id')
-  async cancelAddon(@Param('id') id: number): Promise<UserAddon> {
+  async cancelAddon(@Param('id') id: string): Promise<UserAddon> {
     return this.addonService.cancelAddon(id);
   }
 }

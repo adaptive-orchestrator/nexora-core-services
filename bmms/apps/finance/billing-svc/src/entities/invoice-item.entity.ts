@@ -4,19 +4,20 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Invoice } from './invoice.entity';
 
 @Entity('invoice_items')
 export class InvoiceItem {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  invoiceId: number;
+  @Column('uuid')
+  invoiceId: string;
 
-  @Column({ nullable: true })
-  productId: number;
+  @Column({ type: 'uuid', nullable: true })
+  productId: string;
 
   @Column()
   description: string;
@@ -31,6 +32,7 @@ export class InvoiceItem {
   totalPrice: number;
 
   @ManyToOne(() => Invoice, (invoice) => invoice.items, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invoiceId' })
   invoice: Invoice;
 
   @CreateDateColumn()

@@ -5,8 +5,9 @@ package inventory;
 service InventoryService {
   // Inventory CRUD
   rpc CreateInventory (CreateInventoryRequest) returns (InventoryResponse);
-  rpc GetInventoryByProduct (ProductIdRequest) returns (InventoryResponse);
-  rpc GetAllInventory (PaginationRequest) returns (InventoryListResponse);
+  rpc GetInventoryByProduct (GetInventoryByProductRequest) returns (InventoryResponse);
+  rpc GetAllInventory (GetAllInventoryRequest) returns (InventoryListResponse);
+  rpc GetInventoryByOwner (GetInventoryByOwnerRequest) returns (InventoryListResponse);
   rpc UpdateInventory (UpdateInventoryRequest) returns (InventoryResponse);
   
   // Stock Management
@@ -39,8 +40,8 @@ message MessageResponse {
 
 // Inventory messages
 message Inventory {
-  int32 id = 1;
-  int32 productId = 2;
+  string id = 1;
+  string productId = 2;
   int32 quantity = 3;
   int32 reserved = 4;
   int32 available = 5;
@@ -50,27 +51,47 @@ message Inventory {
   bool isActive = 9;
   string createdAt = 10;
   string updatedAt = 11;
+  string ownerId = 12;
 }
 
 message CreateInventoryRequest {
-  int32 productId = 1;
+  string productId = 1;
   int32 quantity = 2;
   string warehouseLocation = 3;
   int32 reorderLevel = 4;
   int32 maxStock = 5;
+  string ownerId = 6;
 }
 
 message UpdateInventoryRequest {
-  int32 id = 1;
+  string id = 1;
   int32 quantity = 2;
   string warehouseLocation = 3;
   int32 reorderLevel = 4;
   int32 maxStock = 5;
   bool isActive = 6;
+  string ownerId = 7;
 }
 
 message ProductIdRequest {
-  int32 productId = 1;
+  string productId = 1;
+}
+
+message GetInventoryByProductRequest {
+  string productId = 1;
+  string ownerId = 2;
+}
+
+message GetAllInventoryRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string ownerId = 3;
+}
+
+message GetInventoryByOwnerRequest {
+  string ownerId = 1;
+  int32 page = 2;
+  int32 limit = 3;
 }
 
 message InventoryResponse {
@@ -88,19 +109,21 @@ message InventoryListResponse {
 
 // Stock adjustment messages
 message AdjustStockRequest {
-  int32 productId = 1;
+  string productId = 1;
   int32 quantity = 2;
   string reason = 3;
   string adjustmentType = 4; // RESTOCK, DAMAGED, RETURNED, etc.
+  string notes = 5; // Additional notes from user
+  string ownerId = 6; // Owner of the inventory
 }
 
 // Reservation messages
 message InventoryReservation {
-  int32 id = 1;
-  int32 inventoryId = 2;
-  int32 productId = 3;
-  int32 orderId = 4;
-  int32 customerId = 5;
+  string id = 1;
+  string inventoryId = 2;
+  string productId = 3;
+  string orderId = 4;
+  string customerId = 5;
   int32 reservedQuantity = 6;
   string status = 7;
   string expiresAt = 8;
@@ -108,18 +131,18 @@ message InventoryReservation {
 }
 
 message ReserveStockRequest {
-  int32 productId = 1;
+  string productId = 1;
   int32 quantity = 2;
-  int32 orderId = 3;
-  int32 customerId = 4;
+  string orderId = 3;
+  string customerId = 4;
 }
 
 message ReleaseStockRequest {
-  int32 reservationId = 1;
+  string reservationId = 1;
 }
 
 message ConfirmReservationRequest {
-  int32 reservationId = 1;
+  string reservationId = 1;
 }
 
 message ReservationResponse {
@@ -129,14 +152,14 @@ message ReservationResponse {
 
 // Bulk operations
 message ReserveItem {
-  int32 productId = 1;
+  string productId = 1;
   int32 quantity = 2;
 }
 
 message BulkReserveRequest {
   repeated ReserveItem items = 1;
-  int32 orderId = 2;
-  int32 customerId = 3;
+  string orderId = 2;
+  string customerId = 3;
 }
 
 message BulkReserveResponse {
@@ -146,7 +169,7 @@ message BulkReserveResponse {
 }
 
 message CheckAvailabilityRequest {
-  int32 productId = 1;
+  string productId = 1;
   int32 requestedQuantity = 2;
 }
 
@@ -158,9 +181,9 @@ message AvailabilityResponse {
 
 // History messages
 message InventoryHistory {
-  int32 id = 1;
-  int32 inventoryId = 2;
-  int32 productId = 3;
+  string id = 1;
+  string inventoryId = 2;
+  string productId = 3;
   string action = 4;
   int32 quantityBefore = 5;
   int32 quantityAfter = 6;

@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  ParseIntPipe,
   ValidationPipe,
 } from '@nestjs/common';
 import {
@@ -63,15 +62,15 @@ export class PromotionController {
   })
   async getAllPromotions(
     @Query('status') status?: string,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
   ): Promise<PromotionListResponseDto> {
     return (await this.promotionService.getAllPromotions(status, limit, offset)) as PromotionListResponseDto;
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get promotion by ID' })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: 200,
     description: 'Promotion details',
@@ -79,7 +78,7 @@ export class PromotionController {
   })
   @ApiResponse({ status: 404, description: 'Promotion not found' })
   async getPromotionById(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ): Promise<PromotionResponseDto> {
     return (await this.promotionService.getPromotionById(id)) as PromotionResponseDto;
   }
@@ -101,7 +100,7 @@ export class PromotionController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update promotion' })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: 200,
     description: 'Promotion updated successfully',
@@ -109,7 +108,7 @@ export class PromotionController {
   })
   @ApiResponse({ status: 404, description: 'Promotion not found' })
   async updatePromotion(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body(ValidationPipe) dto: UpdatePromotionDto,
   ): Promise<PromotionResponseDto> {
     return (await this.promotionService.updatePromotion(id, dto)) as PromotionResponseDto;
@@ -117,14 +116,14 @@ export class PromotionController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete (deactivate) promotion' })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: 200,
     description: 'Promotion deleted successfully',
   })
   @ApiResponse({ status: 404, description: 'Promotion not found' })
   async deletePromotion(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
   ): Promise<{ success: boolean; message: string }> {
     return (await this.promotionService.deletePromotion(id)) as { success: boolean; message: string };
   }
@@ -173,12 +172,12 @@ export class PromotionController {
     description: 'Usage history',
   })
   async getPromotionUsage(
-    @Query('promotionId', new ParseIntPipe({ optional: true }))
-    promotionId?: number,
-    @Query('customerId', new ParseIntPipe({ optional: true }))
-    customerId?: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('promotionId')
+    promotionId?: string,
+    @Query('customerId')
+    customerId?: string,
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
   ) {
     return await this.promotionService.getPromotionUsage(
       promotionId,

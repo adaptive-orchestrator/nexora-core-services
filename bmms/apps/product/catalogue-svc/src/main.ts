@@ -20,6 +20,6 @@ async function bootstrap() {
   });
 
   await app.listen();
-  console.log(`✅ Catalogue Service | gRPC: ${grpcUrl}`);
+  console.log(`[CatalogueSvc] Catalogue Service | gRPC: ${grpcUrl}`);
 }
 bootstrap();

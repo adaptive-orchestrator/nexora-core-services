@@ -1,11 +1,11 @@
-import { IsNumber, IsOptional, IsBoolean, IsString } from 'class-validator';
+import { IsOptional, IsBoolean, IsString, IsUUID } from 'class-validator';
 
 export class CreateSubscriptionDto {
-  @IsNumber()
-  customerId: number;
+  @IsUUID()
+  customerId: string;
 
-  @IsNumber()
-  planId: number;
+  @IsUUID()
+  planId: string;
 
   @IsOptional()
   @IsString()

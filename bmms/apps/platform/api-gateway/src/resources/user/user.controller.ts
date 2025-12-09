@@ -41,7 +41,7 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ 
     summary: '[DEPRECATED] Update current user profile',
-    description: '⚠️ DEPRECATED: Please use PATCH /customers/me instead. This endpoint only updates authentication data (email, name) but not business profile data.',
+    description: 'DEPRECATED: Please use PATCH /customers/me instead. This endpoint only updates authentication data (email, name) but not business profile data.',
     deprecated: true
   })
   @ApiBody({ type: UpdateUserDto })

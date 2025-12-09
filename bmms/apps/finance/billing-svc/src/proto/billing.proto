@@ -29,14 +29,14 @@ message PaginationRequest {
 }
 
 message CustomerPaginationRequest {
-  int32 customerId = 1;
+  string customerId = 1;
   int32 page = 2;
   int32 limit = 3;
   bool includeCancelled = 4;
 }
 
 message SubscriptionPaginationRequest {
-  int32 subscriptionId = 1;
+  string subscriptionId = 1;
   int32 page = 2;
   int32 limit = 3;
   bool includeCancelled = 4;
@@ -44,7 +44,7 @@ message SubscriptionPaginationRequest {
 
 // Invoice Item
 message InvoiceItem {
-  int32 productId = 1;
+  string productId = 1;
   string description = 2;
   int32 quantity = 3;
   double unitPrice = 4;
@@ -53,13 +53,13 @@ message InvoiceItem {
 
 // Invoice messages
 message Invoice {
-  int32 id = 1;
+  string id = 1;
   string invoiceNumber = 2;
-  int32 orderId = 3;
+  string orderId = 3;
   string orderNumber = 4;
-  int32 subscriptionId = 5;
+  string subscriptionId = 5;
   string invoiceType = 6;
-  int32 customerId = 7;
+  string customerId = 7;
   string status = 8;
   double subtotal = 9;
   double tax = 10;
@@ -80,9 +80,9 @@ message Invoice {
 }
 
 message CreateInvoiceRequest {
-  int32 orderId = 1;
+  string orderId = 1;
   string orderNumber = 2;
-  int32 customerId = 3;
+  string customerId = 3;
   repeated InvoiceItem items = 4;
   double subtotal = 5;
   double tax = 6;
@@ -96,7 +96,7 @@ message CreateInvoiceRequest {
 }
 
 message InvoiceIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message InvoiceResponse {
@@ -116,14 +116,14 @@ message PaginatedInvoiceListResponse {
 }
 
 message UpdateInvoiceStatusRequest {
-  int32 id = 1;
+  string id = 1;
   string status = 2;
 }
 
 message CustomerIdRequest {
-  int32 customerId = 1;
+  string customerId = 1;
 }
 
 message SubscriptionIdRequest {
-  int32 subscriptionId = 1;
+  string subscriptionId = 1;
 }

@@ -1,5 +1,5 @@
 export class AddItemDto {
-  productId: number;
+  productId: string;
   quantity: number;
   price: number;
   notes?: string;

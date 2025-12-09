@@ -11,9 +11,9 @@ interface SubscriptionPaymentSuccessEvent {
   timestamp: Date | string;
   source: string;
   data: {
-    paymentId: number;
-    subscriptionId: number;
-    customerId: number;
+    paymentId: string;
+    subscriptionId: string;
+    customerId: string;
     amount: number;
     currency: string;
     method: string;
@@ -29,8 +29,8 @@ interface SubscriptionPaymentFailedEvent {
   timestamp: Date | string;
   source: string;
   data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     amount: number;
     reason: string;
     canRetry: boolean;
@@ -48,18 +48,18 @@ export class SubscriptionEventListener {
   @EventPattern(event.EventTopics.PAYMENT_SUCCESS)
   async handlePaymentSuccess(@Payload() eventData: event.PaymentSuccessEvent) {
     try {
-      console.log('📥 [subscription-group] Received PAYMENT_SUCCESS event');
+      console.log('[SubscriptionEvent] Received PAYMENT_SUCCESS event');
       this.logEvent(eventData);
 
       const { invoiceId, customerId } = eventData.data;
 
-      console.log(`💳 Payment succeeded for invoice ${invoiceId}, customer ${customerId}`);
+      console.log(`[SubscriptionEvent] Payment succeeded for invoice ${invoiceId}, customer ${customerId}`);
 
       // TODO: In the future, we can fetch invoice details to get subscriptionId
       // and activate the subscription here. For now, activation happens via direct API call.
       
     } catch (error) {
-      console.error('❌ Error handling PAYMENT_SUCCESS:', error);
+      console.error('[SubscriptionEvent] Error handling PAYMENT_SUCCESS:', error);
     }
   }
 
@@ -68,12 +68,12 @@ export class SubscriptionEventListener {
   @EventPattern('subscription.payment.success')
   async handleSubscriptionPaymentSuccess(@Payload() eventData: SubscriptionPaymentSuccessEvent) {
     try {
-      console.log('📥 [subscription-group] Received subscription.payment.success event');
+      console.log('[SubscriptionEvent] Received subscription.payment.success event');
       this.logEvent(eventData);
 
       const { subscriptionId, customerId, amount, transactionId, planName } = eventData.data;
 
-      console.log(`💳 Subscription payment succeeded:`);
+      console.log(`[SubscriptionEvent] Subscription payment succeeded:`);
       console.log(`   Subscription ID: ${subscriptionId}`);
       console.log(`   Customer ID: ${customerId}`);
       console.log(`   Amount: ${amount}`);
@@ -83,26 +83,26 @@ export class SubscriptionEventListener {
       // Activate subscription
       try {
         await this.subscriptionService.activateSubscription(subscriptionId);
-        console.log(`✅ Subscription ${subscriptionId} activated successfully`);
+        console.log(`[SubscriptionEvent] Subscription ${subscriptionId} activated successfully`);
       } catch (activateError) {
-        console.error(`❌ Failed to activate subscription ${subscriptionId}:`, activateError.message);
+        console.error(`[SubscriptionEvent] Failed to activate subscription ${subscriptionId}:`, activateError.message);
         // Still log success because payment was received
       }
       
     } catch (error) {
-      console.error('❌ Error handling subscription.payment.success:', error);
+      console.error('[SubscriptionEvent] Error handling subscription.payment.success:', error);
     }
   }
 
   @EventPattern('subscription.payment.failed')
   async handleSubscriptionPaymentFailed(@Payload() eventData: SubscriptionPaymentFailedEvent) {
     try {
-      console.log('📥 [subscription-group] Received subscription.payment.failed event');
+      console.log('[SubscriptionEvent] Received subscription.payment.failed event');
       this.logEvent(eventData);
 
       const { subscriptionId, customerId, amount, reason, canRetry } = eventData.data;
 
-      console.log(`❌ Subscription payment failed:`);
+      console.log(`[SubscriptionEvent] Subscription payment failed:`);
       console.log(`   Subscription ID: ${subscriptionId}`);
       console.log(`   Customer ID: ${customerId}`);
       console.log(`   Amount: ${amount}`);
@@ -113,19 +113,19 @@ export class SubscriptionEventListener {
       // This is useful for retry logic
       
     } catch (error) {
-      console.error('❌ Error handling subscription.payment.failed:', error);
+      console.error('[SubscriptionEvent] Error handling subscription.payment.failed:', error);
     }
   }
 
   @EventPattern(event.EventTopics.PAYMENT_FAILED)
   async handlePaymentFailed(@Payload() eventData: event.PaymentFailedEvent) {
     try {
-      console.log('📥 [subscription-group] Received PAYMENT_FAILED event');
+      console.log('[SubscriptionEvent] Received PAYMENT_FAILED event');
       this.logEvent(eventData);
 
       const { invoiceId, customerId, reason } = eventData.data;
 
-      console.log(`❌ Payment failed for invoice ${invoiceId}: ${reason}`);
+      console.log(`[SubscriptionEvent] Payment failed for invoice ${invoiceId}: ${reason}`);
 
       // TODO: If this is a subscription payment, mark subscription as past_due
       // This would require getting invoice details and checking subscriptionId
@@ -139,24 +139,24 @@ export class SubscriptionEventListener {
       // }
       
     } catch (error) {
-      console.error('❌ Error handling PAYMENT_FAILED:', error);
+      console.error('[SubscriptionEvent] Error handling PAYMENT_FAILED:', error);
     }
   }
 
   @EventPattern(event.EventTopics.INVOICE_CREATED)
   async handleInvoiceCreated(@Payload() eventData: event.InvoiceCreatedEvent) {
     try {
-      console.log('📥 [subscription-group] Received INVOICE_CREATED event');
+      console.log('[SubscriptionEvent] Received INVOICE_CREATED event');
       this.logEvent(eventData);
 
       const { invoiceId, invoiceNumber, customerId } = eventData.data;
 
-      console.log(`📄 Invoice ${invoiceNumber} created for customer ${customerId}`);
+      console.log(`[SubscriptionEvent] Invoice ${invoiceNumber} created for customer ${customerId}`);
 
       // TODO: Send notification to customer about new invoice
       
     } catch (error) {
-      console.error('❌ Error handling INVOICE_CREATED:', error);
+      console.error('[SubscriptionEvent] Error handling INVOICE_CREATED:', error);
     }
   }
 
@@ -167,13 +167,13 @@ export class SubscriptionEventListener {
    */
   async checkExpiringTrials() {
     try {
-      console.log('🔍 Checking for expiring trials...');
+      console.log('[SubscriptionEvent] Checking for expiring trials...');
       
       // Find subscriptions on trial that are expiring soon (e.g., 3 days before end)
       // Send notifications to customers
       
     } catch (error) {
-      console.error('❌ Error checking expiring trials:', error);
+      console.error('[SubscriptionEvent] Error checking expiring trials:', error);
     }
   }
 
@@ -182,19 +182,19 @@ export class SubscriptionEventListener {
    */
   async checkSubscriptionRenewals() {
     try {
-      console.log('🔍 Checking for subscriptions to renew...');
+      console.log('[SubscriptionEvent] Checking for subscriptions to renew...');
       
       const subscriptions = await this.subscriptionService.findSubscriptionsToRenew();
       
-      console.log(`Found ${subscriptions.length} subscriptions to renew`);
+      console.log(`[SubscriptionEvent] Found ${subscriptions.length} subscriptions to renew`);
       
       for (const subscription of subscriptions) {
-        console.log(`🔄 Renewing subscription ${subscription.id}`);
+        console.log(`[SubscriptionEvent] Renewing subscription ${subscription.id}`);
         await this.subscriptionService.renew(subscription.id);
       }
       
     } catch (error) {
-      console.error('❌ Error checking subscription renewals:', error);
+      console.error('[SubscriptionEvent] Error checking subscription renewals:', error);
     }
   }
 
@@ -206,7 +206,7 @@ export class SubscriptionEventListener {
       : eventData.timestamp.toISOString();
 
     console.log(
-      `🔥 [SUBSCRIPTION] Received event [${eventData.eventType}] at ${timestamp}`,
+      `[SubscriptionEvent] Received event [${eventData.eventType}] at ${timestamp}`,
     );
   }
 }

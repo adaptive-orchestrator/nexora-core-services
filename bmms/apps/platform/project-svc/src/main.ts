@@ -27,6 +27,6 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  console.log(`✅ Project Service | gRPC: ${grpcUrl}`);
+  console.log(`[ProjectSvc] Project Service | gRPC: ${grpcUrl}`);
 }
 bootstrap();

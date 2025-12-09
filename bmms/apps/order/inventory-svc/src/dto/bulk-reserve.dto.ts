@@ -1,8 +1,8 @@
 export class BulkReserveDto {
   items: Array<{
-    productId: number;
+    productId: string;
     quantity: number;
   }>;
-  orderId: number;
-  customerId: number;
+  orderId: string;
+  customerId: string;
 }

@@ -26,7 +26,7 @@ export class OnetimeBillingStrategy implements IBillingStrategy {
   }
 
   async calculateAmount(params: BillingCalculationParams): Promise<BillingResult> {
-    this.logger.log(`📊 Calculating ONETIME billing for order ${params.orderId}`);
+    this.logger.log(`[Billing] Calculating ONETIME billing for order ${params.orderId}`);
 
     // Calculate subtotal from items
     const subtotal = params.items.reduce((sum, item) => {

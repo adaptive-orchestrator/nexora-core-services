@@ -1,9 +1,9 @@
 import { InvoiceItemDto } from "./invoice-item.dto";
 
 export class CreateInvoiceDto {
-  orderId: number;
+  orderId: string;
   orderNumber: string;
-  customerId: number;
+  customerId: string;
   items: InvoiceItemDto[];
   subtotal: number;
   tax: number;

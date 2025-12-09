@@ -22,11 +22,11 @@ import { ProrationService } from './proration/proration.service';
 import { debug } from '@bmms/common';
 
 interface ICatalogueGrpcService {
-  getPlanById(data: { id: number }): any;
+  getPlanById(data: { id: string }): any;
 }
 
 interface ICustomerGrpcService {
-  getCustomerById(data: { id: number }): any;
+  getCustomerById(data: { id: string }): any;
 }
 
 @Injectable()
@@ -56,7 +56,7 @@ export class subscriptionSvcService implements OnModuleInit {
   onModuleInit() {
     this.catalogueService = this.catalogueClient.getService<ICatalogueGrpcService>('CatalogueService');
     this.customerService = this.customerClient.getService<ICustomerGrpcService>('CustomerService');
-    debug.log('✅ [SubscriptionSvcService] gRPC services initialized');
+    debug.log('[SubscriptionSvc] gRPC services initialized');
   }
 
   // ============= CRUD =============
@@ -65,7 +65,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Create a new subscription
    */
   async create(dto: CreateSubscriptionDto): Promise<Subscription> {
-    debug.log('🔵 [SubscriptionSvc.create] START - dto:', JSON.stringify(dto));
+    debug.log('[SubscriptionSvc.create] START - dto:', JSON.stringify(dto));
 
     // 1. Validate customer exists
     try {
@@ -83,7 +83,7 @@ export class subscriptionSvcService implements OnModuleInit {
     }
 
     const plan = planResponse.plan;
-    debug.log('✅ [SubscriptionSvc.create] Plan found:', plan.name);
+    debug.log('[SubscriptionSvc.create] Plan found:', plan.name);
 
     // 3. Check if customer already has active or pending subscription
     const existingSubscription = await this.subscriptionRepo.findOne({
@@ -103,7 +103,7 @@ export class subscriptionSvcService implements OnModuleInit {
       
       // If has PENDING subscription, return it so user can continue checkout
       if (existingSubscription.status === SubscriptionStatus.PENDING) {
-        debug.log(`📋 [SubscriptionSvc.create] Customer ${dto.customerId} already has pending subscription ${existingSubscription.id}, returning existing`);
+        debug.log(`[SubscriptionSvc.create] Customer ${dto.customerId} already has pending subscription ${existingSubscription.id}, returning existing`);
         return existingSubscription;
       }
     }
@@ -131,9 +131,9 @@ export class subscriptionSvcService implements OnModuleInit {
       trialEnd = new Date(now);
       trialEnd.setDate(trialEnd.getDate() + plan.trialDays);
       isTrialUsed = true;
-      debug.log(`🎁 [SubscriptionSvc.create] Trial enabled for ${plan.trialDays} days`);
+      debug.log(`[SubscriptionSvc.create] Trial enabled for ${plan.trialDays} days`);
     } else {
-      debug.log(`💳 [SubscriptionSvc.create] Subscription created as PENDING - awaiting payment`);
+      debug.log(`[SubscriptionSvc.create] Subscription created as PENDING - awaiting payment`);
     }
 
     // 6. Create subscription
@@ -199,14 +199,14 @@ export class subscriptionSvcService implements OnModuleInit {
       });
     }
 
-    debug.log('✅ [SubscriptionSvc.create] Subscription created:', subscription.id);
+    debug.log('[SubscriptionSvc.create] Subscription created:', subscription.id);
     return subscription;
   }
 
   /**
    * Get all subscriptions for a customer
    */
-  async listByCustomer(customerId: number): Promise<Subscription[]> {
+  async listByCustomer(customerId: string): Promise<Subscription[]> {
     return this.subscriptionRepo.find({
       where: { customerId },
       order: { createdAt: 'DESC' },
@@ -216,7 +216,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Get subscription by ID
    */
-  async findById(id: number): Promise<Subscription> {
+  async findById(id: string): Promise<Subscription> {
     const subscription = await this.subscriptionRepo.findOne({
       where: { id },
       relations: ['history'],
@@ -232,7 +232,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Activate a pending subscription (called after payment success)
    */
-  async activateSubscription(subscriptionId: number): Promise<Subscription> {
+  async activateSubscription(subscriptionId: string): Promise<Subscription> {
     const subscription = await this.findById(subscriptionId);
 
     if (subscription.status !== SubscriptionStatus.PENDING) {
@@ -256,7 +256,7 @@ export class subscriptionSvcService implements OnModuleInit {
       },
     });
 
-    debug.log(`✅ [SubscriptionSvc] Subscription ${subscriptionId} activated`);
+    debug.log(`[SubscriptionSvc] Subscription ${subscriptionId} activated`);
     return updated;
   }
 
@@ -279,7 +279,7 @@ export class subscriptionSvcService implements OnModuleInit {
     converted: number;
     failed: number;
   }> {
-    debug.log('🔍 [SubscriptionSvc] Checking for expired trial subscriptions...');
+    debug.log('[SubscriptionSvc] Checking for expired trial subscriptions...');
 
     const now = new Date();
     const expiredTrials = await this.subscriptionRepo.find({
@@ -289,14 +289,14 @@ export class subscriptionSvcService implements OnModuleInit {
       },
     });
 
-    debug.log(`📋 Found ${expiredTrials.length} expired trial subscriptions`);
+    debug.log(`[SubscriptionSvc] Found ${expiredTrials.length} expired trial subscriptions`);
 
     let converted = 0;
     let failed = 0;
 
     for (const subscription of expiredTrials) {
       try {
-        debug.log(`🔄 Processing subscription ${subscription.id} (trial ended: ${subscription.trialEnd})`);
+        debug.log(`[SubscriptionSvc] Processing subscription ${subscription.id} (trial ended: ${subscription.trialEnd})`);
 
         // Update status to active
         subscription.status = SubscriptionStatus.ACTIVE;
@@ -328,16 +328,16 @@ export class subscriptionSvcService implements OnModuleInit {
           currentPeriodStart: subscription.currentPeriodStart?.toISOString(),
           currentPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
         });
-        debug.log(`✅ Subscription ${subscription.id} converted to active`);
+        debug.log(`[SubscriptionSvc] Subscription ${subscription.id} converted to active`);
 
         converted++;
       } catch (error) {
-        console.error(`❌ Failed to process subscription ${subscription.id}:`, error);
+        console.error(`[SubscriptionSvc] Failed to process subscription ${subscription.id}:`, error);
         failed++;
       }
     }
 
-    debug.log(`✅ Trial expiry check complete. Converted: ${converted}, Failed: ${failed}`);
+    debug.log(`[SubscriptionSvc] Trial expiry check complete. Converted: ${converted}, Failed: ${failed}`);
 
     return {
       processed: expiredTrials.length,
@@ -349,7 +349,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Cancel a subscription
    */
-  async cancel(id: number, dto: CancelSubscriptionDto): Promise<Subscription> {
+  async cancel(id: string, dto: CancelSubscriptionDto): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (subscription.isCancelled()) {
@@ -395,7 +395,7 @@ export class subscriptionSvcService implements OnModuleInit {
       },
     });
 
-    debug.log(`✅ [SubscriptionSvc.cancel] Subscription ${id} cancelled`);
+    debug.log(`[SubscriptionSvc.cancel] Subscription ${id} cancelled`);
     return subscription;
   }
 
@@ -403,7 +403,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Renew a subscription (called by scheduler or payment success event)
    */
 
-  async renew(id: number): Promise<Subscription> {
+  async renew(id: string): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.shouldBill()) {
@@ -453,7 +453,7 @@ export class subscriptionSvcService implements OnModuleInit {
       },
     });
 
-    debug.log(`✅ [SubscriptionSvc.renew] Subscription ${id} renewed`);
+    debug.log(`[SubscriptionSvc.renew] Subscription ${id} renewed`);
     return subscription;
   }
 
@@ -461,7 +461,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Change plan (upgrade/downgrade)
    */
 
-  async changePlan(id: number, dto: ChangePlanDto): Promise<Subscription> {
+  async changePlan(id: string, dto: ChangePlanDto): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.isActive()) {
@@ -505,7 +505,7 @@ export class subscriptionSvcService implements OnModuleInit {
     const changeType = this.prorationService.getChangeType(previousAmount, newPlan.price);
     const prorationDescription = this.prorationService.generateProrationDescription(prorationResult, changeType);
 
-    debug.log(`📊 [Proration] ${changeType.toUpperCase()}:`, {
+    debug.log(`[Proration] ${changeType.toUpperCase()}:`, {
       oldAmount: previousAmount,
       newAmount: newPlan.price,
       creditAmount: prorationResult.creditAmount,
@@ -595,7 +595,7 @@ export class subscriptionSvcService implements OnModuleInit {
             },
           },
         });
-        debug.log(`💰 [Proration] Invoice created for upgrade: $${prorationResult.netAmount}`);
+        debug.log(`[Proration] Invoice created for upgrade: $${prorationResult.netAmount}`);
       } else if (prorationResult.netAmount < 0) {
         // Customer gets credit (downgrade)
         const creditEvent = createBaseEvent(EventTopics.BILLING_CREDIT_APPLIED, 'subscription-svc');
@@ -612,11 +612,11 @@ export class subscriptionSvcService implements OnModuleInit {
             },
           },
         });
-        debug.log(`💳 [Proration] Credit issued for downgrade: $${Math.abs(prorationResult.netAmount)}`);
+        debug.log(`[Proration] Credit issued for downgrade: $${Math.abs(prorationResult.netAmount)}`);
       }
     }
 
-    debug.log(`✅ [SubscriptionSvc.changePlan] Subscription ${id} plan changed to ${newPlan.name}`);
+    debug.log(`[SubscriptionSvc.changePlan] Subscription ${id} plan changed to ${newPlan.name}`);
     return subscription;
   }
 
@@ -624,7 +624,7 @@ export class subscriptionSvcService implements OnModuleInit {
    * Update subscription status (used by event listeners)
    */
   async updateStatus(
-    id: number,
+    id: string,
     newStatus: SubscriptionStatus,
     reason?: string
   ): Promise<Subscription> {
@@ -681,7 +681,7 @@ export class subscriptionSvcService implements OnModuleInit {
   /**
    * Convert trial to active (called when payment succeeds after trial)
    */
-  async convertTrialToActive(id: number): Promise<Subscription> {
+  async convertTrialToActive(id: string): Promise<Subscription> {
     const subscription = await this.findById(id);
 
     if (!subscription.isOnTrial()) {

@@ -6,19 +6,25 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
+  Unique,
 } from 'typeorm';
 import { InventoryReservation } from './inventory-reservation.entity';
 
 @Entity('inventory')
+@Unique('uq_inventory_product_owner', ['productId', 'ownerId'])
 @Index('idx_inventory_product', ['productId'])
+@Index('idx_inventory_owner', ['ownerId'])
 @Index('idx_inventory_quantity_reorder', ['quantity', 'reorderLevel'])
 @Index('idx_inventory_active', ['isActive'])
 export class Inventory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ unique: true })
-  productId: number;
+  @Column('uuid')
+  productId: string;
+
+  @Column({ nullable: true })
+  ownerId: string;
 
   @Column()
   quantity: number; // Số lượng available

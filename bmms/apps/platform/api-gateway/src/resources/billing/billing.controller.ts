@@ -5,7 +5,7 @@ import {
   Patch, 
   Body, 
   Param, 
-  ParseIntPipe,
+  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   Query,
@@ -51,7 +51,7 @@ export class BillingController {
   @ApiOperation({ summary: 'Get invoice by ID' })
   @ApiResponse({ status: 200, description: 'Invoice found', type: InvoiceResponseDto })
   @ApiResponse({ status: 404, description: 'Invoice not found' })
-  async getInvoiceById(@Param('id', ParseIntPipe) id: number) {
+  async getInvoiceById(@Param('id', ParseUUIDPipe) id: string) {
     return this.billingService.getInvoiceById(id);
   }
 
@@ -59,7 +59,7 @@ export class BillingController {
   @ApiOperation({ summary: 'Update invoice status' })
   @ApiResponse({ status: 200, description: 'Invoice status updated', type: InvoiceResponseDto })
   async updateInvoiceStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateInvoiceStatusDto,
   ) {
     return this.billingService.updateInvoiceStatus(id, dto);
@@ -68,7 +68,7 @@ export class BillingController {
   @Post(':id/retry')
   @ApiOperation({ summary: 'Retry payment for invoice' })
   @ApiResponse({ status: 200, description: 'Payment retry initiated' })
-  async retryPayment(@Param('id', ParseIntPipe) id: number) {
+  async retryPayment(@Param('id', ParseUUIDPipe) id: string) {
     return this.billingService.retryPayment(id);
   }
 }

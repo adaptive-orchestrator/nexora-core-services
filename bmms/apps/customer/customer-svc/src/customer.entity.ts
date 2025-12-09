@@ -23,8 +23,8 @@ export enum LifecycleStage {
 
 @Entity('customers')
 export class Customer {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @Column()
   name!: string;
@@ -62,8 +62,8 @@ export class Customer {
   @Column({ nullable: true })
   tenantId?: string;
 
-  @Column({ nullable: true })
-  userId?: number; // Reference to User from Auth service
+  @Column({ type: 'uuid', nullable: true })
+  userId?: string; // Reference to User from Auth service
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   totalSpent!: number; // Tổng chi tiêu

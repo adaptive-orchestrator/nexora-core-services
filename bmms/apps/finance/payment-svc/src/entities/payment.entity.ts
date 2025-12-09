@@ -13,17 +13,17 @@ import {
 @Index(['status'])
 @Index(['createdAt'])
 export class Payment {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'bigint', nullable: false })
-  invoiceId: number;
+  @Column({ type: 'uuid', nullable: false })
+  invoiceId: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
   invoiceNumber: string;
 
-  @Column({ type: 'bigint', nullable: false })
-  customerId: number;
+  @Column({ type: 'uuid', nullable: false })
+  customerId: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: false })
   totalAmount: number;

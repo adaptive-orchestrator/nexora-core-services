@@ -49,6 +49,6 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.init();
   
-  console.log(`✅ Order Service | gRPC: ${grpcUrl} | Kafka: listening`);
+  console.log(`[OrderSvc] Order Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

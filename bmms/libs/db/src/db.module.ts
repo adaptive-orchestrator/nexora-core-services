@@ -26,7 +26,7 @@ export class DbModule {
             const password = configService.get(`${prefix}_DB_PASS`);
             const database = configService.get(`${prefix}_DB_NAME`);
             
-            debug.log(`🔍 DB Config for [${prefix}]:`);
+            debug.log(`[DbModule] DB Config for [${prefix}]:`);
             debug.log('Host:', host);
             debug.log('Port:', port);
             debug.log('User:', username);
@@ -48,26 +48,24 @@ export class DbModule {
               password,
               database,
               autoLoadEntities: true,
-              synchronize: true, // ⚠️ CHỈ dùng trong development, tắt đi ở production!
-              logging: false, // 🚀 Disable logging for performance
-              // 🚀 Connection Pool Optimization for High Concurrency (1000 VUs)
+              synchronize: true, // [WARNING] CHỈ dùng trong development, tắt đi ở production!
+              logging: false, // [DbModule] Disable logging for performance
+              // [DbModule] Connection Pool Optimization for High Concurrency (1000 VUs)
               extra: {
                 connectionLimit: 100,       // Giữ 100 (đủ cho 1 service)
                 waitForConnections: true,
                 queueLimit: 1000,           // Tăng queue lên 1000 để buffer requests
                 enableKeepAlive: true,
                 keepAliveInitialDelay: 10000,
-                acquireTimeout: 120000,     // 120s timeout
-                timeout: 120000,
                 maxIdle: 50,                // Keep 50 idle connections
                 idleTimeout: 60000,
                 connectTimeout: 60000,      // Connection timeout
               },
-              // 🚀 Query Cache (Extended)
+              // [DbModule] Query Cache (Extended)
               cache: {
                 duration: 60000, // Cache queries 60 seconds
               },
-              // 🚀 Retry Strategy
+              // [DbModule] Retry Strategy
               retryAttempts: 5,             // Tăng từ 3 lên 5
               retryDelay: 2000,             // Tăng delay lên 2s
             };

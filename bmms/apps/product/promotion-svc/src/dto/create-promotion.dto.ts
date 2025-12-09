@@ -60,8 +60,8 @@ export class CreatePromotionDto {
 
   @IsOptional()
   @IsArray()
-  @IsNumber({}, { each: true })
-  specificPlanIds?: number[];
+  @IsString({ each: true })
+  specificPlanIds?: string[];
 
   // Usage limits
   @IsOptional()

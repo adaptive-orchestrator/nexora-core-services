@@ -9,11 +9,11 @@ import { Invoice } from './invoice.entity';
 
 @Entity('payment_records')
 export class PaymentRecord {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  invoiceId: number;
+  @Column('uuid')
+  invoiceId: string;
 
   @Column({
     type: 'enum',

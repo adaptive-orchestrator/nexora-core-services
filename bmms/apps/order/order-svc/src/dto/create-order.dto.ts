@@ -1,11 +1,10 @@
 import { Type } from "class-transformer";
-import { IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsOptional, IsString, ValidateNested, IsUUID } from "class-validator";
 import { OrderItemDto } from "./order-item.dto";
 
 export class CreateOrderDto {
-  @IsNumber()
-  @Type(() => Number)
-  customerId: number;
+  @IsUUID()
+  customerId: string;
 
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)

@@ -36,7 +36,7 @@ export class RetailPromotionStrategy implements IPromotionStrategy {
   }
 
   async validatePromotion(params: PromotionValidationParams): Promise<PromotionValidationResult> {
-    this.logger.log(`🎫 Validating RETAIL promotion: ${params.promotionCode}`);
+    this.logger.log(`[Promotion] Validating RETAIL promotion: ${params.promotionCode}`);
 
     const promotion = await this.promotionRepo.findOne({
       where: { code: params.promotionCode.toUpperCase() },

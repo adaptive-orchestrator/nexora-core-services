@@ -4,7 +4,7 @@ import { GrpcMethod } from '@nestjs/microservices';
 import { LlmOrchestratorService } from './llm-orchestrator.service';
 import type { LlmChatRequest, LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
-import { K8sIntegrationService } from './service/k8s-integration.service';
+import { HelmIntegrationService } from './service/helm-integration.service';
 
 
 @Controller()
@@ -12,7 +12,7 @@ export class LlmOrchestratorController {
   constructor(
     private readonly llmOrchestratorService: LlmOrchestratorService,
     private readonly codeSearchService: CodeSearchService,
-    private readonly k8sIntegrationService: K8sIntegrationService,
+    private readonly helmIntegrationService: HelmIntegrationService,
   ) { }
 
   // @ts-ignore - NestJS decorator type issue in strict mode
@@ -60,6 +60,93 @@ export class LlmOrchestratorController {
 
     const result = await this.llmOrchestratorService.generateCode(prompt, context || []);
     return result;
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'RecommendBusinessModel')
+  async recommendBusinessModel(data: {
+    business_description?: string;
+    businessDescription?: string; // gRPC may convert snake_case to camelCase
+    target_audience?: string;
+    targetAudience?: string;
+    revenue_preference?: string;
+    revenuePreference?: string;
+    lang?: string;
+  }): Promise<{
+    greeting: string;
+    recommendation_intro: string;
+    recommended_model: string;
+    why_this_fits: string;
+    how_it_works: string;
+    next_steps: string[];
+    alternatives_intro?: string;
+    alternatives?: Array<{ model: string; brief_reason: string }>;
+    closing?: string;
+  }> {
+    // Handle both snake_case and camelCase (gRPC may convert)
+    const businessDescription = data.business_description || data.businessDescription;
+    const targetAudience = data.target_audience || data.targetAudience;
+    const revenuePreference = data.revenue_preference || data.revenuePreference;
+    
+    console.log('[RecommendBusinessModel] Received data:', JSON.stringify(data));
+    
+    if (!businessDescription || typeof businessDescription !== 'string') {
+      throw new Error('business_description is required and must be a string');
+    }
+
+    return this.llmOrchestratorService.recommendBusinessModel({
+      business_description: businessDescription,
+      target_audience: targetAudience,
+      revenue_preference: revenuePreference,
+      lang: data.lang,
+    });
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'SwitchBusinessModel')
+  async switchBusinessModel(data: {
+    to_model: string;
+    tenant_id?: string;
+    dry_run?: boolean;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    changeset_path?: string;
+    deployed?: boolean;
+    dry_run?: boolean;
+    error?: string;
+  }> {
+    const validModels = ['retail', 'subscription', 'freemium', 'multi'];
+    if (!data.to_model || !validModels.includes(data.to_model)) {
+      throw new Error(`Invalid model. Must be one of: ${validModels.join(', ')}`);
+    }
+
+    // Tạo mock LLM response để generate changeset
+    const mockLlmResponse = {
+      metadata: {
+        to_model: data.to_model,
+      },
+      changeset: {
+        features: [
+          { key: 'business_model', value: data.to_model },
+        ],
+      },
+    };
+
+    // Trigger Helm deployment
+    const result = await this.helmIntegrationService.triggerDeployment(
+      mockLlmResponse, 
+      data.dry_run ?? false
+    );
+
+    return {
+      success: result.success,
+      message: result.message || (result.success ? `Switched to ${data.to_model} model` : 'Switch failed'),
+      changeset_path: result.changesetPath,
+      deployed: result.deployed,
+      dry_run: result.dryRun,
+      error: result.error,
+    };
   }
 
   @Get('/rag/health')
@@ -116,7 +203,7 @@ export class LlmOrchestratorController {
     // 2. Auto-deploy if enabled
     let deploymentResult = null;
     if (body.auto_deploy !== false) {
-      deploymentResult = await this.k8sIntegrationService.triggerDeployment(llmResponse, isDryRun);
+      deploymentResult = await this.helmIntegrationService.triggerDeployment(llmResponse, isDryRun);
     }
 
     return {
@@ -127,13 +214,30 @@ export class LlmOrchestratorController {
   }
 
   /**
-   * Check deployment status
+   * Check Helm release status
    */
-  @Get('/k8s/status/:namespace/:service')
-  async getDeploymentStatus(
+  @Get('/helm/status/:namespace/:release')
+  async getHelmStatus(
     @Param('namespace') namespace: string,
-    @Param('service') service: string,
+    @Param('release') release: string,
   ) {
-    return this.k8sIntegrationService.checkDeploymentStatus(namespace, service);
+    return this.helmIntegrationService.getHelmStatus(release, namespace);
+  }
+
+  /**
+   * List all Helm releases
+   */
+  @Get('/helm/releases')
+  async listHelmReleases() {
+    return this.helmIntegrationService.listHelmReleases();
+  }
+
+  /**
+   * Get Helm configuration (for debugging)
+   * Returns configured paths for helm charts and changesets
+   */
+  @Get('/helm/config')
+  getHelmConfiguration() {
+    return this.helmIntegrationService.getConfiguration();
   }
 }

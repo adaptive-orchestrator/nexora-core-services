@@ -21,7 +21,7 @@ export class CustomerSvcService {
   async create(dto: CreateCustomerDto): Promise<Customer> {
     const customer = await this.repo.save(this.repo.create(dto));
 
-    // ✅ Emit event customer.created với đúng structure
+    // Emit event customer.created với đúng structure
     const event: CustomerCreatedEvent = {
       ...createBaseEvent('customer.created', 'customer-service'),
       eventType: 'customer.created',
@@ -34,7 +34,7 @@ export class CustomerSvcService {
       },
     };
 
-    debug.log('🚀 Emitting customer.created event:', event);
+    debug.log('Emitting customer.created event:', event);
     this.kafka.emit('customer.created', event);
 
     return customer;
@@ -71,7 +71,7 @@ export class CustomerSvcService {
     return query.getMany();
   }
 
-  async findOne(id: number): Promise<Customer> {
+  async findOne(id: string): Promise<Customer> {
     const customer = await this.repo.findOne({ where: { id } });
     if (!customer) throw new NotFoundException(`Customer ${id} not found`);
     return customer;
@@ -83,29 +83,29 @@ export class CustomerSvcService {
     return customer;
   }
 
-  async findByUserId(userId: number): Promise<Customer> {
+  async findByUserId(userId: string): Promise<Customer> {
     const customer = await this.repo.findOne({ where: { userId } });
     if (!customer) throw new NotFoundException(`Customer with userId ${userId} not found`);
     return customer;
   }
 
-  async update(id: number, dto: UpdateCustomerDto): Promise<Customer> {
+  async update(id: string, dto: UpdateCustomerDto): Promise<Customer> {
     const customer = await this.findOne(id);
     Object.assign(customer, dto);
     return this.repo.save(customer);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.repo.delete(id);
   }
 
-  async updateSegment(id: number, segment: CustomerSegment): Promise<Customer> {
+  async updateSegment(id: string, segment: CustomerSegment): Promise<Customer> {
     const customer = await this.findOne(id);
     const previousSegment = customer.segment;
     customer.segment = segment;
     const saved = await this.repo.save(customer);
 
-    // ✅ Emit event segment.changed với đúng structure
+    // Emit event segment.changed với đúng structure
     const event: SegmentChangedEvent = {
       ...createBaseEvent('segment.changed', 'customer-service'),
       eventType: 'segment.changed',
@@ -115,7 +115,7 @@ export class CustomerSvcService {
       },
     };
 
-    debug.log(`🚀 Emitting segment.changed event: ${previousSegment} → ${segment}`);
+    debug.log(`Emitting segment.changed event: ${previousSegment} -> ${segment}`);
     this.kafka.emit('segment.changed', event);
 
     return saved;

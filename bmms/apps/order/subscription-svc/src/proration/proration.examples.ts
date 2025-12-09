@@ -76,7 +76,7 @@ console.log(`- Net amount: $${downgrade.netAmount}`);
 console.log(`- Change takes effect: ${downgrade.nextBillingDate.toDateString()}`);
 
 if (downgrade.netAmount < 0) {
-  console.log(`\n✅ Customer receives $${Math.abs(downgrade.netAmount)} credit`);
+  console.log(`\n[Proration] Customer receives $${Math.abs(downgrade.netAmount)} credit`);
 }
 
 /*
@@ -87,7 +87,7 @@ Proration Calculation:
 - Net amount: -$7.34
 - Change takes effect: Fri Jan 31 2025
 
-✅ Customer receives $7.34 credit
+Customer receives $7.34 credit
 */
 
 // =============================================================================
@@ -271,18 +271,18 @@ async function simulateChangePlan(
   // Determine action
   if (prorationService.shouldApplyProration(proration.netAmount)) {
     if (proration.netAmount > 0) {
-      console.log(`\n💳 Action: Charge customer $${proration.netAmount}`);
+      console.log(`\n[Proration] Action: Charge customer $${proration.netAmount}`);
       console.log(`   → Create invoice for proration charge`);
     } else {
-      console.log(`\n💰 Action: Issue $${Math.abs(proration.netAmount)} credit`);
+      console.log(`\n[Proration] Action: Issue $${Math.abs(proration.netAmount)} credit`);
       console.log(`   → Add credit to customer account`);
     }
   } else {
-    console.log('\n✅ Action: No charge (amount below threshold)');
+    console.log('\n[Proration] Action: No charge (amount below threshold)');
   }
   
   // Update subscription
-  console.log('\n📝 Update subscription:');
+  console.log('\n[Proration] Update subscription:');
   console.log(`   - planId: ${subscription.planId} → ${newPlan.id}`);
   console.log(`   - amount: $${subscription.amount} → $${newPlan.price}`);
   if (immediate) {
@@ -338,7 +338,7 @@ try {
     'monthly'
   );
 } catch (error) {
-  console.log(`❌ Error caught: ${error.message}`);
+  console.log(`[Proration] Error caught: ${error.message}`);
 }
 
 // =============================================================================
@@ -346,7 +346,7 @@ try {
 // =============================================================================
 
 console.log('\n\n=== Summary ===\n');
-console.log('✅ ProrationService provides:');
+console.log('[Proration] ProrationService provides:');
 console.log('  1. Period-end plan changes (no immediate charge)');
 console.log('  2. Immediate plan changes (with fair proration)');
 console.log('  3. Cancellation refund calculations');
@@ -354,4 +354,4 @@ console.log('  4. Upgrade/downgrade detection');
 console.log('  5. Customer-friendly descriptions');
 console.log('  6. Minimum threshold checking');
 console.log('  7. Comprehensive error handling');
-console.log('\n🚀 Ready for production use!');
+console.log('\n[Proration] Ready for production use!');

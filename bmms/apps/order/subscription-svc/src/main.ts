@@ -48,7 +48,7 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.init();
   
-  console.log(`✅ Subscription Service | gRPC: ${grpcUrl} | Kafka: listening`);
+  console.log(`[SubscriptionSvc] Subscription Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 
 bootstrap();

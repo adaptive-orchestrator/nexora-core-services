@@ -19,7 +19,7 @@ async function bootstrap() {
   );
 
   await app.listen();
-  console.log(`✅ Promotion Service | gRPC: ${grpcUrl}`);
+  console.log(`[PromotionSvc] Promotion Service | gRPC: ${grpcUrl}`);
 }
 
 bootstrap();

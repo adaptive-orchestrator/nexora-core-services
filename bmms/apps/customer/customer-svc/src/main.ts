@@ -42,6 +42,6 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  console.log(`✅ Customer Service | gRPC: ${grpcUrl} | Kafka: listening`);
+  console.log(`[CustomerSvc] Customer Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

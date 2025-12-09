@@ -24,7 +24,7 @@ export class CustomerSvcController {
   }
 
   @GrpcMethod('CustomerService', 'GetCustomerById')
-  async getCustomerById(data: { id: number }) {
+  async getCustomerById(data: { id: string }) {
     try {
       this.logger.log(`GetCustomerById called with id: ${data.id}`);
       const customer = await this.service.findOne(data.id);
@@ -68,7 +68,7 @@ export class CustomerSvcController {
   }
 
   @GrpcMethod('CustomerService', 'GetCustomerByUserId')
-  async getCustomerByUserId(data: { userId: number }) {
+  async getCustomerByUserId(data: { userId: string }) {
     this.logger.log(`GetCustomerByUserId called with userId: ${data.userId}`);
     const customer = await this.service.findByUserId(data.userId);
     return { customer };
@@ -83,7 +83,7 @@ export class CustomerSvcController {
   }
 
   @GrpcMethod('CustomerService', 'DeleteCustomer')
-  async deleteCustomer(data: { id: number }) {
+  async deleteCustomer(data: { id: string }) {
     this.logger.log(`DeleteCustomer called with id: ${data.id}`);
     await this.service.remove(data.id);
     return { success: true, message: 'Customer deleted successfully' };

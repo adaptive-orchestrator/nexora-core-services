@@ -21,6 +21,13 @@ async function bootstrap() {
       package: 'llm',
       protoPath: join(__dirname, './proto/llm-orchestrator.proto'),
       url: grpcUrl,
+      loader: {
+        keepCase: true, // Keep snake_case field names in proto
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true,
+      },
     },
   });
 
@@ -28,6 +35,6 @@ async function bootstrap() {
   await httpApp.startAllMicroservices();
   await httpApp.listen(httpPort);
   
-  console.log(`🚀 LLM Orchestrator HTTP: http://localhost:${httpPort} | gRPC: ${grpcUrl}`);
+  console.log(`[LlmOrchestrator] LLM Orchestrator HTTP: http://localhost:${httpPort} | gRPC: ${grpcUrl}`);
 }
 bootstrap();

@@ -16,7 +16,7 @@ import {
 
 interface PromotionGrpcService {
   createPromotion(data: any): any;
-  getPromotionById(data: { id: number }): any;
+  getPromotionById(data: { id: string }): any;
   getPromotionByCode(data: { code: string }): any;
   getAllPromotions(data: {
     status?: string;
@@ -24,12 +24,12 @@ interface PromotionGrpcService {
     offset?: number;
   }): any;
   updatePromotion(data: any): any;
-  deletePromotion(data: { id: number }): any;
+  deletePromotion(data: { id: string }): any;
   validatePromotion(data: ValidatePromotionDto): any;
   applyPromotion(data: ApplyPromotionDto): any;
   getPromotionUsage(data: {
-    promotionId?: number;
-    customerId?: number;
+    promotionId?: string;
+    customerId?: string;
     limit?: number;
     offset?: number;
   }): any;
@@ -59,7 +59,7 @@ export class PromotionService implements OnModuleInit {
     }
   }
 
-  async getPromotionById(id: number) {
+  async getPromotionById(id: string) {
     try {
       return await firstValueFrom(
         this.promotionService.getPromotionById({ id }),
@@ -98,7 +98,7 @@ export class PromotionService implements OnModuleInit {
     }
   }
 
-  async updatePromotion(id: number, dto: UpdatePromotionDto) {
+  async updatePromotion(id: string, dto: UpdatePromotionDto) {
     try {
       return await firstValueFrom(
         this.promotionService.updatePromotion({ id, ...dto }),
@@ -111,7 +111,7 @@ export class PromotionService implements OnModuleInit {
     }
   }
 
-  async deletePromotion(id: number) {
+  async deletePromotion(id: string) {
     try {
       return await firstValueFrom(this.promotionService.deletePromotion({ id }));
     } catch (error) {
@@ -145,8 +145,8 @@ export class PromotionService implements OnModuleInit {
   }
 
   async getPromotionUsage(
-    promotionId?: number,
-    customerId?: number,
+    promotionId?: string,
+    customerId?: string,
     limit = 50,
     offset = 0,
   ) {

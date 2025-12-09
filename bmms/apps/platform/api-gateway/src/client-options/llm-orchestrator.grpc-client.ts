@@ -12,6 +12,13 @@ export const getLlmGrpcClientOptions = (configService: ConfigService): ClientPro
     package: 'llm',
     protoPath: join(__dirname, '../proto/llm-orchestrator.proto'),
     url: configService.get<string>('GRPC_SERVER_LLM_URL'),
+    loader: {
+      keepCase: true, // Keep snake_case field names (don't convert to camelCase)
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+    },
     channelOptions: {
       'grpc.max_receive_message_length': MAX_MESSAGE_SIZE,
       'grpc.max_send_message_length': MAX_MESSAGE_SIZE,

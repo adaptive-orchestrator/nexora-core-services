@@ -48,6 +48,7 @@ export class CatalogueSvcService {
       name: product.name,
       price: product.price,
       sku: product.sku,
+      ownerId: product.ownerId,
       createdAt: product.createdAt,
     });
 
@@ -74,19 +75,40 @@ export class CatalogueSvcService {
     };
   }
 
-  async findProductById(id: number): Promise<Product> {
+  async listProductsByOwner(ownerId: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, page: number, limit: number, totalPages: number }> {
+    const skip = (page - 1) * limit;
+    
+    const [products, total] = await this.productRepo.findAndCount({
+      where: { ownerId },
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      products,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  async findProductById(id: string): Promise<Product> {
     const product = await this.productRepo.findOne({ where: { id } });
     if (!product) throw new NotFoundException(`Product ${id} not found`);
     return product;
   }
 
-  async updateProduct(id: number, dto: UpdateProductDto): Promise<Product> {
+  async updateProduct(id: string, dto: UpdateProductDto): Promise<Product> {
     const product = await this.findProductById(id);
     Object.assign(product, dto);
     return this.productRepo.save(product);
   }
 
-  async removeProduct(id: number): Promise<void> {
+  async removeProduct(id: string): Promise<void> {
     await this.productRepo.delete(id);
   }
 
@@ -154,7 +176,7 @@ export class CatalogueSvcService {
     return this.planRepo.find({ relations: ['features'] });
   }
 
-  async findPlanById(id: number): Promise<Plan> {
+  async findPlanById(id: string): Promise<Plan> {
     const plan = await this.planRepo.findOne({
       where: { id },
       relations: ['features'],
@@ -163,7 +185,7 @@ export class CatalogueSvcService {
     return plan;
   }
 
-  async updatePlan(id: number, dto: UpdatePlanDto): Promise<Plan> {
+  async updatePlan(id: string, dto: UpdatePlanDto): Promise<Plan> {
     const plan = await this.findPlanById(id);
 
     if (dto.features) {
@@ -178,7 +200,7 @@ export class CatalogueSvcService {
     return this.planRepo.save(plan);
   }
 
-  async removePlan(id: number): Promise<void> {
+  async removePlan(id: string): Promise<void> {
     await this.planRepo.delete(id);
   }
 
@@ -201,19 +223,19 @@ export class CatalogueSvcService {
     return this.featureRepo.find();
   }
 
-  async findFeatureById(id: number): Promise<Feature> {
+  async findFeatureById(id: string): Promise<Feature> {
     const feature = await this.featureRepo.findOne({ where: { id } });
     if (!feature) throw new NotFoundException(`Feature ${id} not found`);
     return feature;
   }
 
-  async updateFeature(id: number, dto: UpdateFeatureDto): Promise<Feature> {
+  async updateFeature(id: string, dto: UpdateFeatureDto): Promise<Feature> {
     const feature = await this.findFeatureById(id);
     Object.assign(feature, dto);
     return this.featureRepo.save(feature);
   }
 
-  async removeFeature(id: number): Promise<void> {
+  async removeFeature(id: string): Promise<void> {
     await this.featureRepo.delete(id);
   }
 

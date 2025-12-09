@@ -15,7 +15,7 @@ export class ProjectSvcService {
   ) {}
 
   async createProject(data: any) {
-    debug.log('📝 [ProjectSvc] createProject data:', JSON.stringify(data));
+    debug.log('[ProjectSvc] createProject data:', JSON.stringify(data));
     
     // Ensure ownerId is set - default to 1 if not provided
     const ownerId = data.user_id || data.userId || 1;
@@ -38,7 +38,7 @@ export class ProjectSvcService {
     return this.mapProjectToResponse(saved);
   }
 
-  async getProjectsByUser(userId: number) {
+  async getProjectsByUser(userId: string) {
     const projects = await this.projectRepository.find({
       where: { ownerId: userId },
       order: { createdAt: 'DESC' },
@@ -47,20 +47,20 @@ export class ProjectSvcService {
     return projects.map(p => this.mapProjectToResponse(p));
   }
 
-  async getProjectById(id: number, userId: number) {
-    debug.log(`📝 [ProjectSvc] getProjectById id=${id}, userId=${userId}`);
+  async getProjectById(id: string, userId: string) {
+    debug.log(`[ProjectSvc] getProjectById id=${id}, userId=${userId}`);
     
     const project = await this.projectRepository.findOne({
-      where: { id: Number(id) },
+      where: { id },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
-    // Compare as numbers to avoid type mismatch
-    if (Number(project.ownerId) !== Number(userId)) {
-      debug.log(`⚠️ [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
+    // Compare string UUIDs
+    if (project.ownerId !== userId) {
+      debug.log(`[WARNING] [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -69,14 +69,14 @@ export class ProjectSvcService {
 
   async updateProject(data: any) {
     const project = await this.projectRepository.findOne({
-      where: { id: Number(data.id) },
+      where: { id: data.id },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${data.id} not found`);
     }
 
-    if (Number(project.ownerId) !== Number(data.user_id)) {
+    if (project.ownerId !== data.user_id) {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -93,16 +93,16 @@ export class ProjectSvcService {
     return this.mapProjectToResponse(updated);
   }
 
-  async deleteProject(id: number, userId: number) {
+  async deleteProject(id: string, userId: string) {
     const project = await this.projectRepository.findOne({
-      where: { id: Number(id) },
+      where: { id },
     });
 
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
-    if (Number(project.ownerId) !== Number(userId)) {
+    if (project.ownerId !== userId) {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -139,7 +139,7 @@ export class ProjectSvcService {
     return this.mapTaskToResponse(saved);
   }
 
-  async getProjectTasks(projectId: number, userId: number) {
+  async getProjectTasks(projectId: string, userId: string) {
     // Verify project ownership
     await this.getProjectById(projectId, userId);
 
@@ -153,7 +153,7 @@ export class ProjectSvcService {
 
   async updateTask(data: any) {
     const task = await this.taskRepository.findOne({
-      where: { id: data.id },
+      where: { id: data.id as string },
     });
 
     if (!task) {
@@ -184,7 +184,7 @@ export class ProjectSvcService {
     return this.mapTaskToResponse(updated);
   }
 
-  async deleteTask(id: number, userId: number) {
+  async deleteTask(id: string, userId: string) {
     const task = await this.taskRepository.findOne({
       where: { id },
     });
@@ -202,7 +202,7 @@ export class ProjectSvcService {
     await this.updateProjectTaskCount(task.projectId);
   }
 
-  async getProjectAnalytics(id: number, userId: number) {
+  async getProjectAnalytics(id: string, userId: string) {
     const project = await this.getProjectById(id, userId);
     
     const tasks = await this.taskRepository.find({
@@ -242,7 +242,7 @@ export class ProjectSvcService {
 
   // ==================== HELPERS ====================
 
-  private async updateProjectTaskCount(projectId: number) {
+  private async updateProjectTaskCount(projectId: string) {
     const project = await this.projectRepository.findOne({
       where: { id: projectId },
     });

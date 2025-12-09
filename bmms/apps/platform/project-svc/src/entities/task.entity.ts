@@ -11,11 +11,11 @@ import { Project } from './project.entity';
 
 @Entity('tasks')
 export class Task {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ name: 'project_id' })
-  projectId: number;
+  projectId: string;
 
   @ManyToOne(() => Project, project => project.tasks)
   @JoinColumn({ name: 'project_id' })
@@ -34,13 +34,13 @@ export class Task {
   priority: string;
 
   @Column({ name: 'assigned_to', nullable: true })
-  assignedTo: number;
+  assignedTo: string;
 
   @Column({ name: 'assigned_to_name', nullable: true })
   assignedToName: string;
 
   @Column({ name: 'created_by' })
-  createdBy: number;
+  createdBy: string;
 
   @Column({ name: 'due_date', type: 'date', nullable: true })
   dueDate: Date;

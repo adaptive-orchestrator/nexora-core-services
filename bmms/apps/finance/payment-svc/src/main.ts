@@ -54,6 +54,6 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
   
   await app.listen(httpPort);
-  console.log(`✅ Payment Service | HTTP: http://localhost:${httpPort} | gRPC: ${grpcUrl} | Kafka: listening`);
+  console.log(`[PaymentSvc] Payment Service | HTTP: http://localhost:${httpPort} | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

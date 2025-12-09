@@ -11,14 +11,14 @@ import {
 @Index(['invoiceId'])
 @Index(['createdAt'])
 export class PaymentHistory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'bigint', nullable: true })
-  paymentId: number;
+  @Column({ type: 'uuid', nullable: true })
+  paymentId: string;
 
-  @Column({ type: 'bigint' })
-  invoiceId: number;
+  @Column({ type: 'uuid' })
+  invoiceId: string;
 
   @Column({
     type: 'varchar',

@@ -23,8 +23,8 @@ import {
 @Index('idx_addon_active', ['isActive'])
 @Index('idx_addon_key_active', ['addonKey', 'isActive'])
 export class Addon {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ name: 'addon_key', unique: true })
   @Index('idx_addon_key')

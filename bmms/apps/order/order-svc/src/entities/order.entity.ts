@@ -12,14 +12,14 @@ import { OrderItem } from './order-item.entity';
 
 @Entity('orders')
 export class Order {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ unique: true })
   orderNumber: string; // ORD-2025-001, ORD-2025-002, etc.
 
-  @Column()
-  customerId: number;
+  @Column('uuid')
+  customerId: string;
 
   @Column({
     type: 'enum',

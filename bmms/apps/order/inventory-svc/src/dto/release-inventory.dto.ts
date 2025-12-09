@@ -1,6 +1,6 @@
 export class ReleaseInventoryDto {
-  productId: number;
+  productId: string;
   quantity: number;
-  orderId: number;
+  orderId: string;
   reason: 'order_cancelled' | 'order_completed' | 'manual_release';
 }

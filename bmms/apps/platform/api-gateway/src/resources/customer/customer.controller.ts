@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Body,
-  ParseIntPipe,
   HttpStatus,
   Request,
   UseGuards,
@@ -105,6 +104,34 @@ export class CustomerController {
     }
   }
 
+  @Get('by-user/:userId')
+  @ApiOperation({
+    summary: 'Get customer by user ID',
+    description: 'Find a customer using their auth user ID (from JWT token)',
+  })
+  @ApiParam({ name: 'userId', type: Number, example: 2 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer found',
+    type: CustomerResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Customer not found for this user ID',
+  })
+  async getCustomerByUserId(@Param('userId') userId: string) {
+    try {
+      const result: any = await this.customerService.getCustomerByUserId(userId);
+      return result.customer;
+    } catch (error: any) {
+      // Handle gRPC NOT_FOUND error (code 5)
+      if (error?.code === 5 || error?.details?.includes('not found')) {
+        throw new NotFoundException(`Customer with userId ${userId} not found`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Internal server error');
+    }
+  }
+
   // ============ Dynamic :id route MUST come after static routes ============
 
   @Get(':id')
@@ -122,7 +149,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found',
   })
-  async getCustomerById(@Param('id', ParseIntPipe) id: number) {
+  async getCustomerById(@Param('id') id: string) {
     const result: any = await this.customerService.getCustomerById(id);
     return result.customer;
   }
@@ -132,13 +159,13 @@ export class CustomerController {
     summary: 'Get customer insights and intelligence',
     description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer insights retrieved successfully',
     type: CustomerInsightsDto,
   })
-  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
+  async getCustomerInsights(@Param('id') id: string) {
     return this.customerService.getCustomerInsights(id);
   }
 
@@ -176,7 +203,7 @@ export class CustomerController {
     summary: 'Update customer',
     description: 'Update customer profile information (name, email, segment, tenantId)',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer updated successfully',
@@ -187,7 +214,7 @@ export class CustomerController {
     description: 'Customer not found',
   })
   async updateCustomer(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateDto: UpdateCustomerDto,
   ) {
     const result: any = await this.customerService.updateCustomer(id, updateDto);
@@ -199,7 +226,7 @@ export class CustomerController {
     summary: 'Delete customer',
     description: 'Permanently delete a customer from the system',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer deleted successfully',
@@ -214,7 +241,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found',
   })
-  async deleteCustomer(@Param('id', ParseIntPipe) id: number) {
+  async deleteCustomer(@Param('id') id: string) {
     return this.customerService.deleteCustomer(id);
   }
 }

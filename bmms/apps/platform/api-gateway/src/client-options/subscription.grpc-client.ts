@@ -5,7 +5,7 @@ import { ChannelOptions } from '@grpc/grpc-js';
 // 10MB max message size
 const MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
 
-// 🚀 gRPC Channel Options for high concurrency
+// gRPC Channel Options for high concurrency
 const grpcChannelOptions: ChannelOptions = {
   'grpc.max_receive_message_length': MAX_MESSAGE_SIZE,
   'grpc.max_send_message_length': MAX_MESSAGE_SIZE,

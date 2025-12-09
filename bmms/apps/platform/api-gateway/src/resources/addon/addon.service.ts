@@ -12,7 +12,7 @@ interface IAddonGrpcService {
   cancelAddon(data: any): any;
 }
 
-// 🚀 Retry configuration (optimized for speed)
+// Retry configuration (optimized for speed)
 const RETRY_CONFIG = {
   maxRetries: 2,      // Reduced from 3
   initialDelay: 50,   // Reduced from 100ms
@@ -32,11 +32,11 @@ export class AddonService implements OnModuleInit {
 
   onModuleInit() {
     this.addonService = this.client.getService<IAddonGrpcService>('SubscriptionService');
-    this.logger.log('✅ AddonService gRPC client initialized');
+    this.logger.log('[OK] AddonService gRPC client initialized');
   }
 
   /**
-   * 🚀 Retry with exponential backoff helper
+   * Retry with exponential backoff helper
    */
   private async withRetry<T>(operation: () => any, operationName: string): Promise<T> {
     let lastError: any;

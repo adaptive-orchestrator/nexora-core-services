@@ -24,8 +24,8 @@ export interface PaymentRetryConfig {
  * Payment Retry Status
  */
 export interface PaymentRetryStatus {
-  subscriptionId: number;
-  invoiceId: number;
+  subscriptionId: string;
+  invoiceId: string;
   attempt: number;
   maxAttempts: number;
   nextRetryAt: Date | null;
@@ -41,8 +41,8 @@ export interface PaymentRetryStatus {
  */
 export interface PaymentRetryResult {
   success: boolean;
-  subscriptionId: number;
-  invoiceId: number;
+  subscriptionId: string;
+  invoiceId: string;
   attempt: number;
   message: string;
   nextRetryAt?: Date;
@@ -82,7 +82,7 @@ export class PaymentRetryService {
   constructor(config?: PaymentRetryConfig) {
     this.config = config || this.defaultConfig;
     
-    this.logger.log('🔄 PaymentRetryService initialized');
+    this.logger.log('PaymentRetryService initialized');
     this.logger.log(`   Max attempts: ${this.config.maxAttempts}`);
     this.logger.log(`   Initial delay: ${this.formatDuration(this.config.initialDelayMs)}`);
     this.logger.log(`   Grace period: ${this.config.gracePeriodDays} days`);
@@ -195,8 +195,8 @@ export class PaymentRetryService {
    * @returns Retry status
    */
   getRetryStatus(
-    subscriptionId: number,
-    invoiceId: number,
+    subscriptionId: string,
+    invoiceId: string,
     attempt: number,
     firstFailureDate: Date,
     failureReason: string
@@ -351,19 +351,19 @@ export class PaymentRetryService {
    * @param error - Error message if failed
    */
   logRetryAttempt(
-    subscriptionId: number,
+    subscriptionId: string,
     attempt: number,
     success: boolean,
     error?: string
   ): void {
     if (success) {
       this.logger.log(
-        `✅ Payment retry succeeded for subscription ${subscriptionId} ` +
+        `[Payment] Payment retry succeeded for subscription ${subscriptionId} ` +
         `(attempt ${attempt}/${this.config.maxAttempts})`
       );
     } else {
       this.logger.warn(
-        `❌ Payment retry failed for subscription ${subscriptionId} ` +
+        `[ERROR] Payment retry failed for subscription ${subscriptionId} ` +
         `(attempt ${attempt}/${this.config.maxAttempts}): ${error}`
       );
     }

@@ -23,7 +23,7 @@ import { ReleaseInventoryDto } from './dto/release-inventory.dto';
 import { BulkReserveDto } from './dto/bulk-reserve.dto';
 import { debug } from '@bmms/common';
 
-// ✅ Import types và functions từ @bmms/event
+// Import types và functions từ @bmms/event
 import {
   EventTopics,
   createBaseEvent,
@@ -34,7 +34,7 @@ import {
 } from '@bmms/event';
 
 interface CatalogueGrpcService {
-  getProductById(data: { id: number }): any;
+  getProductById(data: { id: string }): any;
 }
 
 @Injectable()
@@ -65,7 +65,7 @@ export class InventoryService implements OnModuleInit {
   /**
    * Validate product exists in catalogue
    */
-  private async validateProduct(productId: number): Promise<void> {
+  private async validateProduct(productId: string): Promise<void> {
     try {
       await firstValueFrom(
         this.catalogueGrpcService.getProductById({ id: productId }).pipe(
@@ -76,7 +76,7 @@ export class InventoryService implements OnModuleInit {
       );
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      debug.log(`⚠️ Unable to validate product ${productId} with catalogue service`);
+      debug.log(`[WARNING] Unable to validate product ${productId} with catalogue service`);
       // Continue anyway if catalogue service is down
     }
   }
@@ -87,32 +87,34 @@ export class InventoryService implements OnModuleInit {
  * Create initial inventory for a new product
  */
   async createInventoryForProduct(
-    productId: number,
+    productId: string,
     initialQuantity: number = 0,
     reorderLevel: number = 10,
     warehouseLocation?: string,
     maxStock?: number,
+    ownerId?: string,
   ): Promise<Inventory> {
-    // ✅ Check if inventory already exists
-    const existingInventory = await this.inventoryRepo.findOne({
-      where: { productId }
-    });
-
-    if (existingInventory) {
-      debug.log(`⚠️ Inventory already exists for productId: ${productId}, skipping creation`);
-      return existingInventory;
-    }
-
     // ✅ Validate product exists in catalogue
     await this.validateProduct(productId);
 
+    // ✅ Check if inventory already exists for this product AND owner
+    const existing = await this.inventoryRepo.findOne({
+      where: { productId, ownerId: ownerId || undefined },
+    });
+
+    if (existing) {
+      debug.log(`⚠️ Inventory already exists for productId: ${productId} (owner: ${ownerId}), skipping creation`);
+      return existing;
+    }
+
     const inventory = this.inventoryRepo.create({
       productId,
-      quantity: initialQuantity,  // ✅ Total quantity
-      reserved: 0,                // ✅ Nothing reserved yet
+      quantity: initialQuantity,  // Total quantity
+      reserved: 0,                // Nothing reserved yet
       reorderLevel,
       warehouseLocation,
       maxStock: maxStock || 1000,
+      ownerId,
       isActive: true,
     });
 
@@ -122,7 +124,7 @@ export class InventoryService implements OnModuleInit {
       // Handle duplicate error gracefully (race condition edge case)
       if (error.code === 'ER_DUP_ENTRY') {
         debug.warn(`⚠️ Duplicate inventory detected for productId: ${productId} (race condition), fetching existing`);
-        const existing = await this.inventoryRepo.findOne({ where: { productId } });
+        const existing = await this.inventoryRepo.findOne({ where: { productId, ownerId: ownerId || undefined } });
         if (existing) return existing;
       }
       throw error;
@@ -133,29 +135,29 @@ export class InventoryService implements OnModuleInit {
  * Reserve stock for an order
  */
   async reserveStock(
-    productId: number,
+    productId: string,
     quantity: number,
-    orderId: number,
-    customerId: number,
+    orderId: string,
+    customerId: string,
   ): Promise<InventoryReservation> {
-    // ✅ Validate product exists in catalogue
+    // Validate product exists in catalogue
     await this.validateProduct(productId);
 
     // Find inventory
     let inventory = await this.inventoryRepo.findOne({ where: { productId } });
     if (!inventory) {
-    debug.log(`⚠️ Inventory not found for product ${productId}, creating with 0 stock...`);
+    debug.log(`[WARNING] Inventory not found for product ${productId}, creating with 0 stock...`);
     
-    // ✅ Auto-create inventory record with 0 stock
+    // Auto-create inventory record with 0 stock
     inventory = await this.createInventoryForProduct(productId, 0, 10);
     
-    // ❌ Throw error vì không có stock để reserve
+    // [ERROR] Throw error vì không có stock để reserve
     throw new BadRequestException(
       `Product ${productId} has no stock available. Please restock before creating orders.`
     );
   }
 
-    // ✅ Check available using helper method
+    // Check available using helper method
     const available = inventory.getAvailableQuantity();
     if (available < quantity) {
       throw new BadRequestException(
@@ -169,16 +171,16 @@ export class InventoryService implements OnModuleInit {
       quantity,
       orderId,
       customerId,
-      status: 'active', // ✅ Đổi từ 'reserved' thành 'active' theo entity
+      status: 'active', // Đổi từ 'reserved' thành 'active' theo entity
     });
 
     const savedReservation = await this.reservationRepo.save(reservation);
 
-    // ✅ Update inventory (only increase reserved, quantity stays the same)
+    // Update inventory (only increase reserved, quantity stays the same)
     inventory.reserved += quantity;
     await this.inventoryRepo.save(inventory);
 
-    // ✅ Emit INVENTORY_RESERVED event
+    // Emit INVENTORY_RESERVED event
     const event: InventoryReservedEvent = {
       ...createBaseEvent('inventory.reserved', 'inventory-service'),
       eventType: 'inventory.reserved',
@@ -191,7 +193,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    debug.log('🚀 Emitting inventory.reserved event:', event);
+    debug.log('[Inventory] Emitting inventory.reserved event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RESERVED, event);
 
     return savedReservation;
@@ -200,9 +202,9 @@ export class InventoryService implements OnModuleInit {
   /**
  * Complete reservations when order is completed
  */
-  async completeReservations(orderId: number): Promise<void> {
+  async completeReservations(orderId: string): Promise<void> {
     const reservations = await this.reservationRepo.find({
-      where: { orderId, status: 'active' }, // ✅ Đổi từ 'reserved' thành 'active'
+      where: { orderId, status: 'active' }, // Đổi từ 'reserved' thành 'active'
     });
 
     for (const reservation of reservations) {
@@ -216,8 +218,8 @@ export class InventoryService implements OnModuleInit {
       });
 
       if (inventory) {
-        inventory.reserved -= reservation.quantity;  // ✅ Release reservation
-        inventory.quantity -= reservation.quantity;  // ✅ Deduct from total stock
+        inventory.reserved -= reservation.quantity;  // Release reservation
+        inventory.quantity -= reservation.quantity;  // Deduct from total stock
         await this.inventoryRepo.save(inventory);
       }
     }
@@ -228,14 +230,14 @@ export class InventoryService implements OnModuleInit {
   /**
  * Release reservations when order is cancelled
  */
-  async releaseReservations(orderId: number, reason: string): Promise<void> {
+  async releaseReservations(orderId: string, reason: string): Promise<void> {
     const reservations = await this.reservationRepo.find({
-      where: { orderId, status: 'active' }, // ✅ Đổi từ 'reserved' thành 'active'
+      where: { orderId, status: 'active' }, // Đổi từ 'reserved' thành 'active'
     });
 
     for (const reservation of reservations) {
       // Update reservation status
-      reservation.status = 'cancelled'; // ✅ Đổi từ 'released' thành 'cancelled'
+      reservation.status = 'cancelled'; // Đổi từ 'released' thành 'cancelled'
       await this.reservationRepo.save(reservation);
 
       // Update inventory (only decrease reserved, quantity stays the same)
@@ -244,12 +246,12 @@ export class InventoryService implements OnModuleInit {
       });
 
       if (inventory) {
-        // ✅ Just release reservation, quantity unchanged (stock returns to available)
+        // Just release reservation, quantity unchanged (stock returns to available)
         inventory.reserved -= reservation.quantity;
         await this.inventoryRepo.save(inventory);
       }
 
-      // ✅ Emit INVENTORY_RELEASED event
+      // Emit INVENTORY_RELEASED event
       const event: InventoryReleasedEvent = {
         ...createBaseEvent('inventory.released', 'inventory-service'),
         eventType: 'inventory.released',
@@ -261,26 +263,52 @@ export class InventoryService implements OnModuleInit {
         },
       };
 
-      debug.log('🚀 Emitting inventory.released event:', event);
+      debug.log('[Inventory] Emitting inventory.released event:', event);
       this.kafka.emit(EventTopics.INVENTORY_RELEASED, event);
     }
   }
   async create(dto: CreateInventoryDto): Promise<Inventory> {
     const existing = await this.inventoryRepo.findOne({
-      where: { productId: dto.productId },
+      where: { productId: dto.productId, ownerId: dto.ownerId || undefined },
     });
 
     if (existing) {
-      throw new ConflictException(
-        `Inventory for product ${dto.productId} already exists`,
-      );
+      // If inventory exists, update the quantity instead of throwing error
+      debug.log(`[Inventory] Inventory for product ${dto.productId} (owner: ${dto.ownerId}) already exists, updating quantity...`);
+      existing.quantity += dto.quantity;
+      if (dto.reorderLevel !== undefined) existing.reorderLevel = dto.reorderLevel;
+      if (dto.maxStock !== undefined) existing.maxStock = dto.maxStock;
+      if (dto.warehouseLocation !== undefined) existing.warehouseLocation = dto.warehouseLocation;
+      
+      const updated = await this.inventoryRepo.save(existing);
+      
+      // Emit adjusted event instead of created
+      const event: InventoryAdjustedEvent = {
+        ...createBaseEvent(EventTopics.INVENTORY_ADJUSTED, 'inventory-service'),
+        eventType: 'inventory.adjusted',
+        data: {
+          productId: existing.productId,
+          previousQuantity: existing.quantity - dto.quantity,
+          currentQuantity: updated.quantity,
+          adjustment: dto.quantity,
+          reason: 'restock',
+        },
+      };
+
+      debug.log('[Inventory] Emitting inventory.adjusted event (upsert):', event);
+      this.kafka.emit(EventTopics.INVENTORY_ADJUSTED, event);
+      
+      return updated;
     }
 
     const inventory = await this.inventoryRepo.save(
-      this.inventoryRepo.create(dto),
+      this.inventoryRepo.create({
+        ...dto,
+        ownerId: dto.ownerId,
+      }),
     );
 
-    // ✅ Emit với đúng structure
+    // Emit với đúng structure
     const event: InventoryCreatedEvent = {
       ...createBaseEvent(EventTopics.INVENTORY_CREATED, 'inventory-service'),
       eventType: 'inventory.created',
@@ -292,15 +320,20 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    debug.log('🚀 Emitting inventory.created event:', event);
+    debug.log('[Inventory] Emitting inventory.created event:', event);
     this.kafka.emit(EventTopics.INVENTORY_CREATED, event);
 
     return inventory;
   }
 
-  async getByProduct(productId: number): Promise<Inventory> {
+  async getByProduct(productId: string, ownerId?: string): Promise<Inventory> {
+    const whereCondition: any = { productId };
+    if (ownerId) {
+      whereCondition.ownerId = ownerId;
+    }
+    
     const inventory = await this.inventoryRepo.findOne({
-      where: { productId },
+      where: whereCondition,
       relations: ['reservations'],
     });
 
@@ -311,7 +344,7 @@ export class InventoryService implements OnModuleInit {
     return inventory;
   }
 
-  async listAll(page: number = 1, limit: number = 20): Promise<{
+  async listAll(page: number = 1, limit: number = 20, ownerId?: string): Promise<{
     items: Inventory[];
     total: number;
     page: number;
@@ -320,7 +353,15 @@ export class InventoryService implements OnModuleInit {
   }> {
     const skip = (page - 1) * limit;
     
+    const whereCondition: any = {};
+    if (ownerId) {
+      whereCondition.ownerId = ownerId;
+    }
+    
+    console.log('[InventoryService.listAll] Query with ownerId:', ownerId, 'whereCondition:', whereCondition);
+    
     const [items, total] = await this.inventoryRepo.findAndCount({
+      where: whereCondition,
       relations: ['reservations'],
       skip,
       take: limit,
@@ -346,10 +387,34 @@ export class InventoryService implements OnModuleInit {
   // ============= ADJUST STOCK =============
 
   async adjust(
-    productId: number,
+    productId: string,
     dto: AdjustInventoryDto,
+    ownerId?: string,
   ): Promise<Inventory> {
-    const inventory = await this.getByProduct(productId);
+    console.log('[InventoryService.adjust] productId:', productId, 'ownerId:', ownerId, 'adjustment:', dto.adjustment);
+    
+    let inventory: Inventory;
+    
+    try {
+      // Try to get existing inventory with ownerId if provided
+      inventory = await this.getByProduct(productId, ownerId);
+      console.log('[InventoryService.adjust] Found existing inventory:', inventory.id, 'ownerId:', inventory.ownerId);
+    } catch (error) {
+      // If not found, create new inventory for this owner
+      if (error instanceof NotFoundException && ownerId) {
+        debug.log(`[Inventory] Creating new inventory for product ${productId}, owner ${ownerId}`);
+        inventory = await this.createInventoryForProduct(
+          productId,
+          0, // Start with 0, will be adjusted below
+          10, // Default reorder level
+          ownerId,
+        );
+        console.log('[InventoryService.adjust] Created new inventory:', inventory.id, 'ownerId:', inventory.ownerId);
+      } else {
+        throw error;
+      }
+    }
+    
     const previousQuantity = inventory.quantity;
 
     inventory.quantity += dto.adjustment;
@@ -374,7 +439,7 @@ export class InventoryService implements OnModuleInit {
       }),
     );
 
-    // ✅ Emit với đúng structure
+    // Emit với đúng structure
     const event: InventoryAdjustedEvent = {
       ...createBaseEvent(EventTopics.INVENTORY_ADJUSTED, 'inventory-service'),
       eventType: 'inventory.adjusted',
@@ -387,7 +452,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    debug.log('🚀 Emitting inventory.adjusted event:', event);
+    debug.log('[Inventory] Emitting inventory.adjusted event:', event);
     this.kafka.emit(EventTopics.INVENTORY_ADJUSTED, event);
 
     return updated;
@@ -428,7 +493,7 @@ export class InventoryService implements OnModuleInit {
       }),
     );
 
-    // ✅ Emit với đúng structure
+    // Emit với đúng structure
     const event: InventoryReservedEvent = {
       ...createBaseEvent(EventTopics.INVENTORY_RESERVED, 'inventory-service'),
       eventType: 'inventory.reserved',
@@ -441,7 +506,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    debug.log('🚀 Emitting inventory.reserved event:', event);
+    debug.log('[Inventory] Emitting inventory.reserved event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RESERVED, event);
 
     return reservation;
@@ -513,7 +578,7 @@ export class InventoryService implements OnModuleInit {
       }),
     );
 
-    // ✅ Emit với đúng structure
+    // Emit với đúng structure
     const event: InventoryReleasedEvent = {
       ...createBaseEvent(EventTopics.INVENTORY_RELEASED, 'inventory-service'),
       eventType: 'inventory.released',
@@ -525,7 +590,7 @@ export class InventoryService implements OnModuleInit {
       },
     };
 
-    debug.log('🚀 Emitting inventory.released event:', event);
+    debug.log('[Inventory] Emitting inventory.released event:', event);
     this.kafka.emit(EventTopics.INVENTORY_RELEASED, event);
 
     return updated;
@@ -533,12 +598,12 @@ export class InventoryService implements OnModuleInit {
 
   // ============= UTILITIES =============
 
-  async checkStock(productId: number, requiredQuantity: number): Promise<boolean> {
+  async checkStock(productId: string, requiredQuantity: number): Promise<boolean> {
     const inventory = await this.getByProduct(productId);
     return inventory.getAvailableQuantity() >= requiredQuantity;
   }
 
-  async getInventoryHistory(productId: number, limit = 50): Promise<InventoryHistory[]> {
+  async getInventoryHistory(productId: string, limit = 50): Promise<InventoryHistory[]> {
     return this.historyRepo.find({
       where: { productId },
       order: { createdAt: 'DESC' },
@@ -563,6 +628,6 @@ export class InventoryService implements OnModuleInit {
       });
     }
 
-    debug.log(`🧹 Cleaned up ${expired.length} expired reservations`);
+    debug.log(`[Inventory] Cleaned up ${expired.length} expired reservations`);
   }
 }

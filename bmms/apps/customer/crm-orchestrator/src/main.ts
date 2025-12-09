@@ -32,7 +32,7 @@ async function bootstrap() {
 
   await app.listen();
   
-  console.log(`✅ CRM Orchestrator | Kafka: listening (order.completed, payment.success, crm.check-churn)`);
+  console.log(`[CrmOrchestrator] CRM Orchestrator | Kafka: listening (order.completed, payment.success, crm.check-churn)`);
 }
 bootstrap();
 

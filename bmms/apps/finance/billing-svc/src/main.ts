@@ -37,6 +37,6 @@ async function bootstrap() {
   await app.startAllMicroservices();
   await app.init();
   
-  console.log(`✅ Billing Service | gRPC: ${grpcUrl} | Kafka: listening`);
+  console.log(`[BillingSvc] Billing Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

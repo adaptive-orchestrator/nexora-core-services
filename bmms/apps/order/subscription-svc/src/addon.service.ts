@@ -23,7 +23,7 @@ import { UserAddon } from './entities/user-addon.entity';
 export class AddonService {
   private readonly logger = new Logger(AddonService.name);
   
-  // 🚀 In-memory cache for addons (rarely changes)
+  // [Addon] In-memory cache for addons (rarely changes)
   private addonCache: Map<string, Addon> = new Map();
   private addonListCache: { data: Addon[]; timestamp: number } | null = null;
   private readonly CACHE_TTL = 60000; // 60 seconds
@@ -55,9 +55,9 @@ export class AddonService {
       this.addonListCache = { data: addons, timestamp: Date.now() };
       addons.forEach(addon => this.addonCache.set(addon.addonKey, addon));
       
-      this.logger.log(`🚀 Cache warmed up with ${addons.length} addons`);
+      this.logger.log(`[Addon] Cache warmed up with ${addons.length} addons`);
     } catch (error) {
-      this.logger.warn(`⚠️ Failed to warmup cache: ${error.message}`);
+      this.logger.warn(`[WARNING] Failed to warmup cache: ${error.message}`);
     }
   }
 
@@ -156,7 +156,7 @@ export class AddonService {
     // Invalidate cache
     this.invalidateCache();
 
-    this.logger.log(`✅ Created add-on: ${addon.name} (${addon.addonKey})`);
+    this.logger.log(`[Addon] Created add-on: ${addon.name} (${addon.addonKey})`);
 
     return addon;
   }
@@ -170,17 +170,17 @@ export class AddonService {
    * - Async Kafka emit
    */
   async purchaseAddons(
-    subscriptionId: number,
-    customerId: number,
+    subscriptionId: string,
+    customerId: string,
     addonKeys: string[],
   ): Promise<UserAddon[]> {
     if (!addonKeys || addonKeys.length === 0) {
       return [];
     }
 
-    this.logger.log(`💎 User ${customerId} purchasing ${addonKeys.length} add-ons`);
+    this.logger.log(`[Addon] User ${customerId} purchasing ${addonKeys.length} add-ons`);
 
-    // 🚀 Batch fetch all addons at once
+    // [Addon] Batch fetch all addons at once
     const addons = await Promise.all(
       addonKeys.map(key => this.getAddonByKey(key).catch(() => null))
     );
@@ -190,7 +190,7 @@ export class AddonService {
       return [];
     }
 
-    // 🚀 Batch check existing user addons
+    // [Addon] Batch check existing user addons
     const existingAddons = await this.userAddonRepo.find({
       where: {
         subscriptionId,
@@ -205,11 +205,11 @@ export class AddonService {
     const toPurchase = validAddons.filter(a => !existingAddonIds.has(a.id));
 
     if (toPurchase.length === 0) {
-      this.logger.warn(`⚠️ User already has all requested add-ons`);
+      this.logger.warn(`[WARNING] User already has all requested add-ons`);
       return [];
     }
 
-    // 🚀 Batch create user addons
+    // [Addon] Batch create user addons
     const purchasedAt = new Date();
     const userAddons = toPurchase.map(addon => {
       let expiresAt: Date | null = null;
@@ -238,12 +238,12 @@ export class AddonService {
       return userAddon;
     });
 
-    // 🚀 Batch save
+    // [Addon] Batch save
     const savedAddons = await this.userAddonRepo.save(userAddons);
 
-    this.logger.log(`✅ Purchased ${savedAddons.length} add-ons`);
+    this.logger.log(`[Addon] Purchased ${savedAddons.length} add-ons`);
 
-    // 🚀 Async Kafka emit (non-blocking)
+    // [Addon] Async Kafka emit (non-blocking)
     setImmediate(() => {
       try {
         this.kafka.emit(EventTopics.ADDON_PURCHASED, {
@@ -263,7 +263,7 @@ export class AddonService {
             })),
           },
         });
-        this.logger.log(`📤 Emitted ADDON_PURCHASED event (async)`);
+        this.logger.log(`[Addon] Emitted ADDON_PURCHASED event (async)`);
       } catch (error) {
         this.logger.error(`Failed to emit ADDON_PURCHASED: ${error.message}`);
       }
@@ -276,7 +276,7 @@ export class AddonService {
    * Get user's active add-ons with pagination
    */
   async getUserAddons(
-    subscriptionId: number,
+    subscriptionId: string,
     page: number = 1,
     limit: number = 20,
   ): Promise<{ userAddons: UserAddon[]; total: number; page: number; limit: number; totalPages: number }> {
@@ -306,7 +306,7 @@ export class AddonService {
   /**
    * Cancel add-on
    */
-  async cancelAddon(userAddonId: number): Promise<UserAddon> {
+  async cancelAddon(userAddonId: string): Promise<UserAddon> {
     const userAddon = await this.userAddonRepo.findOne({
       where: { id: userAddonId },
       select: ['id', 'subscriptionId', 'addonId', 'customerId', 'price', 'status', 'purchasedAt', 'expiresAt', 'nextBillingDate', 'cancelledAt'],
@@ -321,7 +321,7 @@ export class AddonService {
       return userAddon;
     }
 
-    // 🚀 Use update instead of save for better performance
+    // [Addon] Use update instead of save for better performance
     await this.userAddonRepo.update(userAddonId, {
       status: 'cancelled',
       cancelledAt: new Date(),
@@ -330,7 +330,7 @@ export class AddonService {
     userAddon.status = 'cancelled';
     userAddon.cancelledAt = new Date();
 
-    this.logger.log(`❌ Cancelled add-on ${userAddonId}`);
+    this.logger.log(`[ERROR] Cancelled add-on ${userAddonId}`);
 
     return userAddon;
   }
@@ -341,7 +341,7 @@ export class AddonService {
   async renewRecurringAddons(): Promise<void> {
     const now = new Date();
 
-    // 🚀 Use query builder for efficient filtering
+    // [Addon] Use query builder for efficient filtering
     const toRenew = await this.userAddonRepo
       .createQueryBuilder('ua')
       .where('ua.status = :status', { status: 'active' })
@@ -353,9 +353,9 @@ export class AddonService {
       return;
     }
 
-    this.logger.log(`🔄 Renewing ${toRenew.length} add-ons`);
+    this.logger.log(`[Addon] Renewing ${toRenew.length} add-ons`);
 
-    // 🚀 Batch emit and update
+    // [Addon] Batch emit and update
     const updates: Promise<any>[] = [];
 
     for (const userAddon of toRenew) {
@@ -387,7 +387,7 @@ export class AddonService {
       }
     }
 
-    // 🚀 Batch execute updates
+    // [Addon] Batch execute updates
     await Promise.all(updates);
   }
 }

@@ -12,6 +12,12 @@ service LlmOrchestratorService {
   
   // AI Chat: Generate code
   rpc GenerateCode (GenerateCodeRequest) returns (GenerateCodeResponse);
+  
+  // AI Recommend: Tư vấn mô hình kinh doanh phù hợp
+  rpc RecommendBusinessModel (RecommendModelRequest) returns (RecommendModelResponse);
+  
+  // Switch business model và trigger Helm deployment
+  rpc SwitchBusinessModel (SwitchModelRequest) returns (SwitchModelResponse);
 }
 
 // ====== Request & Response ======
@@ -73,4 +79,47 @@ message GenerateCodeResponse {
 message ContextMessage {
   string role = 1;                 // 'user' or 'assistant'
   string content = 2;              // Message content
+}
+
+// ====== Business Model Recommendation ======
+
+message RecommendModelRequest {
+  string business_description = 1;  // Mô tả về doanh nghiệp/sản phẩm
+  string target_audience = 2;       // Đối tượng khách hàng mục tiêu
+  string revenue_preference = 3;    // Mong muốn về doanh thu (một lần, định kỳ, freemium)
+  string lang = 4;                  // Ngôn ngữ (vi, en)
+}
+
+message RecommendModelResponse {
+  string greeting = 1;              // Lời chào thân thiện
+  string recommendation_intro = 2;  // Giới thiệu ngắn về đề xuất
+  string recommended_model = 3;     // retail, subscription, freemium, multi
+  string why_this_fits = 4;         // Giải thích tại sao phù hợp
+  string how_it_works = 5;          // Giải thích cách hoạt động
+  repeated string next_steps = 6;   // Các bước tiếp theo
+  string alternatives_intro = 7;    // Giới thiệu các lựa chọn khác
+  repeated ModelAlternative alternatives = 8; // Các lựa chọn khác
+  string closing = 9;               // Lời kết
+}
+
+message ModelAlternative {
+  string model = 1;                 // retail, subscription, freemium, multi
+  string brief_reason = 2;          // Lý do ngắn gọn
+}
+
+// ====== Switch Business Model ======
+
+message SwitchModelRequest {
+  string to_model = 1;              // Model muốn chuyển sang: retail, subscription, freemium, multi
+  string tenant_id = 2;             // Tenant ID
+  bool dry_run = 3;                 // Nếu true, chỉ generate YAML mà không deploy
+}
+
+message SwitchModelResponse {
+  bool success = 1;                 // Thành công hay không
+  string message = 2;               // Thông báo
+  string changeset_path = 3;        // Đường dẫn file changeset YAML
+  bool deployed = 4;                // Đã deploy chưa
+  bool dry_run = 5;                 // Có phải dry run không
+  string error = 6;                 // Lỗi nếu có
 }

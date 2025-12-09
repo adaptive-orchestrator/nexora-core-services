@@ -40,7 +40,7 @@ export class LlmOutputValidator {
     'APIGatewayService',
     'LLMOrchestratorService',
     'CodeIndexerService',
-    'RLSchedulerService',
+    'JobSchedulerService',
   ];
 
   // Business model to required services mapping
@@ -136,11 +136,11 @@ export class LlmOutputValidator {
 
     // Log validation result
     if (errors.length > 0) {
-      this.logger.error(`❌ Validation failed: ${errors.join('; ')}`);
+      this.logger.error(`[ERROR] Validation failed: ${errors.join('; ')}`);
     } else if (warnings.length > 0) {
-      this.logger.warn(`⚠️ Validation warnings: ${warnings.join('; ')}`);
+      this.logger.warn(`[WARNING] Validation warnings: ${warnings.join('; ')}`);
     } else {
-      this.logger.log(`✅ Validation passed: ${serviceCount} services, ~${estimatedPods} pods`);
+      this.logger.log(`[LLM] Validation passed: ${serviceCount} services, ~${estimatedPods} pods`);
     }
 
     return {
@@ -205,7 +205,7 @@ export class LlmOutputValidator {
     // Info logging
     if (productCount || planCount) {
       this.logger.log(
-        `📦 SHARED SERVICE PATTERN: ${productCount || 0} products, ${planCount || 0} plans → ${changeset.impacted_services.length} unique services`,
+        `[LLM] SHARED SERVICE PATTERN: ${productCount || 0} products, ${planCount || 0} plans -> ${changeset.impacted_services.length} unique services`,
       );
     }
 

@@ -19,7 +19,7 @@ export class InventoryEventListener {
       const eventData = payload?.data || payload?.value?.data || payload;
 
       if (!eventData || !eventData.id) {
-        debug.log('⚠️ PRODUCT_CREATED event missing data, skipping:', JSON.stringify(payload));
+        debug.log('[WARNING] PRODUCT_CREATED event missing data, skipping:', JSON.stringify(payload));
         return;
       }
 
@@ -51,10 +51,10 @@ export class InventoryEventListener {
       this.logEvent(event);
       const { orderId, orderNumber, items, customerId } = event.data;
 
-      debug.log(`📦 Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
+      debug.log(`[Inventory] Processing inventory reservation for order ${orderNumber} (ID: ${orderId})`);
 
       const reservations: any[] = [];
-      const reservedItems: Array<{ productId: number; quantity: number; reservationId: number }> = [];
+      const reservedItems: Array<{ productId: string; quantity: number; reservationId: string }> = [];
 
       // Reserve inventory for each item in order
       for (const item of items) {
@@ -76,35 +76,35 @@ export class InventoryEventListener {
             reservationId: reservation.id,
           });
 
-          debug.log(`✅ Reserved ${quantity} units of product ${productId} for order ${orderNumber}`);
+          debug.log(`[Inventory] Reserved ${quantity} units of product ${productId} for order ${orderNumber}`);
         } catch (error) {
-          debug.error(`❌ Failed to reserve product ${productId} for order ${orderNumber}:`, error.message);
+          debug.error(`[ERROR] Failed to reserve product ${productId} for order ${orderNumber}:`, error.message);
           
           // Compensation: Release already reserved items
           if (reservedItems.length > 0) {
-            debug.log(`🔄 Rolling back ${reservedItems.length} reservations...`);
+            debug.log(`[Inventory] Rolling back ${reservedItems.length} reservations...`);
             try {
               await this.inventoryService.releaseReservations(orderId, 'reservation_failed');
             } catch (rollbackError) {
-              debug.error('❌ Failed to rollback reservations:', rollbackError);
+              debug.error('[ERROR] Failed to rollback reservations:', rollbackError);
             }
           }
           
           // Log failure (Order service should handle timeout and update status)
-          debug.error(`🚨 Reservation failed for order ${orderNumber}. Order service should handle this.`);
+          debug.error(`[ERROR] Reservation failed for order ${orderNumber}. Order service should handle this.`);
           
           throw error;
         }
       }
 
-      debug.log(`✅ All inventory reserved successfully for order ${orderNumber}`);
-      debug.log(`📊 Total reservations: ${reservations.length}, Total items: ${reservedItems.length}`);
+      debug.log(`[Inventory] All inventory reserved successfully for order ${orderNumber}`);
+      debug.log(`[Inventory] Total reservations: ${reservations.length}, Total items: ${reservedItems.length}`);
       
       // Note: Individual inventory.reserved events already emitted by reserveStock()
       // Billing service will listen to those events
       
     } catch (error) {
-      debug.error('❌ Error handling ORDER_CREATED:', error);
+      debug.error('[ERROR] Error handling ORDER_CREATED:', error);
       // Error already logged and compensation already executed
     }
   }
@@ -118,9 +118,9 @@ export class InventoryEventListener {
       // Complete all reservations for order (convert reserved -> actual deduction)
       await this.inventoryService.completeReservations(orderId);
 
-      debug.log(`✅ Completed inventory reservations for order ${orderId}`);
+      debug.log(`[Inventory] Completed inventory reservations for order ${orderId}`);
     } catch (error) {
-      debug.error('❌ Error handling ORDER_COMPLETED:', error);
+      debug.error('[ERROR] Error handling ORDER_COMPLETED:', error);
     }
   }
 
@@ -133,9 +133,9 @@ export class InventoryEventListener {
       // Release all reserved inventory back to available stock
       await this.inventoryService.releaseReservations(orderId, 'order_cancelled');
 
-      debug.log(`✅ Released inventory for cancelled order ${orderId} (Reason: ${reason})`);
+      debug.log(`[Inventory] Released inventory for cancelled order ${orderId} (Reason: ${reason})`);
     } catch (error) {
-      debug.error('❌ Error handling ORDER_CANCELLED:', error);
+      debug.error('[ERROR] Error handling ORDER_CANCELLED:', error);
     }
   }
 
@@ -150,7 +150,7 @@ export class InventoryEventListener {
     }
 
     debug.log(
-      `🔥 [INVENTORY] Received event [${event.eventType}] at ${timestamp}`,
+      `[Inventory] Received event [${event.eventType}] at ${timestamp}`,
     );
   }
 }

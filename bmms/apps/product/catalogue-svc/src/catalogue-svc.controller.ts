@@ -21,8 +21,15 @@ export class CatalogueSvcController {
     return await this.service.listProducts(page, limit);
   }
 
+  @GrpcMethod('CatalogueService', 'GetProductsByOwner')
+  async getProductsByOwner(data: { ownerId: string; page?: number; limit?: number }) {
+    const page = data.page || 1;
+    const limit = data.limit || 20;
+    return await this.service.listProductsByOwner(data.ownerId, page, limit);
+  }
+
   @GrpcMethod('CatalogueService', 'GetProductById')
-  async getProductById(data: { id: number }) {
+  async getProductById(data: { id: string }) {
     try {
       const product = await this.service.findProductById(data.id);
       return { product, message: 'Product found' };
@@ -53,7 +60,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetPlanById')
-  async getPlanById(data: { id: number }) {
+  async getPlanById(data: { id: string }) {
     const plan = await this.service.findPlanById(data.id);
     return { plan, message: 'Plan found' };
   }
@@ -72,7 +79,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetFeatureById')
-  async getFeatureById(data: { id: number }) {
+  async getFeatureById(data: { id: string }) {
     const feature = await this.service.findFeatureById(data.id);
     return { feature, message: 'Feature found' };
   }

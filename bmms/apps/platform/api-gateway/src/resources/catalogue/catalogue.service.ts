@@ -5,14 +5,15 @@ import { catchError, firstValueFrom } from 'rxjs';
 interface CatalogueGrpcService {
   createProduct(data: any): any;
   getAllProducts(data: any): any;
-  getProductById(data: { id: number }): any;
+  getProductsByOwner(data: { ownerId: string; page?: number; limit?: number }): any;
+  getProductById(data: { id: string }): any;
   updateProduct(data: any): any;
   createPlan(data: any): any;
   getAllPlans(data: any): any;
-  getPlanById(data: { id: number }): any;
+  getPlanById(data: { id: string }): any;
   createFeature(data: any): any;
   getAllFeatures(data: any): any;
-  getFeatureById(data: { id: number }): any;
+  getFeatureById(data: { id: string }): any;
 }
 
 @Injectable()
@@ -56,7 +57,22 @@ export class CatalogueService implements OnModuleInit {
     }
   }
 
-  async getProductById(id: number) {
+  async getProductsByOwner(ownerId: string, page: number = 1, limit: number = 20) {
+    try {
+      return await firstValueFrom(
+        this.catalogueGrpcService.getProductsByOwner({ ownerId, page, limit }).pipe(
+          catchError(error => {
+            throw new HttpException(error.details || 'Failed to get products', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Catalogue service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  async getProductById(id: string) {
     try {
       return await firstValueFrom(
         this.catalogueGrpcService.getProductById({ id }).pipe(
@@ -71,7 +87,7 @@ export class CatalogueService implements OnModuleInit {
     }
   }
 
-  async updateProduct(id: number, data: any) {
+  async updateProduct(id: string, data: any) {
     try {
       return await firstValueFrom(
         this.catalogueGrpcService.updateProduct({ id, ...data }).pipe(
@@ -124,7 +140,7 @@ export class CatalogueService implements OnModuleInit {
     }
   }
 
-  async getPlanById(id: number) {
+  async getPlanById(id: string) {
     try {
       return await firstValueFrom(
         this.catalogueGrpcService.getPlanById({ id }).pipe(
@@ -170,7 +186,7 @@ export class CatalogueService implements OnModuleInit {
     }
   }
 
-  async getFeatureById(id: number) {
+  async getFeatureById(id: string) {
     try {
       return await firstValueFrom(
         this.catalogueGrpcService.getFeatureById({ id }).pipe(

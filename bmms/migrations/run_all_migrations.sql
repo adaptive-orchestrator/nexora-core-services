@@ -1,90 +1,64 @@
 -- =============================================
 -- Master Migration Script
--- Date: 2025-01-26
+-- Date: 2025-12-04
 -- Description: Run all migrations in correct order
 -- Usage: mysql -u root -p < run_all_migrations.sql
 -- =============================================
 
 -- ============================================
--- 1. CATALOGUE SERVICE MIGRATIONS
+-- 1. AUTH SERVICE MIGRATIONS (auth_db)
 -- ============================================
-SOURCE migrations/catalogue/001_add_trial_to_plans.sql;
+USE auth_db;
+SOURCE migrations/auth/001_add_business_model_and_seed_admin.sql;
 
 -- ============================================
--- 2. SUBSCRIPTION SERVICE MIGRATIONS
+-- 2. CATALOGUE SERVICE MIGRATIONS (catalogue_db)
 -- ============================================
+USE catalogue_db;
+SOURCE migrations/catalogue/001_add_trial_to_plans.sql;
+SOURCE migrations/catalogue/002_create_plan_features_table.sql;
+SOURCE migrations/catalogue/003_seed_sample_data.sql;
+SOURCE migrations/catalogue/004_add_imageUrl_to_products.sql;
+
+-- ============================================
+-- 3. SUBSCRIPTION SERVICE MIGRATIONS (subscription_db)
+-- ============================================
+USE subscription_db;
 SOURCE migrations/subscription/001_create_subscriptions_table.sql;
 SOURCE migrations/subscription/002_create_subscription_history_table.sql;
+SOURCE migrations/subscription/003_add_freemium_addons.sql;
 
 -- ============================================
--- 3. BILLING SERVICE MIGRATIONS
+-- 4. BILLING SERVICE MIGRATIONS (billing_db)
 -- ============================================
+USE billing_db;
 SOURCE migrations/billing/001_add_subscription_support_to_invoices.sql;
+SOURCE migrations/billing/002_add_addon_metadata_column.sql;
+SOURCE migrations/billing/003_make_productId_nullable.sql;
 
 -- ============================================
--- 4. PROMOTION SERVICE MIGRATIONS
+-- 5. ORDER SERVICE MIGRATIONS (order_db)
 -- ============================================
+USE order_db;
+SOURCE migrations/order/003_add_payment_status.sql;
+
+-- ============================================
+-- 6. PROMOTION SERVICE MIGRATIONS (promotion_db)
+-- ============================================
+USE promotion_db;
 SOURCE migrations/promotion/001_create_promotions_table.sql;
 SOURCE migrations/promotion/002_create_promotion_usage_table.sql;
 
 -- ============================================
--- 5. PAYMENT RETRY MIGRATIONS
+-- 7. PAYMENT SERVICE MIGRATIONS (payment_db)
 -- ============================================
-SOURCE migrations/006_payment_retries.sql;
+USE payment_db;
+SOURCE migrations/payment/001_create_payment_retries.sql;
 
 -- ============================================
 -- SUMMARY
 -- ============================================
 SELECT '============================================' AS '';
 SELECT 'ALL MIGRATIONS COMPLETED SUCCESSFULLY' AS status;
-SELECT '============================================' AS '';
-
--- Show table counts
-SELECT 'CATALOGUE DATABASE' AS database_name;
-USE catalogue_db;
-SELECT 
-    'plans' AS table_name,
-    COUNT(*) AS row_count
-FROM plans;
-
-SELECT 'SUBSCRIPTION DATABASE' AS database_name;
-USE subscription_db;
-SELECT 
-    'subscriptions' AS table_name,
-    COUNT(*) AS row_count
-FROM subscriptions
-UNION ALL
-SELECT 
-    'subscription_history' AS table_name,
-    COUNT(*) AS row_count
-FROM subscription_history;
-
-SELECT 'BILLING DATABASE' AS database_name;
-USE billing_db;
-SELECT 
-    'invoices' AS table_name,
-    COUNT(*) AS row_count
-FROM invoices;
-
-SELECT 'PROMOTION DATABASE' AS database_name;
-USE promotion_db;
-SELECT 
-    'promotions' AS table_name,
-    COUNT(*) AS row_count
-FROM promotions
-UNION ALL
-SELECT 
-    'promotion_usage' AS table_name,
-    COUNT(*) AS row_count
-FROM promotion_usage;
-
-SELECT 'PAYMENT DATABASE' AS database_name;
-USE payment_db;
-SELECT 
-    'payment_retries' AS table_name,
-    COUNT(*) AS row_count
-FROM payment_retries;
-
-SELECT '============================================' AS '';
-SELECT 'Migration completed at: ' AS '', NOW() AS timestamp;
+SELECT NOW() AS completed_at;
 SELECT '============================================' AS '';
