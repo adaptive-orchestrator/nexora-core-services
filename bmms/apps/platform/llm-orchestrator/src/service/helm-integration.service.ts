@@ -76,10 +76,30 @@ export class HelmIntegrationService {
       true,
     );
     
+    // Log configuration on startup
     this.logger.log(`[HelmIntegration] Initialized with:`);
     this.logger.log(`  - HELM_CHARTS_PATH: ${this.helmChartsPath}`);
+    this.logger.log(`  - CHANGESETS_PATH: ${this.changesetsPath}`);
     this.logger.log(`  - AUTO_DEPLOY_ENABLED: ${this.autoDeployEnabled}`);
     this.logger.log(`  - DEFAULT_DRY_RUN: ${this.defaultDryRun}`);
+  }
+
+  /**
+   * Get current Helm configuration paths
+   * Useful for debugging and health checks
+   */
+  getConfiguration(): {
+    helmChartsPath: string;
+    changesetsPath: string;
+    autoDeployEnabled: boolean;
+    defaultDryRun: boolean;
+  } {
+    return {
+      helmChartsPath: this.helmChartsPath,
+      changesetsPath: this.changesetsPath,
+      autoDeployEnabled: this.autoDeployEnabled,
+      defaultDryRun: this.defaultDryRun,
+    };
   }
 
   /**
@@ -183,13 +203,14 @@ export class HelmIntegrationService {
    */
   async saveChangeset(changeset: HelmChangeset, filename?: string): Promise<string> {
     // Use switch-to-{model}.yaml format to be compatible with infrastructure scripts
+    // Or use changeset-{model}-{timestamp}.yaml if filename provided
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const file = filename || `switch-to-${changeset.global.businessModel}.yaml`;
     // Save to changesets/ directory inside helmChartsPath
-    const outputDir = this.changesetsPath;
-    const filePath = join(outputDir, file);
+    const filePath = join(this.changesetsPath, file);
 
     // Create directory if not exists
-    await mkdir(outputDir, { recursive: true });
+    await mkdir(this.changesetsPath, { recursive: true });
 
     // Convert to YAML and save
     const yamlContent = yaml.dump(changeset, {

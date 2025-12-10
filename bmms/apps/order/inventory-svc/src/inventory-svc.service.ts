@@ -90,19 +90,20 @@ export class InventoryService implements OnModuleInit {
     productId: string,
     initialQuantity: number = 0,
     reorderLevel: number = 10,
+    warehouseLocation?: string,
+    maxStock?: number,
     ownerId?: string,
   ): Promise<Inventory> {
-    // Validate product exists in catalogue
+    // ✅ Validate product exists in catalogue
     await this.validateProduct(productId);
 
-    // Check if inventory already exists for this product AND owner
+    // ✅ Check if inventory already exists for this product AND owner
     const existing = await this.inventoryRepo.findOne({
       where: { productId, ownerId: ownerId || undefined },
     });
 
     if (existing) {
-      // If exists, just return it (or update quantity if needed)
-      debug.log(`[Inventory] Inventory for product ${productId} (owner: ${ownerId}) already exists, returning existing...`);
+      debug.log(`⚠️ Inventory already exists for productId: ${productId} (owner: ${ownerId}), skipping creation`);
       return existing;
     }
 
@@ -111,11 +112,23 @@ export class InventoryService implements OnModuleInit {
       quantity: initialQuantity,  // Total quantity
       reserved: 0,                // Nothing reserved yet
       reorderLevel,
+      warehouseLocation,
+      maxStock: maxStock || 1000,
       ownerId,
       isActive: true,
     });
 
-    return this.inventoryRepo.save(inventory);
+    try {
+      return await this.inventoryRepo.save(inventory);
+    } catch (error) {
+      // Handle duplicate error gracefully (race condition edge case)
+      if (error.code === 'ER_DUP_ENTRY') {
+        debug.warn(`⚠️ Duplicate inventory detected for productId: ${productId} (race condition), fetching existing`);
+        const existing = await this.inventoryRepo.findOne({ where: { productId, ownerId: ownerId || undefined } });
+        if (existing) return existing;
+      }
+      throw error;
+    }
   }
 
   /**

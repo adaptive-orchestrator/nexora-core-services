@@ -17,22 +17,29 @@ export class InventoryEventListener {
     try {
       // Handle both wrapped event format and direct data format from Kafka
       const eventData = payload?.data || payload?.value?.data || payload;
-      
+
       if (!eventData || !eventData.id) {
         debug.log('[WARNING] PRODUCT_CREATED event missing data, skipping:', JSON.stringify(payload));
         return;
       }
 
       const { id: productId, name } = eventData;
-      
-      debug.log(`[Inventory] Processing PRODUCT_CREATED for product: ${name} (ID: ${productId})`);
 
-      // Create initial inventory record
-      await this.inventoryService.createInventoryForProduct(productId, 0, 10);
+      debug.log(`📦 [INVENTORY] Processing PRODUCT_CREATED for product: ${name} (ID: ${productId})`);
 
-      debug.log(`[Inventory] Inventory initialized for new product: ${name} (ID: ${productId})`);
+      // Create initial inventory record (with duplicate check)
+      const inventory = await this.inventoryService.createInventoryForProduct(productId, 0, 10);
+
+      if (inventory.createdAt.getTime() === inventory.updatedAt.getTime()) {
+        debug.log(`✅ Inventory initialized for new product: ${name} (ID: ${productId})`);
+      } else {
+        debug.log(`ℹ️ Inventory already existed for product: ${name} (ID: ${productId}), skipped creation`);
+      }
     } catch (error) {
-      debug.error('[ERROR] Error handling PRODUCT_CREATED:', error);
+      // Only log non-duplicate errors
+      if (error.code !== 'ER_DUP_ENTRY') {
+        debug.error('❌ Error handling PRODUCT_CREATED:', error);
+      }
     }
   }
 

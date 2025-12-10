@@ -20,6 +20,33 @@ COPY --from=builder /usr/bmms/dist/apps/platform/llm-orchestrator ./dist/apps/pl
 COPY --from=builder /usr/bmms/apps/platform/llm-orchestrator/src/proto ./dist/apps/platform/llm-orchestrator/src/proto
 COPY --from=builder /usr/bmms/dist/libs ./dist/libs/
 
+# ========================
+# Install Helm & Kubectl for K8s operations
+# ========================
+RUN apk add --no-cache curl ca-certificates bash git && \
+    # Detect architecture
+    ARCH=$(uname -m) && \
+    case ${ARCH} in \
+        x86_64) ARCH="amd64" ;; \
+        aarch64) ARCH="arm64" ;; \
+        armv7l) ARCH="arm" ;; \
+    esac && \
+    # Install kubectl with correct architecture
+    KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/kubectl && \
+    # Install helm with correct architecture
+    HELM_VERSION="v3.13.3" && \
+    curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" | tar -xz && \
+    mv linux-${ARCH}/helm /usr/local/bin/helm && \
+    rm -rf linux-${ARCH} && \
+    # Verify installations
+    echo "Checking kubectl installation..." && \
+    kubectl version --client && \
+    echo "Checking helm installation..." && \
+    helm version
+
 # nhận build-arg từ bên ngoài
 ARG GEMINI_API_KEY
 ENV GEMINI_API_KEY=$GEMINI_API_KEY
@@ -27,7 +54,7 @@ ENV GEMINI_API_KEY=$GEMINI_API_KEY
 ARG JWT_SECRET
 ENV JWT_SECRET=$JWT_SECRET
 
-ARG TOKEN_EXPIRE_TIME 
+ARG TOKEN_EXPIRE_TIME
 ENV TOKEN_EXPIRE_TIME=$TOKEN_EXPIRE_TIME
 
 COPY package*.json ./

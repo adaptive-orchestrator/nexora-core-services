@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { InventoryService } from './inventory-svc.service';
 
@@ -6,12 +6,19 @@ import { InventoryService } from './inventory-svc.service';
 export class InventoryController {
   constructor(private readonly service: InventoryService) {}
 
+  @Get('health')
+  health() {
+    return { status: 'ok', service: 'inventory-svc', timestamp: new Date().toISOString() };
+  }
+
   @GrpcMethod('InventoryService', 'CreateInventory')
   async createInventory(data: any) {
     const inventory = await this.service.createInventoryForProduct(
       data.productId,
       data.quantity || 0,
       data.reorderLevel || 10,
+      data.warehouseLocation,
+      data.maxStock,
       data.ownerId, // Pass ownerId for multi-tenant support
     );
     return { inventory, message: 'Inventory created successfully' };
