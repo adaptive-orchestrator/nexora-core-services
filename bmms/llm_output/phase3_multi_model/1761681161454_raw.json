@@ -1,0 +1,19 @@
+{
+  "proposal_text": "Để hỗ trợ cả 2 sản phẩm retail và 1 gói subscription, chúng ta cần cấu hình hệ thống để kích hoạt mô hình kinh doanh đa dạng (Multi-Model). Các dịch vụ liên quan đến bán lẻ (Retail) như OrderService và InventoryService sẽ được triển khai. Đồng thời, các dịch vụ cho mô hình đăng ký (Subscription) như SubscriptionService và PromotionService cũng sẽ được kích hoạt. Tất cả các dịch vụ cốt lõi (AuthService, CustomerService, CRMOrchestratorService, APIGatewayService, CatalogueService, BillingService, PaymentService) cũng sẽ được đảm bảo hoạt động để hỗ trợ các mô hình này. Lưu ý rằng mỗi loại dịch vụ chỉ triển khai một lần và sẽ xử lý tất cả các sản phẩm và gói dịch vụ thuộc mô hình tương ứng.",
+  "changeset": {
+    "model": "MultiBusinessModel",
+    "features": [
+      {"key": "business_model", "value": "multi"},
+      {"key": "supported_models", "value": "retail,subscription"},
+      {"key": "retail_products_count", "value": 2},
+      {"key": "subscription_plans_count", "value": 1}
+    ],
+    "impacted_services": ["OrderService", "InventoryService", "SubscriptionService", "PromotionService", "CatalogueService", "BillingService", "PaymentService", "AuthService", "CustomerService", "CRMOrchestratorService", "APIGatewayService"]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.95,
+    "risk": "medium",
+    "to_model": "multi"
+  }
+}

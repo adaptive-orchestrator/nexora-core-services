@@ -1,0 +1,33 @@
+{
+  "proposal_text": "Yêu cầu của bạn là hỗ trợ đồng thời 2 sản phẩm bán lẻ (retail) và 1 gói đăng ký (subscription). Điều này sẽ kích hoạt mô hình kinh doanh đa sản phẩm (Multi-Model) trên hệ thống. Các dịch vụ cần thiết cho cả hai mô hình Retail và Subscription cùng với các dịch vụ cốt lõi sẽ được đảm bảo hoạt động. Lưu ý rằng các dịch vụ sẽ được triển khai một lần và chia sẻ giữa các mô hình sản phẩm theo mô hình Shared Service Pattern.",
+  "changeset": {
+    "model": "MultiBusinessModel",
+    "features": [
+      {"key": "business_model", "value": "multi"},
+      {"key": "supported_models", "value": "retail,subscription"},
+      {"key": "retail_products_count", "value": 2},
+      {"key": "subscription_plans_count", "value": 1}
+    ],
+    "impacted_services": [
+      "OrderService",
+      "InventoryService",
+      "SubscriptionService",
+      "PromotionService",
+      "CatalogueService",
+      "BillingService",
+      "PaymentService",
+      "AuthService",
+      "CustomerService",
+      "CRMOrchestratorService",
+      "APIGatewayService"
+    ]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.98,
+    "risk": "low",
+    "from_model": "none",
+    "to_model": "multi",
+    "note": "SHARED SERVICE PATTERN: Each service in impacted_services list will be deployed ONCE (e.g., 1 OrderService handles both retail products, 1 SubscriptionService handles the subscription plan)"
+  }
+}

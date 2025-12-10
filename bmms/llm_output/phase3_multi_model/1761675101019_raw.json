@@ -1,0 +1,31 @@
+{
+  "proposal_text": "Hệ thống sẽ được cấu hình để hỗ trợ đồng thời 2 sản phẩm bán lẻ và 1 gói dịch vụ đăng ký theo tháng/năm (subscription). Điều này yêu cầu triển khai hoặc cấu hình các dịch vụ liên quan đến quản lý đơn hàng, tồn kho cho sản phẩm bán lẻ, cũng như dịch vụ quản lý gói đăng ký và khuyến mãi. Các dịch vụ cốt lõi như xác thực, khách hàng, cổng API và tài chính cũng sẽ được đảm bảo hoạt động tương thích với mô hình đa dạng này. Lưu ý rằng mỗi loại dịch vụ chỉ cần triển khai một lần và sẽ xử lý tất cả các sản phẩm/gói tương ứng.",
+  "changeset": {
+    "model": "MultiBusinessModel",
+    "features": [
+      {"key": "business_model", "value": "multi"},
+      {"key": "supported_models", "value": "retail,subscription"},
+      {"key": "retail_products_count", "value": 2},
+      {"key": "subscription_plans_count", "value": 1}
+    ],
+    "impacted_services": [
+      "OrderService",
+      "InventoryService",
+      "SubscriptionService",
+      "PromotionService",
+      "CatalogueService",
+      "BillingService",
+      "PaymentService",
+      "AuthService",
+      "CustomerService",
+      "CRMOrchestratorService",
+      "APIGatewayService"
+    ]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.98,
+    "risk": "low",
+    "to_model": "multi"
+  }
+}

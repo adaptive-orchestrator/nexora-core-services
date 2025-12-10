@@ -1,0 +1,18 @@
+{
+  "proposal_text": "Để chuyển đổi nhóm sản phẩm A sang mô hình đăng ký theo tháng, hệ thống sẽ cần kích hoạt hoặc điều chỉnh các dịch vụ liên quan đến quản lý đăng ký, khuyến mãi, lập hóa đơn định kỳ, xử lý thanh toán và quản lý danh mục sản phẩm. Cụ thể, các dịch vụ SubscriptionService, PromotionService, BillingService, PaymentService và CatalogueService sẽ được cấu hình để hỗ trợ mô hình kinh doanh đăng ký định kỳ. BillingService sẽ được thiết lập ở chế độ RECURRING.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "product_group", "value": "A"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}
