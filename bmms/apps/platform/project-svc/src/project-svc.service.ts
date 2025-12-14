@@ -1,18 +1,23 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
 import { Task } from './entities/task.entity';
 import { debug } from '@bmms/common';
+import type { ClientGrpc } from '@nestjs/microservices';
 
 @Injectable()
 export class ProjectSvcService {
+  private subscriptionClient: ClientGrpc;
   constructor(
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     @InjectRepository(Task)
     private taskRepository: Repository<Task>,
-  ) {}
+    @Inject('SUBSCRIPTION_PACKAGE') private readonly subscriptionClientInjected: ClientGrpc,
+  ) {
+    this.subscriptionClient = subscriptionClientInjected;
+  }
 
   async createProject(data: any) {
     debug.log('[ProjectSvc] createProject data:', JSON.stringify(data));
@@ -327,6 +332,48 @@ export class ProjectSvcService {
       due_date: dueDate || '',
       created_at: task.createdAt?.toISOString() || new Date().toISOString(),
       updated_at: task.updatedAt?.toISOString() || new Date().toISOString(),
+    };
+  }
+
+  // ==================== QUOTA METHODS ====================
+
+  /**
+   * Get project count for a user
+   * Used for quota enforcement
+   */
+  async getProjectCount(userId: string): Promise<{ count: number; user_id: string }> {
+    const count = await this.projectRepository.count({
+      where: { ownerId: userId },
+    });
+
+    return {
+      count,
+      user_id: userId,
+    };
+  }
+
+  /**
+   * Check if user can create a new project based on quota
+   * Note: This is a local check. Full quota check should involve subscription-svc.
+   */
+  async checkProjectQuota(userId: string, maxAllowed: number = 5): Promise<{
+    allowed: boolean;
+    currentCount: number;
+    maxAllowed: number;
+    planName: string;
+    message: string;
+  }> {
+    const { count } = await this.getProjectCount(userId);
+    const allowed = count < maxAllowed;
+
+    return {
+      allowed,
+      currentCount: count,
+      maxAllowed,
+      planName: 'Default', // This should be retrieved from subscription-svc
+      message: allowed 
+        ? `You can create ${maxAllowed - count} more projects`
+        : `Quota exceeded: ${count}/${maxAllowed} projects used`,
     };
   }
 }

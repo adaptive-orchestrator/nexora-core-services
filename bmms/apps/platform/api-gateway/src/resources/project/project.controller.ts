@@ -23,6 +23,8 @@ import { JwtGuard } from '../../guards/jwt.guard';
 import { ProjectService } from './project.service';
 import { CreateProjectDto, UpdateProjectDto, ProjectResponseDto } from './dto/project.dto';
 import { CreateTaskDto, UpdateTaskDto, TaskResponseDto } from './dto/task.dto';
+import { CurrentUser } from '../../decorators/current-user.decorator';
+import type { JwtUserPayload } from '../../decorators/current-user.decorator';
 
 @ApiTags('Projects')
 @Controller('projects')
@@ -30,13 +32,45 @@ export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   // Helper to get userId from request or header (for testing without auth)
-  private getUserId(req: any, userIdHeader?: string): number {
-    return req?.user?.sub || req?.user?.id || (userIdHeader ? parseInt(userIdHeader) : 1);
+  private getUserId(req: any, userIdHeader?: string): string {
+    const userId = req?.user?.sub || req?.user?.id || req?.user?.userId || (userIdHeader ? userIdHeader : '1');
+    return String(userId);
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new project' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Project created successfully', type: ProjectResponseDto })
+  @ApiOperation({ 
+    summary: 'Create a new project',
+    description: 'Creates a new project. Requires active subscription. Will check against plan quota limits.'
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CREATED, 
+    description: 'Project created successfully', 
+    type: ProjectResponseDto 
+  })
+  @ApiResponse({ 
+    status: 402, 
+    description: 'Payment Required - No active subscription',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 402 },
+        message: { type: 'string', example: 'Active subscription required to create projects. Please subscribe to a plan.' },
+        error: { type: 'string', example: 'Payment Required' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Quota Exceeded',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Quota exceeded: You have 5 projects out of 5 allowed by your Basic plan. Please upgrade your plan or delete existing projects.' },
+        error: { type: 'string', example: 'Bad Request' }
+      }
+    }
+  })
   async createProject(
     @Body() createProjectDto: CreateProjectDto,
     @Request() req: any,
@@ -165,5 +199,34 @@ export class ProjectController {
   ) {
     const userId = this.getUserId(req, userIdHeader);
     return this.projectService.getProjectAnalytics(projectId, userId);
+  }
+
+  // =================== QUOTA ENDPOINTS ===================
+
+  @Get('quota/status')
+  @ApiOperation({ 
+    summary: 'Get project quota status',
+    description: 'Returns current project count vs. plan limits for the user'
+  })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Quota status retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        currentProjects: { type: 'number', example: 3 },
+        maxProjects: { type: 'number', example: 5 },
+        remainingProjects: { type: 'number', example: 2 },
+        planName: { type: 'string', example: 'Basic Plan' },
+        isActive: { type: 'boolean', example: true },
+      }
+    }
+  })
+  async getQuotaStatus(
+    @Request() req: any,
+    @Headers('x-user-id') userIdHeader?: string,
+  ) {
+    const userId = this.getUserId(req, userIdHeader);
+    return this.projectService.getQuotaStatus(userId);
   }
 }

@@ -9,6 +9,7 @@ interface ICustomerGrpcService {
   getCustomerByUserId(data: { userId: string }): any;
   updateCustomer(data: any): any;
   deleteCustomer(data: { id: string }): any;
+  createCustomerInternal(data: { name: string; email: string; userId?: string; phone?: string; address?: string }): any;
 }
 
 @Injectable()
@@ -63,6 +64,12 @@ export class CustomerService implements OnModuleInit {
   async deleteCustomer(id: string) {
     return firstValueFrom(
       this.customerService.deleteCustomer({ id }),
+    );
+  }
+
+  async createCustomer(data: { name: string; email: string; userId?: string; phone?: string; address?: string }) {
+    return firstValueFrom(
+      this.customerService.createCustomerInternal(data),
     );
   }
 

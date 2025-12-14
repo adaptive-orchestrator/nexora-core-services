@@ -48,7 +48,7 @@ export class DbModule {
               password,
               database,
               autoLoadEntities: true,
-              synchronize: false, // IMPORTANT: Disabled to prevent conflicts with manual migrations
+              synchronize: true, // IMPORTANT: Disabled to prevent conflicts with manual migrations
               logging: false, // [DbModule] Disable logging for performance
               // [DbModule] Connection Pool Optimization for High Concurrency (1000 VUs)
               extra: {

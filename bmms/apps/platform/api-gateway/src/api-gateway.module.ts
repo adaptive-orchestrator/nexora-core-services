@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
@@ -18,6 +19,7 @@ import { PromotionModule } from './resources/promotion/promotion.module';
 import { AddonModule } from './resources/addon/addon.module';
 import { ProjectModule } from './resources/project/project.module';
 import { AdminStatsModule } from './resources/admin/admin-stats.module';
+import { GrpcMetadataInterceptor } from '@bmms/common';
 
 @Module({
   imports: [
@@ -50,6 +52,11 @@ import { AdminStatsModule } from './resources/admin/admin-stats.module';
   providers: [
     ApiGatewayService,
     JwtStrategy,
+    // Global interceptor to inject user context into gRPC metadata
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: GrpcMetadataInterceptor,
+    },
   ],
 })
 export class ApiGatewayModule {}

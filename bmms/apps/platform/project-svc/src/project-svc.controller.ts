@@ -61,4 +61,17 @@ export class ProjectSvcController {
   async getProjectAnalytics(data: { id: string; user_id: string }) {
     return this.projectService.getProjectAnalytics(data.id, data.user_id);
   }
+
+  // ==================== QUOTA ====================
+
+  @GrpcMethod('ProjectService', 'GetProjectCount')
+  async getProjectCount(data: { user_id: string }) {
+    return this.projectService.getProjectCount(data.user_id);
+  }
+
+  @GrpcMethod('ProjectService', 'CheckProjectQuota')
+  async checkProjectQuota(data: { user_id: string }) {
+    // Default max allowed, should be passed from subscription check
+    return this.projectService.checkProjectQuota(data.user_id, 5);
+  }
 }

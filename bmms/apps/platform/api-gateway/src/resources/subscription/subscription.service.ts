@@ -16,6 +16,10 @@ interface ISubscriptionGrpcService {
   updateSubscriptionStatus(data: any): any;
   checkTrialExpiry(data: any): any;
   activateSubscription(data: any): any;
+  // Stripe integration
+  checkSubscriptionStatus(data: any): any;
+  getPlanLimits(data: any): any;
+  getActiveSubscription(data: any): any;
 }
 
 @Injectable()
@@ -136,6 +140,52 @@ export class SubscriptionService implements OnModuleInit {
     try {
       const result = await firstValueFrom(
         this.subscriptionService.activateSubscription({ subscriptionId })
+      );
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // =================== STRIPE INTEGRATION ===================
+
+  /**
+   * Check subscription status for a customer
+   * Used by other services to verify active subscription
+   */
+  async checkSubscriptionStatus(customerId: string) {
+    try {
+      const result = await firstValueFrom(
+        this.subscriptionService.checkSubscriptionStatus({ customerId })
+      );
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get plan limits/quotas for a customer
+   * Used by project-svc to enforce resource limits
+   */
+  async getPlanLimits(customerId: string, planId?: string) {
+    try {
+      const result = await firstValueFrom(
+        this.subscriptionService.getPlanLimits({ customerId, planId })
+      );
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get active subscription for a customer
+   */
+  async getActiveSubscription(customerId: string) {
+    try {
+      const result = await firstValueFrom(
+        this.subscriptionService.getActiveSubscription({ customerId })
       );
       return result;
     } catch (error) {

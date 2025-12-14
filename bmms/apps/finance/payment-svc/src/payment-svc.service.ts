@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment } from './entities/payment.entity';
+import { Payment, PaymentStatus } from './entities/payment.entity';
 import { PaymentHistory } from './entities/payment-history.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
@@ -34,7 +34,7 @@ export class PaymentService {
         where: { invoiceId: dto.invoiceId },
       });
 
-      if (existing && existing.status === 'completed') {
+      if (existing && existing.status === PaymentStatus.COMPLETED) {
         throw new BadRequestException(
           `Invoice ${dto.invoiceId} already paid`,
         );
@@ -49,11 +49,11 @@ export class PaymentService {
         invoiceNumber: invoiceNumber,
         customerId: dto.customerId,
         totalAmount: dto.amount,
-        status: 'initiated',
+        status: PaymentStatus.INITIATED,
         createdAt: new Date(),
-      });
+      } as Partial<Payment>);
 
-      const savedPayment = await this.paymentRepository.save(payment);
+      const savedPayment = await this.paymentRepository.save(payment) as Payment;
 
       // Log payment history
       await this.logPaymentHistory(
@@ -88,14 +88,14 @@ export class PaymentService {
         throw new NotFoundException(`Payment ${dto.paymentId} not found`);
       }
 
-      if (payment.status === 'completed') {
+      if (payment.status === PaymentStatus.COMPLETED) {
         this.logger.warn(`[WARNING] Payment already completed: ${dto.paymentId}`);
         return payment;
       }
 
       // Update payment status
       if (dto.status === 'success') {
-        payment.status = 'completed';
+        payment.status = PaymentStatus.COMPLETED;
         payment.transactionId = dto.transactionId || '';
         payment.paidAmount = dto.amount || payment.totalAmount;
         payment.paidAt = new Date();
@@ -109,7 +109,7 @@ export class PaymentService {
           `Payment successful via ${dto.method || 'unknown'}`,
         );
       } else if (dto.status === 'failed') {
-        payment.status = 'failed';
+        payment.status = PaymentStatus.FAILED;
         payment.failureReason = dto.failureReason || 'Payment failed';
         payment.failedAt = new Date();
 
@@ -158,13 +158,13 @@ export class PaymentService {
         customerId: dto.customerId,
         totalAmount: dto.amount,
         paidAmount: dto.amount,
-        status: 'completed',
+        status: PaymentStatus.COMPLETED,
         transactionId: transactionId,
         createdAt: new Date(),
         paidAt: new Date(),
-      });
+      } as Partial<Payment>);
 
-      const savedPayment = await this.paymentRepository.save(payment);
+      const savedPayment = await this.paymentRepository.save(payment) as Payment;
       this.logger.log(`[Payment] Payment record created: ${savedPayment.id}`);
 
       // Log payment history
@@ -332,9 +332,9 @@ export class PaymentService {
 
       // Total statistics
       const total = await this.paymentRepository.find();
-      const completed = total.filter((p) => p.status === 'completed');
-      const failed = total.filter((p) => p.status === 'failed');
-      const pending = total.filter((p) => p.status === 'initiated' || p.status === 'processing');
+      const completed = total.filter((p) => p.status === PaymentStatus.COMPLETED);
+      const failed = total.filter((p) => p.status === PaymentStatus.FAILED);
+      const pending = total.filter((p) => p.status === PaymentStatus.INITIATED || p.status === PaymentStatus.PROCESSING);
 
       // Calculate amounts
       const totalAmount = total.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
@@ -346,8 +346,8 @@ export class PaymentService {
 
       // Aggregate by status
       const byStatus = {
-        initiated: total.filter((p) => p.status === 'initiated').length,
-        processing: total.filter((p) => p.status === 'processing').length,
+        initiated: total.filter((p) => p.status === PaymentStatus.INITIATED).length,
+        processing: total.filter((p) => p.status === PaymentStatus.PROCESSING).length,
         completed: completed.length,
         failed: failed.length,
       };
@@ -415,12 +415,12 @@ export class PaymentService {
         invoiceNumber: invoiceData.invoiceNumber,
         customerId: invoiceData.customerId,
         totalAmount: invoiceData.totalAmount,
-        status: 'initiated',
+        status: PaymentStatus.INITIATED,
         dueDate: invoiceData.dueDate,
         createdAt: new Date(),
-      });
+      } as Partial<Payment>);
 
-      const saved = await this.paymentRepository.save(payment);
+      const saved = await this.paymentRepository.save(payment) as Payment;
 
       await this.logPaymentHistory(
         saved.id,
@@ -476,7 +476,7 @@ export class PaymentService {
         return;
       }
 
-      payment.status = 'completed';
+      payment.status = PaymentStatus.COMPLETED;
       payment.transactionId = data.transactionId;
       payment.paidAmount = data.amount;
       payment.paidAt = new Date();
@@ -521,7 +521,7 @@ export class PaymentService {
         return;
       }
 
-      payment.status = 'failed';
+      payment.status = PaymentStatus.FAILED;
       payment.failureReason = data.reason;
       payment.failedAt = new Date();
 
@@ -553,7 +553,7 @@ export class PaymentService {
 
       await this.paymentRepository.update(
         { invoiceId },
-        { status: "completed", updatedAt: new Date() },
+        { status: PaymentStatus.COMPLETED, updatedAt: new Date() },
       );
 
       this.logger.log(`[Payment] Invoice status updated to ${status}`);
@@ -614,11 +614,11 @@ export class PaymentService {
       invoiceNumber: data.invoiceNumber,
       customerId: data.customerId,
       totalAmount: data.amount,
-      status: 'initiated', // Use enum value instead of data.status
+      status: PaymentStatus.INITIATED,
       createdAt: new Date(),
-    });
+    } as Partial<Payment>);
 
-    const savedPayment = await this.paymentRepository.save(payment);
+    const savedPayment = await this.paymentRepository.save(payment) as Payment;
     this.logger.log(`[Payment] Pending payment created: ${savedPayment.id}`);
     
     return savedPayment;
@@ -646,11 +646,11 @@ export class PaymentService {
       invoiceId: data.invoiceId,
       customerId: data.customerId || '', // Use empty string as default if null
       totalAmount: data.amount,
-      status: 'initiated',
+      status: PaymentStatus.INITIATED,
       createdAt: new Date(),
-    });
+    } as Partial<Payment>);
 
-    const savedPayment = await this.paymentRepository.save(payment);
+    const savedPayment = await this.paymentRepository.save(payment) as Payment;
     this.logger.log(`[Payment] Retry payment created: ${savedPayment.id}`);
     
     return savedPayment;
@@ -669,11 +669,11 @@ export class PaymentService {
     this.logger.log(`[Payment] Marking payment ${data.paymentId} as refunded`);
     
     // TODO: Implement refund logic
-    // For now, mark as failed (since refunded is not in enum)
+    // Use REFUNDED status since it exists in the enum
     await this.paymentRepository.update(
       { id: data.paymentId },
       { 
-        status: 'failed', // Use 'failed' as closest enum value
+        status: PaymentStatus.REFUNDED,
         failureReason: `REFUNDED: ${data.reason}`,
         updatedAt: new Date(),
       }
