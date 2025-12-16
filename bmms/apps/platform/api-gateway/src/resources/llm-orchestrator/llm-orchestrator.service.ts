@@ -21,6 +21,15 @@ interface LlmOrchestratorGrpcService {
     tenant_id: string;
     dry_run: boolean;
   }): any;
+  textToSql(data: {
+    question: string;
+    lang?: string;
+  }): any;
+  analyzeIncident(data: {
+    incident_description: string;
+    logs?: string;
+    lang?: string;
+  }): any;
 }
 
 export interface RecommendModelResponse {
@@ -199,6 +208,81 @@ export class LlmOrchestratorService implements OnModuleInit {
         throw error;
       }
       this.logger.error(`[SWITCH-ERROR] Service unavailable: ${error.message}`, error.stack);
+      throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Text-to-SQL: Natural language to SQL query
+   */
+  async textToSql(question: string, lang: string = 'vi') {
+    if (!question || typeof question !== 'string') {
+      throw new BadRequestException('question is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[TEXT-TO-SQL] question="${question.substring(0, 50)}..." | lang=${lang}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.textToSql({
+          question,
+          lang,
+        }).pipe(
+          catchError(error => {
+            this.logger.error(`[TEXT-TO-SQL-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(error.details || 'Text-to-SQL failed', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[TEXT-TO-SQL-DONE] took ${elapsed}ms`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[TEXT-TO-SQL-ERROR] Service unavailable: ${error.message}`, error.stack);
+      throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Analyze system incident
+   */
+  async analyzeIncident(incident_description: string, logs?: string, lang: string = 'vi') {
+    if (!incident_description || typeof incident_description !== 'string') {
+      throw new BadRequestException('incident_description is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[ANALYZE-INCIDENT] incident="${incident_description.substring(0, 50)}..." | lang=${lang}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.analyzeIncident({
+          incident_description,
+          logs,
+          lang,
+        }).pipe(
+          catchError(error => {
+            this.logger.error(`[ANALYZE-INCIDENT-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(error.details || 'Incident analysis failed', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[ANALYZE-INCIDENT-DONE] took ${elapsed}ms`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[ANALYZE-INCIDENT-ERROR] Service unavailable: ${error.message}`, error.stack);
       throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
     }
   }

@@ -240,4 +240,75 @@ export class LlmOrchestratorController {
   getHelmConfiguration() {
     return this.helmIntegrationService.getConfiguration();
   }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'TextToSql')
+  async textToSql(data: { question: string; lang?: string }) {
+    const { question, lang } = data;
+
+    if (!question || typeof question !== 'string') {
+      throw new Error('question is required and must be a string');
+    }
+
+    try {
+      return await this.llmOrchestratorService.handleTextToSql(question);
+    } catch (error) {
+      console.error('[TextToSql gRPC] Error:', error);
+      return {
+        success: false,
+        question,
+        naturalResponse: `Có lỗi xảy ra khi xử lý câu hỏi: ${error.message}`,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'AnalyzeIncident')
+  async analyzeIncident(data: { incident_description: string; logs?: string; lang?: string }) {
+    const { incident_description, logs, lang } = data;
+
+    if (!incident_description || typeof incident_description !== 'string') {
+      throw new Error('incident_description is required and must be a string');
+    }
+
+    try {
+      // For now, use the generic ask method with a specialized prompt
+      const prompt = `Analyze this system incident and provide recommendations:
+
+Incident: ${incident_description}
+${logs ? `\nLogs:\n${logs}` : ''}
+
+Please analyze and provide:
+1. Severity level (low/medium/high/critical)
+2. Possible root cause
+3. Immediate actions to take
+4. Long-term recommendations
+
+Respond in ${lang === 'en' ? 'English' : 'Vietnamese'}.`;
+
+      const result = await this.llmOrchestratorService.ask(
+        prompt,
+        't-system',
+        'admin',
+        (lang as 'vi' | 'en') || 'vi',
+      );
+
+      // Parse the response to extract structured data
+      return {
+        severity: 'medium', // Could be parsed from LLM response
+        analysis: result.proposal_text || result.response || result.text || JSON.stringify(result),
+        recommendations: [], // Could be parsed from LLM response
+        raw_response: JSON.stringify(result),
+      };
+    } catch (error) {
+      console.error('[AnalyzeIncident gRPC] Error:', error);
+      return {
+        severity: 'unknown',
+        analysis: `Có lỗi xảy ra khi phân tích sự cố: ${error.message}`,
+        recommendations: [],
+        raw_response: error.message,
+      };
+    }
+  }
 }

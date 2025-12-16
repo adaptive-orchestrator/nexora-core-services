@@ -18,6 +18,12 @@ service LlmOrchestratorService {
   
   // Switch business model và trigger Helm deployment
   rpc SwitchBusinessModel (SwitchModelRequest) returns (SwitchModelResponse);
+  
+  // Text-to-SQL: Natural language to SQL query
+  rpc TextToSql (TextToSqlRequest) returns (TextToSqlResponse);
+  
+  // Analyze system incident
+  rpc AnalyzeIncident (AnalyzeIncidentRequest) returns (AnalyzeIncidentResponse);
 }
 
 // ====== Request & Response ======
@@ -122,4 +128,35 @@ message SwitchModelResponse {
   bool deployed = 4;                // Đã deploy chưa
   bool dry_run = 5;                 // Có phải dry run không
   string error = 6;                 // Lỗi nếu có
+}
+
+// ====== Text-to-SQL ======
+
+message TextToSqlRequest {
+  string question = 1;              // Câu hỏi tự nhiên
+  string lang = 2;                  // Ngôn ngữ (vi, en)
+}
+
+message TextToSqlResponse {
+  bool success = 1;                 // Thành công hay không
+  string question = 2;              // Câu hỏi gốc
+  string sql = 3;                   // SQL query được tạo
+  string natural_response = 4;      // Câu trả lời tự nhiên
+  string raw_data = 5;              // Dữ liệu raw (JSON)
+  string error = 6;                 // Lỗi nếu có
+}
+
+// ====== Incident Analysis ======
+
+message AnalyzeIncidentRequest {
+  string incident_description = 1;  // Mô tả sự cố
+  string logs = 2;                  // Log hệ thống
+  string lang = 3;                  // Ngôn ngữ (vi, en)
+}
+
+message AnalyzeIncidentResponse {
+  string severity = 1;              // low, medium, high, critical
+  string analysis = 2;              // Phân tích chi tiết
+  repeated string recommendations = 3; // Khuyến nghị
+  string raw_response = 4;          // Raw response từ LLM
 }

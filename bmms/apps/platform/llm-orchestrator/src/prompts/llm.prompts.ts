@@ -44,7 +44,7 @@ IMPORTANT:
 // =============================================================================
 
 export const TEXT_TO_SQL_GEN_PROMPT = `
-ROLE: Expert PostgreSQL Database Engineer with deep knowledge of TypeORM entities.
+ROLE: Expert MySQL Database Engineer with deep knowledge of TypeORM entities.
 TASK: Convert user question to valid SQL SELECT query.
 
 DATABASE SCHEMA (TypeORM Entities):
@@ -56,16 +56,16 @@ CRITICAL RULES:
 3. Use table aliases for readability (e.g., o for orders, c for customers)
 4. Use LIMIT clause for safety (max 100 rows unless specified)
 5. Handle NULL values properly with COALESCE
-6. Format dates using TO_CHAR for Vietnamese locale
+6. Format dates using DATE_FORMAT for Vietnamese locale
 7. Format currency in VND (no decimals, use comma separator)
 8. Use proper JOINs based on entity relationships
 9. Return meaningful column aliases in Vietnamese where appropriate
 
 QUERY PATTERNS:
 - Aggregate queries: Use GROUP BY with appropriate functions
-- Date filtering: Use DATE_TRUNC, BETWEEN, or comparison operators
+- Date filtering: Use DATE(), BETWEEN, or comparison operators
 - Pagination: Use LIMIT/OFFSET pattern
-- Search: Use ILIKE for case-insensitive matching
+- Search: Use LIKE (MySQL is case-insensitive by default for most collations)
 
 User Question: {{USER_QUESTION}}
 

@@ -256,4 +256,99 @@ export class LlmOrchestratorController {
       body.dry_run ?? false,
     );
   }
+
+  @Post('text-to-sql')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Natural language to SQL query',
+    description: 'Chuyển đổi câu hỏi tự nhiên thành SQL query và thực thi (nếu TEXT_TO_SQL_ENABLED=true)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          example: 'Cho tôi biết tổng doanh thu tháng này',
+          description: 'Câu hỏi bằng ngôn ngữ tự nhiên'
+        },
+        lang: {
+          type: 'string',
+          enum: ['vi', 'en'],
+          example: 'vi',
+          description: 'Ngôn ngữ trả lời'
+        },
+      },
+      required: ['question'],
+    }
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Kết quả query',
+    schema: {
+      type: 'object',
+      properties: {
+        answer: { type: 'string', example: 'Tổng doanh thu tháng này là 150.000.000 đ' },
+        sql: { type: 'string', example: 'SELECT SUM(amount) FROM orders WHERE ...' },
+        data: { type: 'array', items: { type: 'object' } },
+      }
+    }
+  })
+  async textToSql(
+    @Body() body: { question: string; lang?: string },
+  ) {
+    return this.llmOrchestratorService.textToSql(body.question, body.lang ?? 'vi');
+  }
+
+  @Post('analyze-incident')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Analyze system incident',
+    description: 'Phân tích sự cố hệ thống và đưa ra khuyến nghị',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        incident_description: {
+          type: 'string',
+          example: 'Service payment-svc không phản hồi, timeout sau 30s',
+          description: 'Mô tả sự cố'
+        },
+        logs: {
+          type: 'string',
+          example: 'Error: Connection refused...',
+          description: 'Log hệ thống (tùy chọn)'
+        },
+        lang: {
+          type: 'string',
+          enum: ['vi', 'en'],
+          example: 'vi',
+        },
+      },
+      required: ['incident_description'],
+    }
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Phân tích sự cố',
+    schema: {
+      type: 'object',
+      properties: {
+        severity: { type: 'string', example: 'high' },
+        root_cause: { type: 'string', example: 'Database connection pool exhausted' },
+        recommendations: { type: 'array', items: { type: 'string' } },
+        immediate_actions: { type: 'array', items: { type: 'string' } },
+      }
+    }
+  })
+  async analyzeIncident(
+    @Body() body: { incident_description: string; logs?: string; lang?: string },
+  ) {
+    return this.llmOrchestratorService.analyzeIncident(
+      body.incident_description,
+      body.logs,
+      body.lang ?? 'vi',
+    );
+  }
 }

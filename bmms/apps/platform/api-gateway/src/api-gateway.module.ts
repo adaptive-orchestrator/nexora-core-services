@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthModule } from './resources/auth/auth.module';
 import { CustomerModule } from './resources/customer/customer.module';
 import { LlmOrchestratorModule } from './resources/llm-orchestrator/llm-orchestrator.module';
+import { AiChatModule } from './resources/ai-chat/ai-chat.module';
 import { CatalogueModule } from './resources/catalogue/catalogue.module';
 import { InventoryModule } from './resources/inventory/inventory.module';
 import { OrderModule } from './resources/order/order.module';
@@ -37,6 +38,7 @@ import { GrpcMetadataInterceptor } from '@bmms/common';
     AuthModule,
     CustomerModule,
     LlmOrchestratorModule,
+    AiChatModule,
     CatalogueModule,
     InventoryModule,
     OrderModule,

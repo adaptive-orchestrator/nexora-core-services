@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   // Create HTTP app first
-  const httpApp = await NestFactory.create(LlmOrchestratorModule);
+  const httpApp = await NestFactory.create(LlmOrchestratorModule.forRoot());
   httpApp.enableCors();
   
   // Get config
