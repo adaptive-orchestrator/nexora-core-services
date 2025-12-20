@@ -85,9 +85,11 @@ export class LlmOrchestratorModule implements OnModuleInit {
         if (dataSource && dataSource.isInitialized) {
           this.llmService.setDataSource(dataSource);
           console.log('[LLM Module] DataSource injected for Text-to-SQL');
+        } else {
+          console.warn('[LLM Module] DataSource exists but not initialized yet');
         }
       } catch (error) {
-        console.warn('[LLM Module] DataSource not available:', error);
+        console.warn('[LLM Module] DataSource not available - Text-to-SQL will not work. Error:', error.message);
       }
     }
   }

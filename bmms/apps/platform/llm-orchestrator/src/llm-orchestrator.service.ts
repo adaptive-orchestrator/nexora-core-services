@@ -7,7 +7,7 @@ import { LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
 import { HelmIntegrationService } from './service/helm-integration.service';
-import { debug } from '@bmms/common';
+
 
 // Import prompts and schemas
 import {
@@ -16,6 +16,7 @@ import {
   DATA_REPORTER_PROMPT,
   BUSINESS_MODEL_SYSTEM_PROMPT,
   AI_ASSISTANT_PROMPT,
+  GENERAL_ASSISTANT_PROMPT,
   CODE_GENERATION_PROMPT,
   fillPromptTemplate,
 } from './prompts/llm.prompts';
@@ -218,20 +219,37 @@ export class LlmOrchestratorService {
     role: string = 'guest',
     lang: 'vi' | 'en' = 'vi',
   ): Promise<LlmChatResponse> {
+    this.logger.log(`[ASK] ==================== NEW REQUEST ====================`);
+    this.logger.log(`[ASK] Message: "${message.substring(0, 100)}..."`);
+    this.logger.log(`[ASK] Tenant: ${tenant}, Role: ${role}, Lang: ${lang}`);
+    this.logger.log(`[ASK] USE_RAG flag: ${this.useRAG}`);
+    
      // RAG: Tìm code liên quan
     let codeContext = '';
     if (this.useRAG) {
-      const relevantCode = await this.codeSearchService.searchRelevantCode(message, 3);
+      this.logger.log(`[RAG] ✅ Enabled - Searching for relevant code...`);
+      const relevantCode = await this.codeSearchService.searchRelevantCode(message, 5);
       
       if (relevantCode.length > 0) {
-        codeContext = '\n\n=== RELEVANT CODE CONTEXT ===\n';
+        this.logger.log(`[RAG] Found ${relevantCode.length} relevant code snippets`);
+        codeContext = '\n\n=== CODE CONTEXT FROM YOUR SYSTEM ===\n';
+        codeContext += 'The following code snippets are from your actual codebase, retrieved using RAG:\n\n';
+        
         relevantCode.forEach((code, idx) => {
-          codeContext += `\n[${idx + 1}] ${code.file_path} (${code.chunk_type}${code.name ? `: ${code.name}` : ''})\n`;
-          codeContext += `Score: ${code.score.toFixed(3)}\n`;
-          codeContext += '```\n' + code.content.substring(0, 1000) + '\n```\n';
+          codeContext += `\n【Snippet ${idx + 1}/${relevantCode.length}】\n`;
+          codeContext += `📁 File: ${code.file_path}\n`;
+          codeContext += `📍 Lines: ${code.start_line}-${code.end_line}\n`;
+          codeContext += `🏷️  Type: ${code.chunk_type}${code.name ? ` (${code.name})` : ''}\n`;
+          codeContext += `🎯 Relevance: ${(code.score * 100).toFixed(1)}%\n`;
+          codeContext += `\`\`\`typescript\n${code.content.substring(0, 1200)}\n\`\`\`\n`;
         });
-        codeContext += '=== END CONTEXT ===\n';
+        codeContext += '\n=== END CODE CONTEXT ===\n';
+        codeContext += 'Use this context to describe how the actual system works, not generic theory.\n';
+      } else {
+        this.logger.warn(`[RAG] No relevant code found for query: "${message.substring(0, 50)}..."`);
       }
+    } else {
+      this.logger.warn(`[RAG] Disabled (USE_RAG=${process.env.USE_RAG})`);
     }
 
     const content = await this.callGemini(message, tenant, role, lang, codeContext);
@@ -257,9 +275,9 @@ export class LlmOrchestratorService {
       await mkdir(dir, { recursive: true });
       const outputPath = path.join(dir, `${Date.now()}_raw.json`);
       await writeFile(outputPath, cleaned, 'utf8');
-      debug.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
+      console.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
     } catch (err) {
-      debug.error('[LLM] Failed to write output file:', err);
+      console.error('[LLM] Failed to write output file:', err);
     }
 
     // Parse and validate JSON
@@ -285,12 +303,12 @@ export class LlmOrchestratorService {
     
     // Log warnings if any
     if (validationResult.warnings.length > 0) {
-      debug.log('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
+        console.log('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
     }
     
     // Log metadata
     if (validationResult.metadata) {
-      debug.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
+      console.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
     }
 
     // Convert value to string for gRPC (proto expects string)
@@ -318,19 +336,19 @@ export class LlmOrchestratorService {
         this.helmIntegrationService.triggerDeployment(response, dryRunDefault)
           .then((result) => {
             if (result.success) {
-              debug.log('[LLM] Helm changeset generated:', result.changesetPath);
+              console.log('[LLM] Helm changeset generated:', result.changesetPath);
               if (result.deployed) {
-                debug.log('[LLM] Helm deployment completed successfully');
+                console.log('[LLM] Helm deployment completed successfully');
               }
             }
           })
           .catch(err => {
-            debug.error('[LLM] Failed to trigger Helm deployment:', err.message);
+            console.error('[LLM] Failed to trigger Helm deployment:', err.message);
           });
       }
     } catch (error) {
       // Don't fail the LLM request if deployment trigger fails
-      debug.error('[LLM] Error triggering Helm deployment:', error instanceof Error ? error.message : String(error));
+      console.error('[LLM] Error triggering Helm deployment:', error instanceof Error ? error.message : String(error));
     }
 
     return response;
@@ -423,7 +441,57 @@ ${codeContext}
 
 Yêu cầu: ${message}`;
 
-    return this.callGeminiWithRetry(userPrompt, BUSINESS_MODEL_SYSTEM_PROMPT);
+    // Detect câu hỏi tổng quát về hệ thống (user-facing questions)
+    const isGeneralSystemQuestion = this.isGeneralSystemQuestion(message);
+    const selectedPrompt = isGeneralSystemQuestion ? GENERAL_ASSISTANT_PROMPT : AI_ASSISTANT_PROMPT;
+    
+    if (isGeneralSystemQuestion) {
+      this.logger.log(`[LLM] 🎯 Detected general system question - using GENERAL_ASSISTANT_PROMPT`);
+    }
+
+    return this.callGeminiWithRetry(userPrompt, selectedPrompt);
+  }
+
+  /**
+   * Check if the message is a general user-facing question about the system
+   */
+  private isGeneralSystemQuestion(message: string): boolean {
+    const generalPatterns = [
+      // Việt - câu hỏi về identity
+      /bạn là (ai|gì)/i,
+      /bạn là ai/i,
+      /là ai\??$/i,
+      // Việt - câu hỏi về hệ thống
+      /hệ thống.*(làm được|có thể|hỗ trợ|cung cấp|làm gì)/i,
+      /làm được gì/i,
+      /có thể làm gì/i,
+      /nexora.*(là|làm)/i,
+      /giới thiệu.*(hệ thống|bản thân|nexora)/i,
+      /mô tả.*(hệ thống|tổng quan|kiến trúc)/i,
+      /có những (tính năng|chức năng|khả năng)/i,
+      /tính năng.*(gì|nào)/i,
+      /chức năng.*(gì|nào)/i,
+      // RAG questions
+      /sử dụng.*rag/i,
+      /rag.*là gì/i,
+      /có.*rag/i,
+      // English
+      /who are you/i,
+      /what (can|do) you/i,
+      /what is (this|nexora|the) system/i,
+      /describe.*(system|yourself|architecture)/i,
+      /introduce.*(yourself|nexora|system)/i,
+      /what features/i,
+      /how does.*(system|rag|nexora) work/i,
+    ];
+
+    const matched = generalPatterns.some(pattern => pattern.test(message));
+    
+    // Debug logging
+    this.logger.log(`[PROMPT-DETECT] Message: "${message.substring(0, 50)}..."`);
+    this.logger.log(`[PROMPT-DETECT] Is general question: ${matched}`);
+    
+    return matched;
   }
 
   /**
@@ -495,22 +563,66 @@ Yêu cầu: ${message}`;
   
   /**
    * Generate text response for AI chat
+   * Includes RAG context when enabled
    */
   async generateText(prompt: string, context: any[]): Promise<string> {
     try {
-      return await this.callGeminiChat(prompt, context, 'You are a helpful AI assistant. Provide clear, concise, and helpful responses.');
+      // Detect loại câu hỏi để chọn prompt phù hợp
+      const isGeneralQuestion = this.isGeneralSystemQuestion(prompt);
+      const selectedPrompt = isGeneralQuestion ? GENERAL_ASSISTANT_PROMPT : AI_ASSISTANT_PROMPT;
+      
+      if (isGeneralQuestion) {
+        this.logger.log(`[generateText] 🎯 Detected GENERAL system question - using GENERAL_ASSISTANT_PROMPT`);
+      } else {
+        this.logger.log(`[generateText] 🔧 Detected TECHNICAL question - using AI_ASSISTANT_PROMPT`);
+      }
+
+      // RAG: Tìm code liên quan
+      let codeContext = '';
+      if (this.useRAG) {
+        this.logger.log(`[generateText] RAG enabled - searching for relevant code...`);
+        const relevantCode = await this.codeSearchService.searchRelevantCode(prompt, 5);
+        
+        if (relevantCode.length > 0) {
+          this.logger.log(`[generateText] Found ${relevantCode.length} relevant code snippets`);
+          codeContext = this.codeSearchService.formatCodeContext(relevantCode);
+        }
+      }
+      
+      const enrichedPrompt = codeContext 
+        ? `${prompt}\n\n${codeContext}`
+        : prompt;
+      
+      return await this.callGeminiChat(enrichedPrompt, context, selectedPrompt);
     } catch (error) {
-      debug.error('[AI Chat] Error:', error);
+      console.error('[AI Chat] Error:', error);
       return 'I apologize, but I encountered an error processing your request. Please try again.';
     }
   }
 
   /**
    * Generate code based on prompt
+   * Includes RAG context for referencing existing codebase patterns
    */
   async generateCode(prompt: string, context: any[]): Promise<{ code: string; language: string; explanation: string }> {
     try {
-      const responseText = await this.callGeminiChat(prompt, context, CODE_GENERATION_PROMPT);
+      // RAG: Tìm code patterns liên quan trong codebase
+      let codeContext = '';
+      if (this.useRAG) {
+        this.logger.log(`[generateCode] RAG enabled - searching for relevant code patterns...`);
+        const relevantCode = await this.codeSearchService.searchRelevantCode(prompt, 5);
+        
+        if (relevantCode.length > 0) {
+          this.logger.log(`[generateCode] Found ${relevantCode.length} relevant code snippets`);
+          codeContext = this.codeSearchService.formatCodeContext(relevantCode);
+        }
+      }
+      
+      const enrichedPrompt = codeContext 
+        ? `${prompt}\n\nUse the following code from the existing codebase as reference for patterns and style:\n${codeContext}`
+        : prompt;
+      
+      const responseText = await this.callGeminiChat(enrichedPrompt, context, CODE_GENERATION_PROMPT);
 
       // Parse JSON response
       const cleaned = cleanLLMJsonResponse(responseText);
@@ -522,7 +634,7 @@ Yêu cầu: ${message}`;
         explanation: parsed.explanation || 'Code generated successfully'
       };
     } catch (error) {
-      debug.error('[Code Generation] Error:', error);
+      console.error('[Code Generation] Error:', error);
       return {
         code: '// Error generating code',
         language: 'text',
@@ -1017,6 +1129,114 @@ Hãy tư vấn thật thân thiện, dễ hiểu bằng ${lang === 'vi' ? 'tiế
         closing: 'Bạn có thể thay đổi sang cách khác sau nếu cần nhé!',
       };
     }
+  }
+
+  /**
+   * Generate detailed changeset with impacted services for Human-in-the-loop workflow
+   */
+  generateDetailedChangeset(
+    from_model: string,
+    to_model: string,
+    business_description: string,
+  ): {
+    changeset: {
+      model: string;
+      features: Array<{ key: string; value: string }>;
+      impacted_services: string[];
+      services_to_enable: string[];
+      services_to_disable: string[];
+      services_to_restart: string[];
+    };
+    metadata: {
+      intent: string;
+      confidence: number;
+      risk: 'low' | 'medium' | 'high';
+      from_model: string;
+      to_model: string;
+    };
+  } {
+    // Determine affected services based on Helm SERVICE_PROFILES
+    // These match the actual services enabled/disabled in helm charts
+    const modelSpecificServices: Record<string, string[]> = {
+      retail: ['OrderService', 'InventoryService'],
+      subscription: ['SubscriptionService', 'PromotionService', 'PricingService'],
+      freemium: ['SubscriptionService', 'PromotionService', 'PricingService'],
+      multi: ['OrderService', 'InventoryService', 'SubscriptionService', 'PromotionService', 'PricingService'],
+    };
+
+    // Core services that are ALWAYS running but need restart when model changes (function changes)
+    const coreServicesToRestart = ['BillingService', 'PaymentService', 'CatalogueService'];
+
+    const fromServices = new Set(modelSpecificServices[from_model] || modelSpecificServices.retail);
+    const toServices = new Set(modelSpecificServices[to_model] || modelSpecificServices.retail);
+    
+    // Services to ENABLE (in to_model but NOT in from_model)
+    const servicesToEnable = Array.from(toServices).filter(s => !fromServices.has(s));
+    
+    // Services to DISABLE (in from_model but NOT in to_model)
+    const servicesToDisable = Array.from(fromServices).filter(s => !toServices.has(s));
+    
+    // Services to RESTART (core services that change function)
+    const servicesToRestart = [...coreServicesToRestart];
+    
+    // All impacted services
+    const impacted = [
+      ...servicesToEnable,
+      ...servicesToDisable,
+      ...servicesToRestart,
+    ] as string[];
+
+    // Determine risk level
+    let risk: 'low' | 'medium' | 'high' = 'low';
+    const descLower = business_description.toLowerCase();
+    
+    if (descLower.includes('xóa') || descLower.includes('delete') || descLower.includes('drop') || descLower.includes('remove all')) {
+      risk = 'high';
+    } else if (descLower.includes('giá') || descLower.includes('price') || descLower.includes('billing') || descLower.includes('thanh toán')) {
+      risk = 'medium';
+    } else if (to_model === 'multi') {
+      risk = 'medium'; // Multi model is more complex
+    }
+
+    // Generate features based on target model
+    const features: Array<{ key: string; value: string }> = [
+      { key: 'business_model', value: to_model },
+    ];
+
+    if (to_model === 'subscription') {
+      features.push(
+        { key: 'subscription_frequency', value: 'monthly' },
+        { key: 'billing_mode', value: 'RECURRING' },
+      );
+    } else if (to_model === 'freemium') {
+      features.push(
+        { key: 'free_tier_enabled', value: 'true' },
+        { key: 'premium_features', value: 'advanced_analytics,priority_support' },
+      );
+    } else if (to_model === 'multi') {
+      features.push(
+        { key: 'retail_enabled', value: 'true' },
+        { key: 'subscription_enabled', value: 'true' },
+      );
+    }
+
+    return {
+      changeset: {
+        model: 'BusinessModel',
+        features,
+        impacted_services: impacted,
+        services_to_enable: servicesToEnable,
+        services_to_disable: servicesToDisable,
+        services_to_restart: servicesToRestart,
+      },
+      metadata: {
+        intent: 'business_model_change',
+        confidence: risk === 'high' ? 0.75 : risk === 'medium' ? 0.85 : 0.95,
+        risk,
+        from_model,
+        to_model,
+      },
+    };
   }
 }
 

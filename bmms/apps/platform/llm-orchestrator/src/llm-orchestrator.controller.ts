@@ -103,6 +103,69 @@ export class LlmOrchestratorController {
   }
 
   // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'RecommendBusinessModelDetailed')
+  async recommendBusinessModelDetailed(data: {
+    business_description?: string;
+    businessDescription?: string;
+    current_model?: string;
+    currentModel?: string;
+    target_audience?: string;
+    targetAudience?: string;
+    revenue_preference?: string;
+    revenuePreference?: string;
+    lang?: string;
+  }): Promise<{
+    proposal_text: string;
+    changeset: {
+      model: string;
+      features: Array<{ key: string; value: string }>;
+      impacted_services: string[];
+      services_to_enable: string[];
+      services_to_disable: string[];
+      services_to_restart: string[];
+    };
+    metadata: {
+      intent: string;
+      confidence: number;
+      risk: string;
+      from_model: string;
+      to_model: string;
+    };
+  }> {
+    const businessDescription = data.business_description || data.businessDescription;
+    const currentModel = data.current_model || data.currentModel || 'retail';
+    const targetAudience = data.target_audience || data.targetAudience;
+    const revenuePreference = data.revenue_preference || data.revenuePreference;
+    
+    console.log('[RecommendBusinessModelDetailed] Received data:', JSON.stringify(data));
+    
+    if (!businessDescription || typeof businessDescription !== 'string') {
+      throw new Error('business_description is required and must be a string');
+    }
+
+    // Get recommendation first
+    const recommendation = await this.llmOrchestratorService.recommendBusinessModel({
+      business_description: businessDescription,
+      target_audience: targetAudience,
+      revenue_preference: revenuePreference,
+      lang: data.lang,
+    });
+
+    // Generate detailed changeset
+    const detailedChangeset = this.llmOrchestratorService.generateDetailedChangeset(
+      currentModel,
+      recommendation.recommended_model,
+      businessDescription,
+    );
+
+    return {
+      proposal_text: recommendation.why_this_fits || recommendation.recommendation_intro,
+      changeset: detailedChangeset.changeset,
+      metadata: detailedChangeset.metadata,
+    };
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
   @GrpcMethod('LlmOrchestratorService', 'SwitchBusinessModel')
   async switchBusinessModel(data: {
     to_model: string;

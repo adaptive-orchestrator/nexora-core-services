@@ -16,6 +16,9 @@ service LlmOrchestratorService {
   // AI Recommend: Tư vấn mô hình kinh doanh phù hợp
   rpc RecommendBusinessModel (RecommendModelRequest) returns (RecommendModelResponse);
   
+  // AI Recommend Detailed: Tư vấn mô hình với changeset chi tiết cho Human-in-the-loop
+  rpc RecommendBusinessModelDetailed (RecommendModelDetailedRequest) returns (RecommendModelDetailedResponse);
+  
   // Switch business model và trigger Helm deployment
   rpc SwitchBusinessModel (SwitchModelRequest) returns (SwitchModelResponse);
   
@@ -111,6 +114,30 @@ message RecommendModelResponse {
 message ModelAlternative {
   string model = 1;                 // retail, subscription, freemium, multi
   string brief_reason = 2;          // Lý do ngắn gọn
+}
+
+// ====== Detailed Business Model Recommendation ======
+
+message RecommendModelDetailedRequest {
+  string business_description = 1;  // Mô tả về doanh nghiệp/sản phẩm
+  string current_model = 2;         // Mô hình hiện tại (retail, subscription, freemium, multi)
+  string target_audience = 3;       // Đối tượng khách hàng mục tiêu
+  string revenue_preference = 4;    // Mong muốn về doanh thu
+  string lang = 5;                  // Ngôn ngữ (vi, en)
+}
+
+message RecommendModelDetailedResponse {
+  string proposal_text = 1;         // Văn bản đề xuất
+  Changeset changeset = 2;          // Changeset chi tiết với impacted_services
+  DetailedMetadata metadata = 3;    // Metadata với risk assessment
+}
+
+message DetailedMetadata {
+  string intent = 1;                // Hành động (business_model_change)
+  double confidence = 2;            // Độ tin cậy (0.0 - 1.0)
+  string risk = 3;                  // Mức độ rủi ro: low / medium / high
+  string from_model = 4;            // Mô hình cũ
+  string to_model = 5;              // Mô hình mới
 }
 
 // ====== Switch Business Model ======
