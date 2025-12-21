@@ -152,6 +152,7 @@ jobs:
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
             VCS_REF=${{ github.sha }}
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} 
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             TOKEN_EXPIRE_TIME=${{ secrets.TOKEN_EXPIRE_TIME }}
       - name: Output image URI
