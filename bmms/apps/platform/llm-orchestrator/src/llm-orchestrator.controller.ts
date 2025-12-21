@@ -226,6 +226,28 @@ export class LlmOrchestratorController {
     );
     return { query: body.query, results };
   }
+
+  /**
+   * REST API endpoint for RCA (Root Cause Analysis)
+   * POST /rca
+   * Body: { errorLog: string, question?: string }
+   */
+  @Post('/rca')
+  async analyzeError(@Body() body: { errorLog: string; question?: string }) {
+    if (!body.errorLog) {
+      throw new Error('errorLog is required');
+    }
+
+    const result = await this.llmOrchestratorService.analyzeIncident(body.errorLog);
+
+    return {
+      success: result.success,
+      analysis: result.analysis,
+      codeContext: result.codeContext,
+      error: result.error,
+    };
+  }
+
   @Get('/rag/all')
   async ragGetAll(
     @Query('limit') limit?: string,
@@ -314,13 +336,25 @@ export class LlmOrchestratorController {
     }
 
     try {
-      return await this.llmOrchestratorService.handleTextToSql(question);
+      const result = await this.llmOrchestratorService.handleTextToSql(question);
+      
+      // Convert rawData array to JSON string for gRPC
+      return {
+        success: result.success,
+        question: result.question,
+        sql: result.sql || '',
+        natural_response: result.naturalResponse || '',
+        raw_data: result.rawData ? JSON.stringify(result.rawData) : '',
+        error: result.error || '',
+      };
     } catch (error) {
       console.error('[TextToSql gRPC] Error:', error);
       return {
         success: false,
         question,
-        naturalResponse: `Có lỗi xảy ra khi xử lý câu hỏi: ${error.message}`,
+        sql: '',
+        natural_response: `Có lỗi xảy ra khi xử lý câu hỏi: ${error.message}`,
+        raw_data: '',
         error: error.message || 'Unknown error',
       };
     }
@@ -336,33 +370,29 @@ export class LlmOrchestratorController {
     }
 
     try {
-      // For now, use the generic ask method with a specialized prompt
-      const prompt = `Analyze this system incident and provide recommendations:
+      // Construct error log from incident description and logs
+      const errorLog = `${incident_description}${logs ? `\n\nLogs:\n${logs}` : ''}`;
 
-Incident: ${incident_description}
-${logs ? `\nLogs:\n${logs}` : ''}
+      // Use dedicated RCA method with proper schema validation
+      const result = await this.llmOrchestratorService.analyzeIncident(errorLog);
 
-Please analyze and provide:
-1. Severity level (low/medium/high/critical)
-2. Possible root cause
-3. Immediate actions to take
-4. Long-term recommendations
+      if (!result.success || !result.analysis) {
+        return {
+          severity: 'unknown',
+          analysis: result.error || 'Unable to analyze incident',
+          recommendations: [],
+          raw_response: result.error || '',
+        };
+      }
 
-Respond in ${lang === 'en' ? 'English' : 'Vietnamese'}.`;
-
-      const result = await this.llmOrchestratorService.ask(
-        prompt,
-        't-system',
-        'admin',
-        (lang as 'vi' | 'en') || 'vi',
-      );
-
-      // Parse the response to extract structured data
+      // Map RCA output to gRPC response format
+      const analysis = result.analysis;
+      
       return {
-        severity: 'medium', // Could be parsed from LLM response
-        analysis: result.proposal_text || result.response || result.text || JSON.stringify(result),
-        recommendations: [], // Could be parsed from LLM response
-        raw_response: JSON.stringify(result),
+        severity: analysis.severity || 'medium',
+        analysis: `${analysis.summary}\n\n**Root Cause:** ${analysis.root_cause}\n\n**Affected Component:** ${analysis.affected_component}\n\n**Suggested Fix:**\n${analysis.suggested_fix}\n\n**Prevention:** ${analysis.prevention}`,
+        recommendations: [analysis.suggested_fix, analysis.prevention].filter(Boolean),
+        raw_response: JSON.stringify(analysis),
       };
     } catch (error) {
       console.error('[AnalyzeIncident gRPC] Error:', error);
