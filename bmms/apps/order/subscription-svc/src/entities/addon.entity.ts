@@ -4,8 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  Index,
 } from 'typeorm';
 
 /**
@@ -21,11 +20,14 @@ import {
  * - Custom domain (20,000 VND/month)
  */
 @Entity('addons')
+@Index('idx_addon_active', ['isActive'])
+@Index('idx_addon_key_active', ['addonKey', 'isActive'])
 export class Addon {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ name: 'addon_key', unique: true })
+  @Index('idx_addon_key')
   addonKey: string; // e.g., 'extra_storage', 'ai_assistant'
 
   @Column()

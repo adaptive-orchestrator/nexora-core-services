@@ -19,7 +19,7 @@ service SubscriptionService {
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
   
   // Addon operations
-  rpc ListAddons (Empty) returns (AddonListResponse);
+  rpc ListAddons (ListAddonsRequest) returns (AddonListResponse);
   rpc GetAddonByKey (AddonByKeyRequest) returns (AddonResponse);
   rpc CreateAddon (CreateAddonRequest) returns (AddonResponse);
   rpc PurchaseAddons (PurchaseAddonsRequest) returns (UserAddonListResponse);
@@ -32,9 +32,9 @@ message Empty {}
 
 // Subscription messages
 message Subscription {
-  int32 id = 1;
-  int32 customerId = 2;
-  int32 planId = 3;
+  string id = 1;
+  string customerId = 2;
+  string planId = 3;
   string planName = 4;
   double amount = 5;
   string billingCycle = 6;
@@ -52,44 +52,44 @@ message Subscription {
 }
 
 message CreateSubscriptionRequest {
-  int32 customerId = 1;
-  int32 planId = 2;
+  string customerId = 1;
+  string planId = 2;
   string promotionCode = 3;
   bool useTrial = 4;
 }
 
 message SubscriptionByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message SubscriptionsByCustomerRequest {
-  int32 customerId = 1;
+  string customerId = 1;
 }
 
 message CancelSubscriptionRequest {
-  int32 id = 1;
+  string id = 1;
   string reason = 2;
   bool cancelAtPeriodEnd = 3;
 }
 
 message RenewSubscriptionRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message ChangePlanRequest {
-  int32 id = 1;
-  int32 newPlanId = 2;
+  string id = 1;
+  string newPlanId = 2;
   bool immediate = 3;
 }
 
 message UpdateStatusRequest {
-  int32 id = 1;
+  string id = 1;
   string newStatus = 2;
   string reason = 3;
 }
 
 message ActivateSubscriptionRequest {
-  int32 subscriptionId = 1;
+  string subscriptionId = 1;
 }
 
 message SubscriptionResponse {
@@ -111,7 +111,7 @@ message TrialExpiryResponse {
 
 // Addon messages
 message Addon {
-  int32 id = 1;
+  string id = 1;
   string addonKey = 2;
   string name = 3;
   string description = 4;
@@ -124,10 +124,10 @@ message Addon {
 }
 
 message UserAddon {
-  int32 id = 1;
-  int32 subscriptionId = 2;
-  int32 addonId = 3;
-  int32 customerId = 4;
+  string id = 1;
+  string subscriptionId = 2;
+  string addonId = 3;
+  string customerId = 4;
   double price = 5;
   string status = 6;
   string purchasedAt = 7;
@@ -140,6 +140,11 @@ message AddonByKeyRequest {
   string key = 1;
 }
 
+message ListAddonsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
 message CreateAddonRequest {
   string addonKey = 1;
   string name = 2;
@@ -150,17 +155,19 @@ message CreateAddonRequest {
 }
 
 message PurchaseAddonsRequest {
-  int32 subscriptionId = 1;
-  int32 customerId = 2;
+  string subscriptionId = 1;
+  string customerId = 2;
   repeated string addonKeys = 3;
 }
 
 message UserAddonsBySubscriptionRequest {
-  int32 subscriptionId = 1;
+  string subscriptionId = 1;
+  int32 page = 2;
+  int32 limit = 3;
 }
 
 message CancelAddonRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message AddonResponse {
@@ -170,7 +177,11 @@ message AddonResponse {
 
 message AddonListResponse {
   repeated Addon addons = 1;
-  string message = 2;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
 }
 
 message UserAddonResponse {
@@ -180,7 +191,11 @@ message UserAddonResponse {
 
 message UserAddonListResponse {
   repeated UserAddon userAddons = 1;
-  string message = 2;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
 }
 
 message SubscriptionStatsResponse {

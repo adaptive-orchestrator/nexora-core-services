@@ -1,24 +1,35 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
 import { Task } from './entities/task.entity';
+import { debug } from '@bmms/common';
+import type { ClientGrpc } from '@nestjs/microservices';
 
 @Injectable()
 export class ProjectSvcService {
+  private subscriptionClient: ClientGrpc;
   constructor(
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     @InjectRepository(Task)
     private taskRepository: Repository<Task>,
-  ) {}
+    @Inject('SUBSCRIPTION_PACKAGE') private readonly subscriptionClientInjected: ClientGrpc,
+  ) {
+    this.subscriptionClient = subscriptionClientInjected;
+  }
 
   async createProject(data: any) {
+    debug.log('[ProjectSvc] createProject data:', JSON.stringify(data));
+    
+    // Ensure ownerId is set - default to 1 if not provided
+    const ownerId = data.user_id || data.userId || 1;
+    
     const project = this.projectRepository.create({
       name: data.name,
       description: data.description,
       status: data.status || 'planning',
-      ownerId: data.user_id,
+      ownerId: ownerId,
       ownerName: 'Current User', // TODO: Get from user service
       startDate: data.start_date,
       endDate: data.end_date,
@@ -32,7 +43,7 @@ export class ProjectSvcService {
     return this.mapProjectToResponse(saved);
   }
 
-  async getProjectsByUser(userId: number) {
+  async getProjectsByUser(userId: string) {
     const projects = await this.projectRepository.find({
       where: { ownerId: userId },
       order: { createdAt: 'DESC' },
@@ -41,7 +52,9 @@ export class ProjectSvcService {
     return projects.map(p => this.mapProjectToResponse(p));
   }
 
-  async getProjectById(id: number, userId: number) {
+  async getProjectById(id: string, userId: string) {
+    debug.log(`[ProjectSvc] getProjectById id=${id}, userId=${userId}`);
+    
     const project = await this.projectRepository.findOne({
       where: { id },
     });
@@ -50,7 +63,9 @@ export class ProjectSvcService {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
+    // Compare string UUIDs
     if (project.ownerId !== userId) {
+      debug.log(`[WARNING] [ProjectSvc] Access denied: ownerId=${project.ownerId} !== userId=${userId}`);
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -83,7 +98,7 @@ export class ProjectSvcService {
     return this.mapProjectToResponse(updated);
   }
 
-  async deleteProject(id: number, userId: number) {
+  async deleteProject(id: string, userId: string) {
     const project = await this.projectRepository.findOne({
       where: { id },
     });
@@ -129,7 +144,7 @@ export class ProjectSvcService {
     return this.mapTaskToResponse(saved);
   }
 
-  async getProjectTasks(projectId: number, userId: number) {
+  async getProjectTasks(projectId: string, userId: string) {
     // Verify project ownership
     await this.getProjectById(projectId, userId);
 
@@ -143,7 +158,7 @@ export class ProjectSvcService {
 
   async updateTask(data: any) {
     const task = await this.taskRepository.findOne({
-      where: { id: data.id },
+      where: { id: data.id as string },
     });
 
     if (!task) {
@@ -174,7 +189,7 @@ export class ProjectSvcService {
     return this.mapTaskToResponse(updated);
   }
 
-  async deleteTask(id: number, userId: number) {
+  async deleteTask(id: string, userId: string) {
     const task = await this.taskRepository.findOne({
       where: { id },
     });
@@ -192,7 +207,7 @@ export class ProjectSvcService {
     await this.updateProjectTaskCount(task.projectId);
   }
 
-  async getProjectAnalytics(id: number, userId: number) {
+  async getProjectAnalytics(id: string, userId: string) {
     const project = await this.getProjectById(id, userId);
     
     const tasks = await this.taskRepository.find({
@@ -232,7 +247,7 @@ export class ProjectSvcService {
 
   // ==================== HELPERS ====================
 
-  private async updateProjectTaskCount(projectId: number) {
+  private async updateProjectTaskCount(projectId: string) {
     const project = await this.projectRepository.findOne({
       where: { id: projectId },
     });
@@ -250,38 +265,115 @@ export class ProjectSvcService {
   }
 
   private mapProjectToResponse(project: Project) {
+    let startDate: string | null = null;
+    let endDate: string | null = null;
+    
+    try {
+      if (project.startDate && project.startDate instanceof Date) {
+        startDate = project.startDate.toISOString().split('T')[0];
+      } else if (project.startDate && typeof project.startDate === 'string') {
+        startDate = project.startDate;
+      }
+    } catch (e) {
+      debug.log('Error parsing startDate:', e);
+    }
+    
+    try {
+      if (project.endDate && project.endDate instanceof Date) {
+        endDate = project.endDate.toISOString().split('T')[0];
+      } else if (project.endDate && typeof project.endDate === 'string') {
+        endDate = project.endDate;
+      }
+    } catch (e) {
+      debug.log('Error parsing endDate:', e);
+    }
+    
     return {
       id: project.id,
       name: project.name,
-      description: project.description,
-      status: project.status,
+      description: project.description || '',
+      status: project.status || 'planning',
       owner_id: project.ownerId,
-      owner_name: project.ownerName,
-      total_tasks: project.totalTasks,
-      completed_tasks: project.completedTasks,
-      team_member_count: project.teamMemberCount,
-      start_date: project.startDate ? project.startDate.toISOString().split('T')[0] : null,
-      end_date: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+      owner_name: project.ownerName || '',
+      total_tasks: project.totalTasks || 0,
+      completed_tasks: project.completedTasks || 0,
+      team_member_count: project.teamMemberCount || 1,
+      start_date: startDate || '',
+      end_date: endDate || '',
       tags: project.tags || [],
-      created_at: project.createdAt.toISOString(),
-      updated_at: project.updatedAt.toISOString(),
+      created_at: project.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: project.updatedAt?.toISOString() || new Date().toISOString(),
     };
   }
 
   private mapTaskToResponse(task: Task) {
+    let dueDate: string | null = null;
+    
+    try {
+      if (task.dueDate && task.dueDate instanceof Date) {
+        dueDate = task.dueDate.toISOString().split('T')[0];
+      } else if (task.dueDate && typeof task.dueDate === 'string') {
+        dueDate = task.dueDate;
+      }
+    } catch (e) {
+      debug.log('Error parsing dueDate:', e);
+    }
+    
     return {
       id: task.id,
       project_id: task.projectId,
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      assigned_to: task.assignedTo,
-      assigned_to_name: task.assignedToName,
-      created_by: task.createdBy,
-      due_date: task.dueDate ? task.dueDate.toISOString().split('T')[0] : null,
-      created_at: task.createdAt.toISOString(),
-      updated_at: task.updatedAt.toISOString(),
+      title: task.title || '',
+      description: task.description || '',
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
+      assigned_to: task.assignedTo || 0,
+      assigned_to_name: task.assignedToName || '',
+      created_by: task.createdBy || 0,
+      due_date: dueDate || '',
+      created_at: task.createdAt?.toISOString() || new Date().toISOString(),
+      updated_at: task.updatedAt?.toISOString() || new Date().toISOString(),
+    };
+  }
+
+  // ==================== QUOTA METHODS ====================
+
+  /**
+   * Get project count for a user
+   * Used for quota enforcement
+   */
+  async getProjectCount(userId: string): Promise<{ count: number; user_id: string }> {
+    const count = await this.projectRepository.count({
+      where: { ownerId: userId },
+    });
+
+    return {
+      count,
+      user_id: userId,
+    };
+  }
+
+  /**
+   * Check if user can create a new project based on quota
+   * Note: This is a local check. Full quota check should involve subscription-svc.
+   */
+  async checkProjectQuota(userId: string, maxAllowed: number = 5): Promise<{
+    allowed: boolean;
+    currentCount: number;
+    maxAllowed: number;
+    planName: string;
+    message: string;
+  }> {
+    const { count } = await this.getProjectCount(userId);
+    const allowed = count < maxAllowed;
+
+    return {
+      allowed,
+      currentCount: count,
+      maxAllowed,
+      planName: 'Default', // This should be retrieved from subscription-svc
+      message: allowed 
+        ? `You can create ${maxAllowed - count} more projects`
+        : `Quota exceeded: ${count}/${maxAllowed} projects used`,
     };
   }
 }

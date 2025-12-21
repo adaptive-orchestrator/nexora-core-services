@@ -1,0 +1,19 @@
+{
+  "proposal_text": "Chuyển đổi nhóm sản phẩm A sang mô hình đăng ký theo tháng yêu cầu kích hoạt các dịch vụ liên quan đến quản lý đăng ký, khuyến mãi, và cập nhật hệ thống thanh toán để hỗ trợ thanh toán định kỳ. CatalogueService sẽ cần cập nhật thông tin sản phẩm dưới dạng gói đăng ký. Các dịch vụ lõi như API Gateway, Authentication, Customer và CRM Orchestrator cũng cần đảm bảo tích hợp với mô hình mới.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "subscription_type", "value": "monthly"},
+      {"key": "billing_mode", "value": "RECURRING"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService", "APIGatewayService", "AuthService", "CustomerService", "CRMOrchestratorService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

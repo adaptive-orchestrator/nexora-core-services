@@ -1,15 +1,18 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
   Query,
   Body,
-  ParseIntPipe,
   HttpStatus,
   Request,
   UseGuards,
+  NotFoundException,
+  InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { CustomerService } from './customer.service';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { CreateCustomerDto } from './dto/create-customer.dto';
 import { CustomerResponseDto, CustomersListResponseDto } from './dto/customer-response.dto';
 import { CustomerInsightsDto, SegmentCalculationDto } from './dto/customer-insights.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
@@ -59,24 +63,50 @@ export class CustomerController {
     return this.customerService.getAllCustomers(page, limit, segment);
   }
 
-  @Get(':id')
+  @Post()
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
   @ApiOperation({
-    summary: 'Get customer by ID',
-    description: 'Retrieve detailed information about a specific customer',
+    summary: 'Create new customer',
+    description: 'Create a new customer profile with optional user ID association',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiBody({ type: CreateCustomerDto })
   @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Customer details retrieved successfully',
+    status: HttpStatus.CREATED,
+    description: 'Customer created successfully',
     type: CustomerResponseDto,
   })
   @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Customer not found',
+    status: HttpStatus.CONFLICT,
+    description: 'Customer with this email already exists',
   })
-  async getCustomerById(@Param('id', ParseIntPipe) id: number) {
-    const result: any = await this.customerService.getCustomerById(id);
-    return result.customer;
+  async createCustomer(@Body() dto: CreateCustomerDto) {
+    try {
+      const result: any = await this.customerService.createCustomer(dto);
+      return result.customer;
+    } catch (error: any) {
+      // Handle duplicate email error
+      if (error?.code === 6 || error?.details?.includes('duplicate') || error?.details?.includes('already exists')) {
+        throw new ConflictException(`Customer with email ${dto.email} already exists`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Failed to create customer');
+    }
+  }
+
+  // ============ Static routes MUST come before dynamic :id route ============
+
+  @Get('segments/thresholds')
+  @ApiOperation({
+    summary: 'Get segment calculation thresholds',
+    description: 'Get the spending thresholds for each customer segment (bronze, silver, gold, platinum)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Segment thresholds retrieved successfully',
+    type: SegmentCalculationDto,
+  })
+  getSegmentThresholds() {
+    return this.customerService.getSegmentThresholds();
   }
 
   @Get('email/:email')
@@ -95,13 +125,86 @@ export class CustomerController {
     description: 'Customer not found',
   })
   async getCustomerByEmail(@Param('email') email: string) {
-    const result: any = await this.customerService.getCustomerByEmail(email);
+    try {
+      const result: any = await this.customerService.getCustomerByEmail(email);
+      return result.customer;
+    } catch (error: any) {
+      // Handle gRPC NOT_FOUND error (code 5)
+      if (error?.code === 5 || error?.details?.includes('not found')) {
+        throw new NotFoundException(`Customer with email ${email} not found`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Internal server error');
+    }
+  }
+
+  @Get('by-user/:userId')
+  @ApiOperation({
+    summary: 'Get customer by user ID',
+    description: 'Find a customer using their auth user ID (from JWT token)',
+  })
+  @ApiParam({ name: 'userId', type: Number, example: 2 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer found',
+    type: CustomerResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Customer not found for this user ID',
+  })
+  async getCustomerByUserId(@Param('userId') userId: string) {
+    try {
+      const result: any = await this.customerService.getCustomerByUserId(userId);
+      return result.customer;
+    } catch (error: any) {
+      // Handle gRPC NOT_FOUND error (code 5)
+      if (error?.code === 5 || error?.details?.includes('not found')) {
+        throw new NotFoundException(`Customer with userId ${userId} not found`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Internal server error');
+    }
+  }
+
+  // ============ Dynamic :id route MUST come after static routes ============
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Get customer by ID',
+    description: 'Retrieve detailed information about a specific customer',
+  })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer details retrieved successfully',
+    type: CustomerResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Customer not found',
+  })
+  async getCustomerById(@Param('id') id: string) {
+    const result: any = await this.customerService.getCustomerById(id);
     return result.customer;
+  }
+
+  @Get(':id/insights')
+  @ApiOperation({
+    summary: 'Get customer insights and intelligence',
+    description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
+  })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Customer insights retrieved successfully',
+    type: CustomerInsightsDto,
+  })
+  async getCustomerInsights(@Param('id') id: string) {
+    return this.customerService.getCustomerInsights(id);
   }
 
   @UseGuards(JwtGuard)
   @Patch('me')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({
     summary: 'Update current user profile',
     description: 'Update the profile of the currently authenticated user (name, email). Requires JWT authentication.',
@@ -133,7 +236,7 @@ export class CustomerController {
     summary: 'Update customer',
     description: 'Update customer profile information (name, email, segment, tenantId)',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer updated successfully',
@@ -144,7 +247,7 @@ export class CustomerController {
     description: 'Customer not found',
   })
   async updateCustomer(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateDto: UpdateCustomerDto,
   ) {
     const result: any = await this.customerService.updateCustomer(id, updateDto);
@@ -156,7 +259,7 @@ export class CustomerController {
     summary: 'Delete customer',
     description: 'Permanently delete a customer from the system',
   })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiParam({ name: 'id', type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Customer deleted successfully',
@@ -171,38 +274,7 @@ export class CustomerController {
     status: HttpStatus.NOT_FOUND,
     description: 'Customer not found',
   })
-  async deleteCustomer(@Param('id', ParseIntPipe) id: number) {
+  async deleteCustomer(@Param('id') id: string) {
     return this.customerService.deleteCustomer(id);
-  }
-
-  // ============ CRM Insights Endpoints ============
-
-  @Get(':id/insights')
-  @ApiOperation({
-    summary: 'Get customer insights and intelligence',
-    description: 'Get AI-powered customer insights including segment analysis, lifecycle stage, churn risk, CLV estimation, and recommended actions',
-  })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Customer insights retrieved successfully',
-    type: CustomerInsightsDto,
-  })
-  async getCustomerInsights(@Param('id', ParseIntPipe) id: number) {
-    return this.customerService.getCustomerInsights(id);
-  }
-
-  @Get('segments/thresholds')
-  @ApiOperation({
-    summary: 'Get segment calculation thresholds',
-    description: 'Get the spending thresholds for each customer segment (bronze, silver, gold, platinum)',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Segment thresholds retrieved successfully',
-    type: SegmentCalculationDto,
-  })
-  getSegmentThresholds() {
-    return this.customerService.getSegmentThresholds();
   }
 }

@@ -1,12 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('inventory_history')
+@Index('idx_history_product', ['productId'])
+@Index('idx_history_product_created', ['productId', 'createdAt'])
 export class InventoryHistory {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  productId: number;
+  @Column('uuid')
+  productId: string;
 
   @Column('int')
   previousQuantity: number;
@@ -32,8 +34,8 @@ export class InventoryHistory {
   })
   reason: string;
 
-  @Column({ nullable: true })
-  orderId?: number;
+  @Column({ type: 'uuid', nullable: true })
+  orderId?: string;
 
   @Column({ nullable: true })
   notes?: string;

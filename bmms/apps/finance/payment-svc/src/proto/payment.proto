@@ -7,21 +7,46 @@ service PaymentService {
   rpc InitiatePayment (InitiatePaymentRequest) returns (PaymentResponse);
   rpc ConfirmPayment (ConfirmPaymentRequest) returns (PaymentResponse);
   rpc GetPaymentById (PaymentIdRequest) returns (PaymentResponse);
-  rpc GetAllPayments (Empty) returns (PaymentListResponse);
+  rpc GetAllPayments (PaginationRequest) returns (PaginatedPaymentListResponse);
   rpc GetPaymentsByInvoice (InvoiceIdRequest) returns (PaymentListResponse);
   rpc GetPaymentStats (Empty) returns (PaymentStatsResponse);
   rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  
+  // =================== STRIPE OPERATIONS ===================
+  rpc CreateCheckoutSession (CreateCheckoutSessionRequest) returns (CheckoutSessionResponse);
+  rpc CreateSubscriptionCheckout (CreateSubscriptionCheckoutRequest) returns (CheckoutSessionResponse);
+  rpc CreatePaymentIntent (CreatePaymentIntentRequest) returns (PaymentIntentResponse);
+  rpc CreateRefund (CreateRefundRequest) returns (RefundResponse);
+  rpc HandleStripeWebhook (StripeWebhookRequest) returns (StripeWebhookResponse);
+  rpc GetOrCreateCustomer (GetOrCreateCustomerRequest) returns (CustomerResponse);
+  rpc CreateBillingPortalSession (BillingPortalRequest) returns (BillingPortalResponse);
+  rpc CancelStripeSubscription (CancelStripeSubscriptionRequest) returns (CancelSubscriptionResponse);
 }
 
 // Common messages
 message Empty {}
 
+// Pagination messages
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PaginationMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int32 total = 3;
+  int32 totalPages = 4;
+  bool hasNext = 5;
+  bool hasPrev = 6;
+}
+
 // Payment messages
 message Payment {
-  int32 id = 1;
-  int32 invoiceId = 2;
-  optional int32 orderId = 3;
-  optional int32 customerId = 4;
+  string id = 1;
+  string invoiceId = 2;
+  optional string orderId = 3;
+  optional string customerId = 4;
   double totalAmount = 5;
   string status = 6;
   string method = 7;
@@ -33,9 +58,9 @@ message Payment {
 }
 
 message InitiatePaymentRequest {
-  int32 invoiceId = 1;
-  optional int32 orderId = 2;
-  optional int32 customerId = 3;
+  string invoiceId = 1;
+  optional string orderId = 2;
+  optional string customerId = 3;
   double amount = 4;
   string method = 5;
 }
@@ -44,15 +69,16 @@ message ConfirmPaymentRequest {
   string paymentId = 1;
   string status = 2;
   optional string transactionId = 3;
-  optional string failureReason = 4;
+  optional double amount = 4;
+  optional string failureReason = 5;
 }
 
 message PaymentIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message InvoiceIdRequest {
-  int32 invoiceId = 1;
+  string invoiceId = 1;
 }
 
 message PaymentResponse {
@@ -61,6 +87,11 @@ message PaymentResponse {
 
 message PaymentListResponse {
   repeated Payment payments = 1;
+}
+
+message PaginatedPaymentListResponse {
+  repeated Payment payments = 1;
+  PaginationMeta pagination = 2;
 }
 
 message PaymentStatsResponse {
@@ -73,7 +104,7 @@ message PaymentStatsResponse {
 }
 
 message ProcessPaymentRequest {
-  int32 invoiceId = 1;
+  string invoiceId = 1;
   double amount = 2;
   string paymentMethod = 3;
 }
@@ -82,5 +113,125 @@ message ProcessPaymentResponse {
   bool success = 1;
   string message = 2;
   Payment payment = 3;
-  optional int32 subscriptionId = 4;
+  optional string subscriptionId = 4;
+}
+
+// =================== STRIPE MESSAGES ===================
+
+// Checkout Session
+message LineItem {
+  string productId = 1;
+  string name = 2;
+  int64 price = 3;  // Price in smallest currency unit (cents)
+  int32 quantity = 4;
+  optional string description = 5;
+  optional string imageUrl = 6;
+}
+
+message CreateCheckoutSessionRequest {
+  string customerId = 1;
+  string orderId = 2;
+  repeated LineItem items = 3;
+  string successUrl = 4;
+  string cancelUrl = 5;
+  optional string currency = 6;
+  map<string, string> metadata = 7;
+}
+
+message CreateSubscriptionCheckoutRequest {
+  string customerId = 1;
+  string priceId = 2;  // Stripe Price ID
+  string successUrl = 3;
+  string cancelUrl = 4;
+  optional int32 trialDays = 5;
+  map<string, string> metadata = 6;
+}
+
+message CheckoutSessionResponse {
+  string sessionId = 1;
+  string checkoutUrl = 2;
+  bool success = 3;
+  optional string message = 4;
+}
+
+// Payment Intent
+message CreatePaymentIntentRequest {
+  int64 amount = 1;  // Amount in smallest currency unit
+  string currency = 2;
+  optional string customerId = 3;
+  optional string orderId = 4;
+  map<string, string> metadata = 5;
+  optional string paymentMethodType = 6;
+}
+
+message PaymentIntentResponse {
+  string paymentIntentId = 1;
+  string clientSecret = 2;
+  string status = 3;
+  bool success = 4;
+  optional string message = 5;
+}
+
+// Refund
+message CreateRefundRequest {
+  string paymentIntentId = 1;
+  optional int64 amount = 2;  // Partial refund amount, null for full
+  optional string reason = 3;
+}
+
+message RefundResponse {
+  string refundId = 1;
+  int64 amount = 2;
+  string status = 3;
+  bool success = 4;
+  optional string message = 5;
+}
+
+// Webhook
+message StripeWebhookRequest {
+  bytes rawBody = 1;
+  string signature = 2;
+}
+
+message StripeWebhookResponse {
+  bool received = 1;
+  string eventType = 2;
+  optional string message = 3;
+}
+
+// Customer
+message GetOrCreateCustomerRequest {
+  string userId = 1;
+  string email = 2;
+  optional string name = 3;
+}
+
+message CustomerResponse {
+  string stripeCustomerId = 1;
+  bool isNew = 2;
+  bool success = 3;
+}
+
+// Billing Portal
+message BillingPortalRequest {
+  string stripeCustomerId = 1;
+  string returnUrl = 2;
+}
+
+message BillingPortalResponse {
+  string portalUrl = 1;
+  bool success = 2;
+}
+
+// Cancel Stripe Subscription
+message CancelStripeSubscriptionRequest {
+  string stripeSubscriptionId = 1;
+  optional bool cancelAtPeriodEnd = 2;
+}
+
+message CancelSubscriptionResponse {
+  bool success = 1;
+  string status = 2;
+  optional string canceledAt = 3;
+  optional string message = 4;
 }

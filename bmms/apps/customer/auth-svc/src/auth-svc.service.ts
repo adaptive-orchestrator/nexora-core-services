@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 import { createBaseEvent, UserCreatedEvent } from '@bmms/event';
+import { debug } from '@bmms/common';
 
 
 
@@ -37,7 +38,6 @@ export class AuthSvcService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', passwordMatch);
 
     if (!passwordMatch) {
       throw new UnauthorizedException('Invalid credentials');
@@ -51,6 +51,12 @@ export class AuthSvcService {
     const payload = { email: user.email, sub: user.id, name: user.name, role: user.role };
     return {
       accessToken: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
     };
   }
 
@@ -124,7 +130,7 @@ export class AuthSvcService {
     return { message: 'Password successfully reset' };
   }
 
-  async getUserById(userId: number) {
+  async getUserById(userId: string) {
     try {
       // Find the user in the database by ID
       const user = await this.userRepo.findOne({ where: { id: userId } });

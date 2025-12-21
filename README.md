@@ -1,35 +1,45 @@
-# 🏢 BMMS - Business Microservices Management System# repo-root
+# 🏢 BMMS - Business Microservices Management System
 
-:D
+Hệ thống quản lý đa mô hình kinh doanh (Retail, Subscription, Freemium) với kiến trúc Microservices, tích hợp LLM để điều khiển hệ thống bằng ngôn ngữ tự nhiên và tự động triển khai lên Kubernetes.
 
-A comprehensive microservices architecture built with NestJS, featuring domain-driven design, gRPC communication, and event-driven patterns with Kafka.
+## 🎯 Tính năng chính
+
+- **4 mô hình kinh doanh**: Retail (bán lẻ), Subscription (đăng ký), Freemium (miễn phí + add-on), Multi-Model
+- **LLM Integration**: Điều khiển hệ thống bằng tiếng Việt tự nhiên (Google Gemini)
+- **K8s Auto-Deployment**: Tự động sinh YAML và deploy lên Kubernetes
+- **Event-Driven Architecture**: Kafka/Redpanda cho giao tiếp async giữa services
+- **Strategy Pattern**: Linh hoạt chuyển đổi billing modes (Onetime/Recurring/Freemium)
+- **gRPC Communication**: Giao tiếp hiệu suất cao giữa các microservices
+
+## 📁 Cấu trúc dự án
 
 ```
-
-## 📁 Project Structureapps/ 
-
-bmms/│ 
-├─ apps/                         # Microservices Applications
+bmms/
+├─ apps/                         # Microservices (14 services)
 │  ├─ platform/                  # Platform Services
 │  │  ├─ api-gateway/            # REST API Gateway (Port 3000)
-│  │  ├─ llm-orchestrator/       # LLM Integration Service 
-│  │  ├─ rl-scheduler/           # Reinforcement Learning Scheduler 
-│  │  └─ code-indexer/           # Code Indexing Service 
-│  ├─ customer/                  # Customer Domain 
-│  │  ├─ auth-svc/               # Authentication Service (gRPC: 50051) 
-│  │  ├─ customer-svc/           # Customer Management
-│  │  └─ crm-orchestrator/       # CRM Orchestration 
-│  ├─ product/                   # Product Domain 
-│  │  ├─ catalogue-svc/          # Product Catalogue (gRPC: 50054)   
-│  │  ├─ promotion-svc/          # Promotions & Discounts   
-│  │  └─ pricing-engine/         # Dynamic Pricing
-│  ├─ order/                     # Order Domain 
-│  │  ├─ order-svc/              # Order Management 
-│  │  ├─ subscription-svc/       # Subscription Handling
-│  │  └─ inventory-svc/          # Inventory Management
+│  │  ├─ llm-orchestrator/       # LLM + Helm Integration (Port 3019, gRPC: 50052)
+│  │  ├─ project-svc/            # Task/Project Management (Port 3021)
+│  │  ├─ job-scheduler/          # Background Job Scheduler (Renewals, Invoices)
+│  │  └─ code-indexer/           # Code Indexing for RAG
+│  │
+│  ├─ customer/                  # Customer Domain
+│  │  ├─ auth-svc/               # Authentication (JWT, gRPC: 50051)
+│  │  ├─ customer-svc/           # Customer Management & Segmentation
+│  │  └─ crm-orchestrator/       # CRM Orchestration
+│  │
+│  ├─ product/                   # Product Domain
+│  │  ├─ catalogue-svc/          # Products, Plans, Features (gRPC: 50054)
+│  │  ├─ promotion-svc/          # Promotions & Discounts
+│  │  └─ pricing-engine/         # Dynamic Pricing Strategies
+│  │
+│  ├─ order/                     # Order Domain
+│  │  ├─ order-svc/              # Order Management (Retail)
+│  │  ├─ subscription-svc/       # Subscriptions + Add-ons (Freemium)
+│  │  └─ inventory-svc/          # Stock & Reservation Management
 │  │
 │  └─ finance/                   # Finance Domain
-│     ├─ billing-svc/            # Billing & Invoicing
+│     ├─ billing-svc/            # Invoicing + Billing Strategies
 │     └─ payment-svc/            # Payment Processing
 │
 ├─ libs/                         # Shared Libraries
@@ -38,7 +48,7 @@ bmms/│
 │  ├─ event/                     # Event Bus (Kafka)
 │  └─ common/                    # Common Utilities
 │
-└─ llm_output/                   # LLM Generated Outputs
+└─ k8s/                          # Kubernetes Configurations
 ```
 
 ## 🚀 Quick Start
@@ -59,8 +69,6 @@ npm install
 
 ### 2. Environment Setup
 
-Copy and configure environment variables:
-
 ```bash
 cp .env.example .env
 ```
@@ -74,360 +82,250 @@ DB_PASSWORD=bmms_password
 # gRPC Services
 GRPC_SERVER_AUTH_URL=127.0.0.1:50051
 GRPC_SERVER_CATALOGUE_URL=127.0.0.1:50054
-GRPC_LISTEN_AUTH_URL=0.0.0.0:50051
-GRPC_LISTEN_CATALOGUE_URL=0.0.0.0:50054
+GRPC_LISTEN_LLM_URL=0.0.0.0:50052
 
 # Kafka
 KAFKA_BROKER=localhost:9092
 
 # JWT
 JWT_SECRET=your_super_secret_jwt_key
+
+# LLM (Google Gemini)
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+LLM_MODEL=gemini-2.5-flash
 ```
 
 ### 3. Start Infrastructure
 
 ```bash
-# Start all databases and Kafka
 docker-compose up -d
-
-# Or start specific services
-docker-compose up -d customer_db catalogue_db redpanda-0
 ```
 
 ### 4. Start Microservices
 
 ```bash
-# Start API Gateway
-npm run start:gateway
-
-# Start Auth Service
-npm run start:auth
-
-# Start Catalogue Service
-npm run start:catalogue
-
-# Development mode (with watch)
-npm run start:catalogue:dev
-npm run start:gateway:dev
+npm run start:gateway          # API Gateway
+npm run start:auth             # Auth Service
+npm run start:catalogue        # Catalogue Service
+npm run start:order            # Order Service
+npm run start:billing          # Billing Service
+npm run start:payment          # Payment Service
+npm run start:subscription     # Subscription Service
+npm run start:inventory        # Inventory Service
+npm run start:llm              # LLM Orchestrator
 ```
 
-## 🌐 API Gateway Endpoints
+## 🌐 API Endpoints (80+ endpoints)
 
-### Base URL
-```
-http://localhost:3000
-```
+### Base URL: `http://localhost:3000`
 
 ### 🔐 Authentication (`/auth`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/login` | User login |
+| POST | `/auth/login` | User login, returns JWT |
 | POST | `/auth/signup` | User registration |
 | POST | `/auth/forgot-password` | Request password reset |
-| POST | `/auth/reset-password` | Reset password |
-| GET | `/auth/me` | Get current user info (Protected) |
+| POST | `/auth/reset-password` | Reset password with token |
+| GET | `/auth/me` | Get current user info |
 
-**Example - Login:**
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-```
-
-###  Customer (`/customers`)
-
-> **Note**: Customers are NOT created via API. They are automatically created when users sign up through Auth service via event-driven architecture.
+### 👥 Customers (`/customers`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/customers` | Get all customers (with pagination & filtering) |
+| GET | `/customers` | List customers (paginated, filter by segment) |
 | GET | `/customers/:id` | Get customer by ID |
 | GET | `/customers/email/:email` | Get customer by email |
-| PATCH | `/customers/:id` | Update customer profile |
+| GET | `/customers/:id/insights` | AI-powered customer insights |
+| PATCH | `/customers/:id` | Update customer |
 | DELETE | `/customers/:id` | Delete customer |
-
-**Query Parameters for GET /customers:**
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 10)
-- `segment` (optional): Filter by segment (bronze, silver, gold, platinum)
-
-**Example - Get All Customers:**
-```bash
-curl -X GET "http://localhost:3000/customers?page=1&limit=10&segment=gold"
-```
-
-**Example - Get Customer by ID:**
-```bash
-curl -X GET http://localhost:3000/customers/1
-```
-
-**Example - Get Customer by Email:**
-```bash
-curl -X GET http://localhost:3000/customers/email/john.doe@example.com
-```
-
-**Example - Update Customer:**
-```bash
-curl -X PATCH http://localhost:3000/customers/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe Updated",
-    "segment": "platinum",
-    "tenantId": "tenant-456"
-  }'
-```
 
 ### 📦 Catalogue (`/catalogue`)
 
-#### Products
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST/GET | `/catalogue/products` | CRUD products |
+| POST/GET | `/catalogue/plans` | CRUD subscription plans |
+| POST/GET | `/catalogue/features` | CRUD plan features |
+
+### 📦 Inventory (`/inventory`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/catalogue/products` | Create new product |
-| GET | `/catalogue/products` | Get all products |
-| GET | `/catalogue/products/:id` | Get product by ID |
+| POST/GET | `/inventory` | CRUD inventory |
+| GET | `/inventory/product/:id` | Get product inventory |
+| POST | `/inventory/product/:id/adjust` | Adjust stock level |
+| POST | `/inventory/product/:id/reserve` | Reserve stock for order |
+| POST | `/inventory/product/:id/release` | Release reservation |
+| GET | `/inventory/low-stock` | Get items below reorder level |
 
-**Example - Create Product:**
-```bash
-curl -X POST http://localhost:3000/catalogue/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Premium Business Plan",
-    "description": "Full-featured business subscription",
-    "price": 99.99,
-    "sku": "PLAN-BUS-001",
-    "category": "subscription"
-  }'
-```
-
-#### Plans
+### 🛒 Orders (`/orders`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/catalogue/plans` | Create new plan |
-| GET | `/catalogue/plans` | Get all plans |
-| GET | `/catalogue/plans/:id` | Get plan by ID |
+| POST | `/orders` | Create order |
+| GET | `/orders` | List orders (paginated) |
+| GET | `/orders/:id` | Get order by ID |
+| GET | `/orders/customer/:customerId` | Get customer's orders |
+| PATCH | `/orders/:id/status` | Update order status |
+| DELETE | `/orders/:id` | Cancel order |
 
-**Example - Create Plan:**
-```bash
-curl -X POST http://localhost:3000/catalogue/plans \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Enterprise Plan",
-    "description": "Customized enterprise solution",
-    "price": 299.99,
-    "billingCycle": "monthly",
-    "features": [1, 2]
-  }'
-```
-
-#### Features
+### 📅 Subscriptions (`/subscriptions`)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/catalogue/features` | Create new feature |
-| GET | `/catalogue/features` | Get all features |
-| GET | `/catalogue/features/:id` | Get feature by ID |
+| POST | `/subscriptions` | Create subscription |
+| GET | `/subscriptions/customer/:customerId` | Get customer's subscriptions |
+| PATCH | `/subscriptions/:id/cancel` | Cancel subscription |
+| PATCH | `/subscriptions/:id/renew` | Renew subscription |
+| POST | `/subscriptions/:id/activate` | Activate after payment |
+| PATCH | `/subscriptions/:id/change-plan` | Upgrade/downgrade plan |
 
-**Example - Create Feature:**
-```bash
-curl -X POST http://localhost:3000/catalogue/features \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Advanced Analytics",
-    "description": "Real-time analytics dashboard",
-    "code": "FEAT-ANALYTICS-001"
-  }'
-```
+### 🎁 Add-ons (`/addons`) - Freemium Model
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/addons` | List available add-ons |
+| GET | `/addons/:key` | Get add-on by key |
+| POST | `/addons` | Create add-on (Admin) |
+| POST | `/addons/purchase` | Purchase add-ons |
+| GET | `/addons/user/:customerId` | Get user's add-ons |
+| DELETE | `/addons/user/:id` | Cancel add-on |
+
+### 💰 Billing (`/billing`, `/invoices`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/invoices` | Create invoice |
+| GET | `/invoices` | List invoices |
+| GET | `/invoices/:id` | Get invoice |
+| PATCH | `/invoices/:id/status` | Update status |
+| GET | `/billing/customer/:customerId` | Customer's invoices |
+
+### 💳 Payments (`/payments`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/payments` | List payments |
+| GET | `/payments/stats/summary` | Payment statistics |
+| POST | `/payments/initiate` | Initiate payment |
+| POST | `/payments/confirm` | Confirm payment |
+| POST | `/payments/subscription/pay` | Subscription payment |
+
+### 🎉 Promotions (`/promotions`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST/GET | `/promotions` | CRUD promotions |
+| GET | `/promotions/code/:code` | Get by code |
+| POST | `/promotions/validate` | Validate promo code |
+| POST | `/promotions/apply` | Apply promo code |
+
+### 🤖 AI Chat (`/ai/chat`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/ai/chat` | Send message to AI |
+| GET | `/ai/chat/history` | Get chat history |
+
+### 🚀 LLM Orchestrator (`/llm`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/llm/chat` | Send business request to LLM |
+| POST | `/llm/chat-and-deploy` | Chat + trigger K8s deployment |
+
+### 📊 Admin (`/admin`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/stats/dashboard` | Dashboard statistics |
+| GET | `/admin/stats/revenue` | Revenue breakdown by model |
 
 ## 🗄️ Database Ports
 
-| Service | Container | Host Port | Internal Port |
-|---------|-----------|-----------|---------------|
-| Customer DB | `bmms-customer-db` | 3306 | 3306 |
-| CRM DB | `bmms-crm-db` | 3307 | 3306 |
-| Catalogue DB | `bmms-catalogue-db` | 3308 | 3306 |
-| Promotion DB | `bmms-promotion-db` | 3309 | 3306 |
-| Pricing DB | `bmms-pricing-db` | 3310 | 3306 |
-| Order DB | `bmms-order-db` | 3311 | 3306 |
-| Subscription DB | `bmms-subscription-db` | 3312 | 3306 |
-| Inventory DB | `bmms-inventory-db` | 3313 | 3306 |
-| Billing DB | `bmms-billing-db` | 3314 | 3306 |
-| Payment DB | `bmms-payment-db` | 3315 | 3306 |
+| Service | Container | Port |
+|---------|-----------|------|
+| Customer DB | bmms-customer-db | 3306 |
+| CRM DB | bmms-crm-db | 3307 |
+| Catalogue DB | bmms-catalogue-db | 3308 |
+| Promotion DB | bmms-promotion-db | 3309 |
+| Pricing DB | bmms-pricing-db | 3310 |
+| Order DB | bmms-order-db | 3311 |
+| Subscription DB | bmms-subscription-db | 3312 |
+| Inventory DB | bmms-inventory-db | 3313 |
+| Billing DB | bmms-billing-db | 3314 |
+| Payment DB | bmms-payment-db | 3315 |
+| Project DB | bmms-project-db | 3320 |
 
 ## 🔌 gRPC Services
 
-| Service | gRPC Port | Protocol |
-|---------|-----------|----------|
-| Auth Service | 50051 | gRPC |
-| LLM Orchestrator | 50052 | gRPC |
-| User Service | 50053 | gRPC |
-| Catalogue Service | 50054 | gRPC |
+| Service | Port | Package |
+|---------|------|---------|
+| Auth Service | 50051 | AUTH_PACKAGE |
+| LLM Orchestrator | 50052 | LLM_ORCHESTRATOR_PACKAGE |
+| User Service | 50053 | USER_PACKAGE |
+| Catalogue Service | 50054 | CATALOGUE_PACKAGE |
 
-## 🎯 Architecture Patterns
+## 🏗️ Architecture Patterns
 
-### Communication Patterns
-
-1. **Synchronous (gRPC)**: Client-server request-response
-   - API Gateway ↔️ Microservices
-   - Inter-service communication (e.g., Inventory validates products with Catalogue)
-
-2. **Asynchronous (Kafka)**: Event-driven messaging
-   - Domain events (user.created, customer.created, order.placed, etc.)
-   - Event sourcing and CQRS patterns
-   - Decoupled service communication
-
-### Event-Driven Architecture
-
-#### User Registration Flow
-
-When a user signs up through the Auth service, an event-driven flow automatically creates their customer profile:
+### Billing Strategy Pattern
 
 ```
-User Signup → Auth Service → Kafka Event → Customer Service
-                    ↓                            ↓
-              user.created event         Auto-create Customer
+┌─────────────────────────────────────────┐
+│          IBillingStrategy               │
+├─────────────────────────────────────────┤
+│ OnetimeBilling   │ RecurringBilling   │ FreemiumBilling │
+│ (Retail)         │ (Subscription)     │ (Free + Addons) │
+└─────────────────────────────────────────┘
 ```
 
-**Implementation Details:**
-
-1. **Auth Service** (`auth-svc`)
-   - Handles user authentication (login, signup, password reset)
-   - On signup: Creates User entity and emits `user.created` event to Kafka
-   - Event payload: `{ id, email, name, createdAt }`
-
-2. **Customer Service** (`customer-svc`)
-   - Manages customer profiles, segments, and preferences
-   - Listens to `user.created` event via `@EventPattern('user.created')`
-   - Automatically creates Customer profile when event received
-   - Emits `customer.created` event for downstream services
-
-**Benefits:**
-- **Separation of Concerns**: Auth owns authentication, Customer owns profile data
-- **Decoupling**: Services don't need direct API calls to each other
-- **Resilience**: If Customer service is down, events are queued in Kafka
-- **Scalability**: Multiple consumers can process events independently
-
-### Domain-Driven Design
-
-- **Bounded Contexts**: Customer, Product, Order, Finance
-- **Aggregates**: Entities grouped by business logic
-- **Event Publishing**: Domain events for inter-service communication
-
-## 📚 Documentation
-
-### Swagger API Documentation
-
-Once the API Gateway is running, access interactive API docs:
+### Event-Driven Flow (Kafka)
 
 ```
-http://localhost:3000/api
+User Signup → Auth Service → user.created → Customer Service → customer.created
+Order Created → order.created → Inventory Service → inventory.reserved → Billing Service → invoice.created → Payment Service
 ```
 
-### Proto Files
+### Key Kafka Topics
 
-gRPC service definitions located in:
-- `apps/{service}/src/proto/*.proto`
-- `apps/platform/api-gateway/src/proto/*.proto`
+| Topic | Producer | Consumer |
+|-------|----------|----------|
+| `user.created` | auth-svc | customer-svc |
+| `order.created` | order-svc | inventory-svc, billing-svc |
+| `order.completed` | order-svc | inventory-svc |
+| `invoice.created` | billing-svc | payment-svc |
+| `payment.success` | payment-svc | billing-svc, subscription-svc |
+| `subscription.created` | subscription-svc | billing-svc |
 
-## 🛠️ Development
+## 🤖 LLM Integration
 
-### Running Tests
+### Supported Provider
+- **Google Gemini** (gemini-2.5-flash)
 
-```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Test coverage
-npm run test:cov
+### Changeset Generation
+```json
+{
+  "proposal_text": "Vietnamese explanation",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [{"key": "business_model", "value": "subscription"}],
+    "impacted_services": ["SubscriptionService", "BillingService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "high"
+  }
+}
 ```
-
-### Building for Production
-
-```bash
-# Build all services
-npm run build
-
-# Build specific service
-npm run build catalogue-svc
-```
-
-### Code Quality
-
-```bash
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-```
-
-## 🐳 Docker Commands
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f catalogue_db
-
-# Stop all services
-docker-compose down
-
-# Rebuild containers
-docker-compose up -d --build
-
-# Remove volumes (⚠️ deletes data)
-docker-compose down -v
-```
-
-## 🔧 Troubleshooting
-
-### Port Conflicts
-
-If you get `EADDRINUSE` errors:
-
-```bash
-# Check which process is using the port (Windows)
-netstat -ano | findstr :3000
-
-# Kill the process
-taskkill /PID <process_id> /F
-```
-
-### Database Connection Issues
-
-1. Ensure Docker containers are running:
-   ```bash
-   docker ps
-   ```
-
-2. Check database logs:
-   ```bash
-   docker-compose logs catalogue_db
-   ```
-
-3. Verify `.env` configuration matches `docker-compose.yaml`
-
-### gRPC Connection Errors
-
-1. Ensure microservice is running on correct port
-2. Check firewall settings
-3. Verify proto file paths in service configuration
 
 ## 📝 Available Scripts
 
 ```bash
-# Platform Services
+# Platform
 npm run start:gateway          # API Gateway
-npm run start:gateway:dev      # API Gateway (watch mode)
+npm run start:llm              # LLM Orchestrator
 
 # Customer Domain
 npm run start:auth             # Auth Service
@@ -435,24 +333,30 @@ npm run start:customer         # Customer Service
 
 # Product Domain
 npm run start:catalogue        # Catalogue Service
-npm run start:catalogue:dev    # Catalogue (watch mode)
+npm run start:promotion        # Promotion Service
 
 # Order Domain
 npm run start:order            # Order Service
-npm run start:order:dev        # Order (watch mode)
+npm run start:subscription     # Subscription Service
+npm run start:inventory        # Inventory Service
+
+# Finance Domain
+npm run start:billing          # Billing Service
+npm run start:payment          # Payment Service
 ```
 
-## 🤝 Contributing
+## 🐳 Docker Commands
 
-1. Create feature branch: `git checkout -b feature/amazing-feature`
-2. Commit changes: `git commit -m 'Add amazing feature'`
-3. Push to branch: `git push origin feature/amazing-feature`
-4. Open Pull Request
+```bash
+docker-compose up -d           # Start all
+docker-compose down            # Stop all
+docker-compose logs -f         # View logs
+```
+
+## 📚 API Documentation
+
+Swagger UI available at: `http://localhost:3000/api`
 
 ## 📄 License
 
-This project is licensed under the MIT License.
-
-## 👥 Team
-
-Built with ❤️ by the BMMS Development Team
+MIT License

@@ -1,5 +1,6 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
+import { debug } from '@bmms/common';
 
 @Injectable()
 export class EventPublisher implements OnModuleInit {
@@ -11,7 +12,7 @@ export class EventPublisher implements OnModuleInit {
   async onModuleInit() {
     // Connect to Kafka when module initializes
     await this.kafkaClient.connect();
-    console.log('✅ Kafka Producer connected');
+    debug.log('[EventPublisher] Kafka Producer connected');
   }
 
   /**
@@ -22,9 +23,9 @@ export class EventPublisher implements OnModuleInit {
   async publish<T = any>(topic: string, event: T): Promise<void> {
     try {
       await this.kafkaClient.emit(topic, event).toPromise();
-      console.log(`📤 Event published to [${topic}]:`, event);
+      debug.log(`[EventPublisher] Event published to [${topic}]:`, event);
     } catch (error) {
-      console.error(`❌ Failed to publish event to [${topic}]:`, error);
+      debug.error(`[EventPublisher] Failed to publish event to [${topic}]:`, error);
       throw error;
     }
   }
@@ -38,9 +39,9 @@ export class EventPublisher implements OnModuleInit {
         this.kafkaClient.emit(topic, event).toPromise(),
       );
       await Promise.all(promises);
-      console.log(`📤 Batch published ${events.length} events to [${topic}]`);
+      debug.log(`[EventPublisher] Batch published ${events.length} events to [${topic}]`);
     } catch (error) {
-      console.error(`❌ Failed to publish batch to [${topic}]:`, error);
+      debug.error(`[EventPublisher] Failed to publish batch to [${topic}]:`, error);
       throw error;
     }
   }
@@ -57,15 +58,15 @@ export class EventPublisher implements OnModuleInit {
       await this.kafkaClient
         .emit(topic, { key, value: event })
         .toPromise();
-      console.log(`📤 Event published to [${topic}] with key [${key}]:`, event);
+      debug.log(`[EventPublisher] Event published to [${topic}] with key [${key}]:`, event);
     } catch (error) {
-      console.error(`❌ Failed to publish event to [${topic}]:`, error);
+      debug.error(`[EventPublisher] Failed to publish event to [${topic}]:`, error);
       throw error;
     }
   }
 
   async onModuleDestroy() {
     await this.kafkaClient.close();
-    console.log('🔌 Kafka Producer disconnected');
+    debug.log('[EventPublisher] Kafka Producer disconnected');
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { AddonService } from './addon.service';
 import { Addon } from './entities/addon.entity';
 import { UserAddon } from './entities/user-addon.entity';
@@ -9,11 +9,14 @@ export class AddonController {
 
   /**
    * GET /addons
-   * List all available add-ons
+   * List all available add-ons with pagination
    */
   @Get()
-  async listAddons(): Promise<Addon[]> {
-    return this.addonService.listAddons();
+  async listAddons(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<{ addons: Addon[]; total: number; page: number; limit: number; totalPages: number }> {
+    return this.addonService.listAddons(page, limit);
   }
 
   /**
@@ -47,8 +50,8 @@ export class AddonController {
    */
   @Post('purchase')
   async purchaseAddons(@Body() data: {
-    subscriptionId: number;
-    customerId: number;
+    subscriptionId: string;
+    customerId: string;
     addonKeys: string[];
   }): Promise<UserAddon[]> {
     return this.addonService.purchaseAddons(
@@ -60,11 +63,15 @@ export class AddonController {
 
   /**
    * GET /addons/user/:subscriptionId
-   * Get user's active add-ons
+   * Get user's active add-ons with pagination
    */
   @Get('user/:subscriptionId')
-  async getUserAddons(@Param('subscriptionId') subscriptionId: number): Promise<UserAddon[]> {
-    return this.addonService.getUserAddons(subscriptionId);
+  async getUserAddons(
+    @Param('subscriptionId') subscriptionId: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<{ userAddons: UserAddon[]; total: number; page: number; limit: number; totalPages: number }> {
+    return this.addonService.getUserAddons(subscriptionId, page, limit);
   }
 
   /**
@@ -72,7 +79,7 @@ export class AddonController {
    * Cancel add-on
    */
   @Delete('user/:id')
-  async cancelAddon(@Param('id') id: number): Promise<UserAddon> {
+  async cancelAddon(@Param('id') id: string): Promise<UserAddon> {
     return this.addonService.cancelAddon(id);
   }
 }

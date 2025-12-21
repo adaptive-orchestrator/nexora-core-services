@@ -1,0 +1,17 @@
+{
+  "proposal_text": "Yêu cầu chuyển đổi mô hình kinh doanh chính từ bán lẻ (Retail Model) sang mô hình đăng ký dịch vụ (Subscription Model). Điều này đòi hỏi triển khai hoặc kích hoạt các dịch vụ quản lý gói đăng ký (SubscriptionService), dịch vụ khuyến mãi (PromotionService), và cập nhật cấu hình cho các dịch vụ danh mục sản phẩm (CatalogueService), thanh toán (BillingService) và xử lý giao dịch (PaymentService) để hỗ trợ hình thức thanh toán định kỳ.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "CatalogueService", "BillingService", "PaymentService", "APIGatewayService", "AuthService", "CustomerService", "CRMOrchestratorService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

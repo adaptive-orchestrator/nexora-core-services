@@ -27,7 +27,7 @@ export class PaymentEventListener {
     @Ctx() context: KafkaContext,
   ) {
     this.logger.debug('='.repeat(60));
-    this.logger.debug('📋 handleInvoiceCreated TRIGGERED');
+    this.logger.debug('[Payment] handleInvoiceCreated TRIGGERED');
     this.logger.debug('='.repeat(60));
 
     try {
@@ -38,7 +38,7 @@ export class PaymentEventListener {
 
       const { invoiceId, invoiceNumber, orderId, customerId, totalAmount, dueDate } = invoiceData;
 
-      this.logger.log(`📊 Processing Invoice:`);
+      this.logger.log(`[Payment] Processing Invoice:`);
       this.logger.log(`   - Invoice ID: ${invoiceId}`);
       this.logger.log(`   - Invoice Number: ${invoiceNumber}`);
       this.logger.log(`   - Order ID: ${orderId || 'N/A'}`);
@@ -47,14 +47,14 @@ export class PaymentEventListener {
       this.logger.log(`   - Due Date: ${dueDate}`);
 
       if (!invoiceId || !invoiceNumber || !customerId || !totalAmount) {
-        this.logger.error('❌ Missing required invoice fields');
+        this.logger.error('[ERROR] Missing required invoice fields');
         return;
       }
 
       // Check if payment already exists for this invoice (avoid duplicates)
       const existingPayment = await this.paymentService.getByInvoice(invoiceId);
       if (existingPayment && existingPayment.length > 0) {
-        this.logger.warn(`⚠️ Payment already exists for invoice ${invoiceNumber}, skipping...`);
+        this.logger.warn(`[WARNING] Payment already exists for invoice ${invoiceNumber}, skipping...`);
         await this.commitOffset(context);
         return;
       }
@@ -69,8 +69,8 @@ export class PaymentEventListener {
         dueDate,
       });
 
-      this.logger.log(`✅ Invoice ${invoiceNumber} registered in payment system`);
-      this.logger.log(`✅ Payment created with ID: ${payment.id}`);
+      this.logger.log(`[Payment] Invoice ${invoiceNumber} registered in payment system`);
+      this.logger.log(`[Payment] Payment created with ID: ${payment.id}`);
 
       // 3. TODO: Generate VNPay payment URL (commented for now)
       // const vnpayUrl = await this.vnpayService.createPaymentUrl({
@@ -93,7 +93,7 @@ export class PaymentEventListener {
         // paymentUrl: vnpayUrl, // Will be real URL after VNPay integration
       });
 
-      this.logger.log(`📤 Emitted payment.initiated event for invoice ${invoiceNumber}`);
+      this.logger.log(`[Payment] Emitted payment.initiated event for invoice ${invoiceNumber}`);
 
       // 5. TODO: Send invoice notification with payment link
       // await this.notificationService.sendInvoiceCreated({
@@ -107,7 +107,7 @@ export class PaymentEventListener {
       await this.commitOffset(context);
 
     } catch (error) {
-      this.logger.error('❌ Error handling INVOICE_CREATED:', error);
+      this.logger.error('[ERROR] Error handling INVOICE_CREATED:', error);
       this.logger.error('Stack:', error.stack);
     }
   }
@@ -123,7 +123,7 @@ export class PaymentEventListener {
     @Ctx() context: KafkaContext,
   ) {
     this.logger.debug('='.repeat(60));
-    this.logger.debug('💰 handlePaymentSuccess TRIGGERED');
+    this.logger.debug('[Payment] handlePaymentSuccess TRIGGERED');
     this.logger.debug('='.repeat(60));
 
     try {
@@ -134,7 +134,7 @@ export class PaymentEventListener {
 
       const { paymentId, invoiceId, orderId, customerId, amount, method, transactionId, paidAt } = paymentData;
 
-      this.logger.log(`💳 Processing Successful Payment:`);
+      this.logger.log(`[Payment] Processing Successful Payment:`);
       this.logger.log(`   - Payment ID: ${paymentId}`);
       this.logger.log(`   - Invoice ID: ${invoiceId}`);
       this.logger.log(`   - Order ID: ${orderId || 'N/A'}`);
@@ -144,7 +144,7 @@ export class PaymentEventListener {
       this.logger.log(`   - Transaction ID: ${transactionId}`);
 
       if (!paymentId || !invoiceId || !amount) {
-        this.logger.error('❌ Missing required payment fields');
+        this.logger.error('[ERROR] Missing required payment fields');
         return;
       }
 
@@ -158,7 +158,7 @@ export class PaymentEventListener {
         paidAt: paidAt || new Date(),
       });
 
-      this.logger.log(`✅ Payment ${paymentId} marked as successful`);
+      this.logger.log(`[Payment] Payment ${paymentId} marked as successful`);
 
       // Note: Invoice status will be updated by billing-svc when it receives this event
       // No need to update invoice directly from payment-svc
@@ -177,12 +177,12 @@ export class PaymentEventListener {
       //   receiptUrl: `${process.env.APP_URL}/receipts/${paymentId}`,
       // });
 
-      this.logger.log(`📧 Payment confirmation queued for customer ${customerId}`);
+      this.logger.log(`[Payment] Payment confirmation queued for customer ${customerId}`);
 
       await this.commitOffset(context);
 
     } catch (error) {
-      this.logger.error('❌ Error handling PAYMENT_SUCCESS:', error);
+      this.logger.error('[ERROR] Error handling PAYMENT_SUCCESS:', error);
       this.logger.error('Stack:', error.stack);
     }
   }
@@ -195,7 +195,7 @@ export class PaymentEventListener {
     @Ctx() context: KafkaContext,
   ) {
     this.logger.debug('='.repeat(60));
-    this.logger.debug('❌ handlePaymentFailed TRIGGERED');
+    this.logger.debug('[ERROR] handlePaymentFailed TRIGGERED');
     this.logger.debug('='.repeat(60));
 
     try {
@@ -206,7 +206,7 @@ export class PaymentEventListener {
 
       const { paymentId, invoiceId, orderId, customerId, amount, method, reason, errorCode, canRetry } = paymentData;
 
-      this.logger.log(`⚠️ Payment Failed:`);
+      this.logger.log(`[WARNING] Payment Failed:`);
       this.logger.log(`   - Payment ID: ${paymentId}`);
       this.logger.log(`   - Invoice ID: ${invoiceId}`);
       this.logger.log(`   - Order ID: ${orderId || 'N/A'}`);
@@ -218,7 +218,7 @@ export class PaymentEventListener {
       this.logger.log(`   - Can Retry: ${canRetry ? 'YES' : 'NO'}`);
 
       if (!paymentId || !invoiceId) {
-        this.logger.error('❌ Missing required payment fields');
+        this.logger.error('[ERROR] Missing required payment fields');
         return;
       }
 
@@ -230,14 +230,14 @@ export class PaymentEventListener {
         errorCode: errorCode || 'UNKNOWN',
       });
 
-      this.logger.log(`✅ Payment ${paymentId} marked as failed`);
+      this.logger.log(`[Payment] Payment ${paymentId} marked as failed`);
 
       // 2. Keep invoice status as pending/unpaid
       await this.paymentService.updateInvoiceStatus(invoiceId, 'pending');
 
       // 3. Handle retry logic based on canRetry flag
       if (canRetry) {
-        this.logger.log(`🔄 Payment can be retried - sending retry notification`);
+        this.logger.log(`[Payment] Payment can be retried - sending retry notification`);
         
         // TODO: Send retry notification to customer
         // await this.notificationService.sendPaymentFailureNotice({
@@ -248,7 +248,7 @@ export class PaymentEventListener {
         //   retryUrl: `${process.env.APP_URL}/payments/retry/${invoiceId}`,
         // });
       } else {
-        this.logger.log(`🚫 Payment cannot be retried - manual intervention required`);
+        this.logger.log(`[Payment] Payment cannot be retried - manual intervention required`);
         
         // TODO: Alert support team for manual review
         // await this.notificationService.alertSupportTeam({
@@ -264,7 +264,7 @@ export class PaymentEventListener {
       await this.commitOffset(context);
 
     } catch (error) {
-      this.logger.error('❌ Error handling PAYMENT_FAILED:', error);
+      this.logger.error('[ERROR] Error handling PAYMENT_FAILED:', error);
       this.logger.error('Stack:', error.stack);
     }
   }
@@ -277,7 +277,7 @@ export class PaymentEventListener {
     @Ctx() context: KafkaContext,
   ) {
     this.logger.debug('='.repeat(60));
-    this.logger.debug('🔄 handlePaymentRetry TRIGGERED');
+    this.logger.debug('[Payment] handlePaymentRetry TRIGGERED');
     this.logger.debug('='.repeat(60));
 
     try {
@@ -288,7 +288,7 @@ export class PaymentEventListener {
 
       const { paymentId, invoiceId, orderId, customerId, amount, retryCount, previousFailureReason } = paymentData;
 
-      this.logger.log(`🔄 Processing Payment Retry:`);
+      this.logger.log(`[Payment] Processing Payment Retry:`);
       this.logger.log(`   - Payment ID: ${paymentId}`);
       this.logger.log(`   - Invoice ID: ${invoiceId}`);
       this.logger.log(`   - Retry Count: ${retryCount}`);
@@ -307,7 +307,7 @@ export class PaymentEventListener {
         // previousFailureReason,  // Not in method signature
       });
 
-      this.logger.log(`✅ Retry payment created: ${newPayment.id}`);
+      this.logger.log(`[Payment] Retry payment created: ${newPayment.id}`);
 
       // 2. TODO: Generate new VNPay payment URL
       // const vnpayUrl = await this.vnpayService.createPaymentUrl({
@@ -325,12 +325,12 @@ export class PaymentEventListener {
       //   paymentUrl: vnpayUrl,
       // });
 
-      this.logger.log(`📧 Retry payment link queued for customer ${customerId}`);
+      this.logger.log(`[Payment] Retry payment link queued for customer ${customerId}`);
 
       await this.commitOffset(context);
 
     } catch (error) {
-      this.logger.error('❌ Error handling PAYMENT_RETRY:', error);
+      this.logger.error('[ERROR] Error handling PAYMENT_RETRY:', error);
       this.logger.error('Stack:', error.stack);
     }
   }
@@ -343,7 +343,7 @@ export class PaymentEventListener {
     @Ctx() context: KafkaContext,
   ) {
     this.logger.debug('='.repeat(60));
-    this.logger.debug('↩️ handlePaymentRefunded TRIGGERED');
+    this.logger.debug('[Payment] handlePaymentRefunded TRIGGERED');
     this.logger.debug('='.repeat(60));
 
     try {
@@ -354,7 +354,7 @@ export class PaymentEventListener {
 
       const { paymentId, invoiceId, orderId, customerId, refundAmount, reason, refundedAt } = paymentData;
 
-      this.logger.log(`↩️ Processing Payment Refund:`);
+      this.logger.log(`[Payment] Processing Payment Refund:`);
       this.logger.log(`   - Payment ID: ${paymentId}`);
       this.logger.log(`   - Invoice ID: ${invoiceId}`);
       this.logger.log(`   - Order ID: ${orderId}`);
@@ -370,11 +370,11 @@ export class PaymentEventListener {
         refundedAt: refundedAt || new Date(),  // Now accepted
       });
 
-      this.logger.log(`✅ Payment ${paymentId} marked as refunded`);
+      this.logger.log(`[Payment] Payment ${paymentId} marked as refunded`);
 
       // 2. Update invoice status to 'refunded'
       await this.paymentService.updateInvoiceStatus(invoiceId, 'refunded');
-      this.logger.log(`✅ Invoice ${invoiceId} marked as refunded`);
+      this.logger.log(`[Payment] Invoice ${invoiceId} marked as refunded`);
 
       // 3. TODO: Process refund via VNPay
       // const refundResult = await this.vnpayService.processRefund({
@@ -392,12 +392,12 @@ export class PaymentEventListener {
       //   estimatedDays: 5,
       // });
 
-      this.logger.log(`📧 Refund confirmation queued for customer ${customerId}`);
+      this.logger.log(`[Payment] Refund confirmation queued for customer ${customerId}`);
 
       await this.commitOffset(context);
 
     } catch (error) {
-      this.logger.error('❌ Error handling PAYMENT_REFUNDED:', error);
+      this.logger.error('[ERROR] Error handling PAYMENT_REFUNDED:', error);
       this.logger.error('Stack:', error.stack);
     }
   }
@@ -416,9 +416,9 @@ export class PaymentEventListener {
           offset: (parseInt(context.getMessage().offset) + 1).toString(),
         },
       ]);
-      this.logger.log('✅ Kafka offset committed');
+      this.logger.log('[Payment] Kafka offset committed');
     } catch (error) {
-      this.logger.error('❌ Error committing Kafka offset:', error);
+      this.logger.error('[ERROR] Error committing Kafka offset:', error);
     }
   }
 }

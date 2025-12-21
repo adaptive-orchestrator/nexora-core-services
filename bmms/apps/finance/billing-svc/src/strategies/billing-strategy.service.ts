@@ -39,7 +39,7 @@ export class BillingStrategyService {
     // Get default from ENV (for dev mode)
     this.defaultStrategy = this.configService.get<string>('BILLING_MODE', 'onetime');
     
-    this.logger.log(`🎯 BillingStrategyService initialized`);
+    this.logger.log(`[Billing] BillingStrategyService initialized`);
     this.logger.log(`   Default mode: ${this.defaultStrategy}`);
     this.logger.log(`   Available strategies: ${this.strategies.length}`);
   }
@@ -54,7 +54,7 @@ export class BillingStrategyService {
     if (businessModel) {
       const strategy = this.strategies.find(s => s.canHandle(businessModel));
       if (strategy) {
-        this.logger.log(`✅ Selected strategy: ${strategy.getStrategyName()} (from metadata)`);
+        this.logger.log(`[Billing] Selected strategy: ${strategy.getStrategyName()} (from metadata)`);
         return strategy;
       }
     }
@@ -62,12 +62,12 @@ export class BillingStrategyService {
     // Priority 2: Use ENV var (for dev mode)
     const envStrategy = this.strategies.find(s => s.canHandle(this.defaultStrategy));
     if (envStrategy) {
-      this.logger.log(`✅ Selected strategy: ${envStrategy.getStrategyName()} (from ENV)`);
+      this.logger.log(`[Billing] Selected strategy: ${envStrategy.getStrategyName()} (from ENV)`);
       return envStrategy;
     }
 
     // Fallback: Use first strategy (onetime)
-    this.logger.warn(`⚠️ No matching strategy found, using default: ${this.strategies[0].getStrategyName()}`);
+    this.logger.warn(`[WARNING] No matching strategy found, using default: ${this.strategies[0].getStrategyName()}`);
     return this.strategies[0];
   }
 
@@ -77,12 +77,12 @@ export class BillingStrategyService {
   async calculate(params: BillingCalculationParams): Promise<BillingResult> {
     const strategy = this.getStrategy(params);
     
-    this.logger.log(`💰 Calculating billing using ${strategy.getStrategyName()}`);
+    this.logger.log(`[Billing] Calculating billing using ${strategy.getStrategyName()}`);
     
     try {
       return await strategy.calculateAmount(params);
     } catch (error) {
-      this.logger.error(`❌ Billing calculation failed: ${error.message}`);
+      this.logger.error(`[ERROR] Billing calculation failed: ${error.message}`);
       throw new BadRequestException(`Failed to calculate billing: ${error.message}`);
     }
   }

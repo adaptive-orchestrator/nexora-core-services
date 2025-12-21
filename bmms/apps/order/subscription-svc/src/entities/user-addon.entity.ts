@@ -4,8 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  Index,
 } from 'typeorm';
 
 /**
@@ -15,18 +14,24 @@ import {
  * Used for billing and access control.
  */
 @Entity('user_addons')
+@Index('idx_user_addon_sub_status', ['subscriptionId', 'status'])
+@Index('idx_user_addon_customer', ['customerId'])
+@Index('idx_user_addon_addon_status', ['addonId', 'status'])
+@Index('idx_user_addon_billing', ['nextBillingDate', 'status'])
 export class UserAddon {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ name: 'subscription_id' })
-  subscriptionId: number;
+  @Column({ name: 'subscription_id', type: 'uuid' })
+  @Index('idx_subscription_id')
+  subscriptionId: string;
 
-  @Column({ name: 'addon_id' })
-  addonId: number;
+  @Column({ name: 'addon_id', type: 'uuid' })
+  @Index('idx_addon_id')
+  addonId: string;
 
-  @Column({ name: 'customer_id' })
-  customerId: number;
+  @Column({ name: 'customer_id', type: 'uuid' })
+  customerId: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
   price: number; // Price at time of purchase
@@ -36,6 +41,7 @@ export class UserAddon {
     enum: ['active', 'cancelled', 'expired'],
     default: 'active',
   })
+  @Index('idx_status')
   status: 'active' | 'cancelled' | 'expired';
 
   @Column({ name: 'purchased_at', type: 'timestamp' })
@@ -46,6 +52,9 @@ export class UserAddon {
 
   @Column({ name: 'next_billing_date', type: 'timestamp', nullable: true })
   nextBillingDate: Date | null;
+
+  @Column({ name: 'cancelled_at', type: 'timestamp', nullable: true })
+  cancelledAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

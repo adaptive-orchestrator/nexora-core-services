@@ -1,5 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import { debug } from '@bmms/common';
 import { CatalogueSvcService } from './catalogue-svc.service';
 
 @Controller()
@@ -9,8 +10,13 @@ export class CatalogueSvcController {
   // Products
   @GrpcMethod('CatalogueService', 'CreateProduct')
   async createProduct(data: any) {
-    const product = await this.service.createProduct(data);
-    return { product };
+    try {
+      const product = await this.service.createProduct(data);
+      return { product };
+    } catch (error) {
+      debug.error('[CatalogueController] Error creating product:', error.message);
+      throw error;
+    }
   }
 
   @GrpcMethod('CatalogueService', 'GetAllProducts')
@@ -20,24 +26,34 @@ export class CatalogueSvcController {
     return await this.service.listProducts(page, limit);
   }
 
+  @GrpcMethod('CatalogueService', 'GetProductsByOwner')
+  async getProductsByOwner(data: { ownerId: string; page?: number; limit?: number }) {
+    const page = data.page || 1;
+    const limit = data.limit || 20;
+    return await this.service.listProductsByOwner(data.ownerId, page, limit);
+  }
+
   @GrpcMethod('CatalogueService', 'GetProductById')
-  async getProductById(data: { id: number }) {
+  async getProductById(data: { id: string }) {
     try {
-      console.log(`[CatalogueController] GetProductById called with id: ${data.id}`);
       const product = await this.service.findProductById(data.id);
-      console.log(`[CatalogueController] Product found:`, product);
       return { product, message: 'Product found' };
     } catch (error) {
-      console.error(`[CatalogueController] Error getting product ${data.id}:`, error);
+      debug.error(`[CatalogueController] Error getting product ${data.id}:`, error);
       throw error;
     }
   }
 
   @GrpcMethod('CatalogueService', 'UpdateProduct')
   async updateProduct(data: any) {
-    const { id, ...updateData } = data;
-    const product = await this.service.updateProduct(id, updateData);
-    return { product, message: 'Product updated successfully' };
+    try {
+      const { id, ...updateData } = data;
+      const product = await this.service.updateProduct(id, updateData);
+      return { product, message: 'Product updated successfully' };
+    } catch (error) {
+      debug.error(`[CatalogueController] Error updating product ${data.id}:`, error.message);
+      throw error;
+    }
   }
 
   // Plans
@@ -54,9 +70,14 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetPlanById')
-  async getPlanById(data: { id: number }) {
-    const plan = await this.service.findPlanById(data.id);
-    return { plan, message: 'Plan found' };
+  async getPlanById(data: { id: string }) {
+    try {
+      const plan = await this.service.findPlanById(data.id);
+      return { plan, message: 'Plan found' };
+    } catch (error) {
+      debug.error(`[CatalogueController] Error getting plan ${data.id}:`, error.message);
+      throw error;
+    }
   }
 
   // Features
@@ -73,7 +94,7 @@ export class CatalogueSvcController {
   }
 
   @GrpcMethod('CatalogueService', 'GetFeatureById')
-  async getFeatureById(data: { id: number }) {
+  async getFeatureById(data: { id: string }) {
     const feature = await this.service.findFeatureById(data.id);
     return { feature, message: 'Feature found' };
   }

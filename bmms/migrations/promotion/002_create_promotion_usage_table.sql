@@ -9,10 +9,10 @@ USE promotion_db;
 
 -- Create promotion_usage table
 CREATE TABLE IF NOT EXISTS promotion_usage (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    promotionId INT NOT NULL,
-    customerId INT NOT NULL,
-    subscriptionId INT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    promotionId CHAR(36) NOT NULL,
+    customerId CHAR(36) NOT NULL,
+    subscriptionId CHAR(36) NULL,
     
     -- Discount details
     discountAmount DECIMAL(10,2) NULL,

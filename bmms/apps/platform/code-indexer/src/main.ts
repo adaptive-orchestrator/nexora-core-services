@@ -7,7 +7,7 @@ import { QdrantService } from './service/qdrant.service';
 import { IndexStats } from './types';
 
 async function bootstrap() {
-  console.log('🚀 Starting Code Indexer...\n');
+  console.log('[CodeIndexer] Starting Code Indexer...\n');
 
   const app = await NestFactory.createApplicationContext(CodeIndexerModule);
 
@@ -26,38 +26,38 @@ async function bootstrap() {
 
   try {
     // Step 1: Scan codebase
-    console.log('📂 Step 1: Scanning codebase...');
+    console.log('Step 1: Scanning codebase...');
     const chunks = await archmind.scanCodebase();
     stats.totalChunks = chunks.length;
-    console.log(`✅ Found ${chunks.length} code chunks\n`);
+    console.log(`[CodeIndexer] Found ${chunks.length} code chunks\n`);
 
     if (chunks.length === 0) {
-      console.warn('⚠️  No code chunks found. Check WORKSPACE_PATH.');
+      console.warn('[WARNING] No code chunks found. Check WORKSPACE_PATH.');
       await app.close();
       return;
     }
 
     // Step 2: Generate embeddings
-    console.log('🧠 Step 2: Generating embeddings...');
+    console.log('Step 2: Generating embeddings...');
     const embeddings = await embedding.generateEmbeddings(chunks);
     stats.totalVectors = embeddings.length;
-    console.log(`✅ Generated ${embeddings.length} embeddings\n`);
+    console.log(`[CodeIndexer] Generated ${embeddings.length} embeddings\n`);
 
     // Step 3: Upsert to Qdrant
-    console.log('💾 Step 3: Upserting to Qdrant...');
+    console.log('Step 3: Upserting to Qdrant...');
     
     // Optional: Recreate collection (clean slate)
     const shouldRecreate = process.env.RECREATE_COLLECTION === 'true';
     if (shouldRecreate) {
-      console.log('🔄 Recreating collection...');
+      console.log('Recreating collection...');
       await qdrant.recreateCollection();
     }
     
     await qdrant.upsertEmbeddings(embeddings);
-    console.log('✅ Upsert complete\n');
+    console.log('[CodeIndexer] Upsert complete\n');
 
     // Step 4: Verify
-    console.log('🔍 Step 4: Verifying collection...');
+    console.log('Step 4: Verifying collection...');
     const info = await qdrant.getCollectionInfo();
     console.log(`Vectors: ${info.vectors_count}`);
     console.log(`Points: ${info.points_count}\n`);
@@ -65,13 +65,13 @@ async function bootstrap() {
     stats.endTime = Date.now();
     stats.duration = stats.endTime - stats.startTime;
 
-    console.log('✅ Indexing complete!');
-    console.log(`⏱️  Duration: ${(stats.duration / 1000).toFixed(2)}s`);
-    console.log(`📊 Total chunks: ${stats.totalChunks}`);
-    console.log(`🧠 Total vectors: ${stats.totalVectors}`);
+    console.log('[CodeIndexer] Indexing complete!');
+    console.log(`Duration: ${(stats.duration / 1000).toFixed(2)}s`);
+    console.log(`Total chunks: ${stats.totalChunks}`);
+    console.log(`Total vectors: ${stats.totalVectors}`);
 
   } catch (error) {
-    console.error('❌ Indexing failed:', error.message);
+    console.error('[ERROR] Indexing failed:', error.message);
     console.error(error.stack);
     process.exit(1);
   }
@@ -80,18 +80,18 @@ async function bootstrap() {
   const watchMode = process.env.WATCH_MODE === 'true';
   if (watchMode) {
     const intervalHours = parseInt(process.env.WATCH_INTERVAL_HOURS || '6', 10);
-    console.log(`\n🔄 Watch mode enabled. Re-indexing every ${intervalHours} hours...`);
+    console.log(`\nWatch mode enabled. Re-indexing every ${intervalHours} hours...`);
     
     // Keep app alive and re-index periodically
     setInterval(async () => {
-      console.log('\n⏰ Re-indexing codebase...');
+      console.log('\nRe-indexing codebase...');
       try {
         const chunks = await archmind.scanCodebase();
         const embeddings = await embedding.generateEmbeddings(chunks);
         await qdrant.upsertEmbeddings(embeddings);
-        console.log('✅ Re-indexing complete\n');
+        console.log('[CodeIndexer] Re-indexing complete\n');
       } catch (error) {
-        console.error('❌ Re-indexing failed:', error.message);
+        console.error('[ERROR] Re-indexing failed:', error.message);
       }
     }, intervalHours * 60 * 60 * 1000);
 
@@ -105,6 +105,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((error) => {
-  console.error('💥 Fatal error:', error);
+  console.error('[FATAL] Fatal error:', error);
   process.exit(1);
 });

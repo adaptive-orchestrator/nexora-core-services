@@ -113,7 +113,7 @@ export class crmOrchestratorService implements OnModuleInit {
         })
       );
       
-      this.logger.log(`Customer ${customerId} segment updated: ${customer.segment} → ${newSegment}`);
+      this.logger.log(`Customer ${customerId} segment updated: ${customer.segment} to ${newSegment}`);
       return { updated: true, oldSegment: customer.segment, newSegment };
     }
 

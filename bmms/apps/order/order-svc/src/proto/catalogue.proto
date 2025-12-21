@@ -5,8 +5,10 @@ package catalogue;
 service CatalogueService {
   // Product operations
   rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
-  rpc GetAllProducts (Empty) returns (ProductListResponse);
+  rpc GetAllProducts (PaginationRequest) returns (ProductListResponse);
+  rpc GetProductsByOwner (GetProductsByOwnerRequest) returns (ProductListResponse);
   rpc GetProductById (ProductByIdRequest) returns (ProductResponse);
+  rpc UpdateProduct (UpdateProductRequest) returns (ProductResponse);
   
   // Plan operations
   rpc CreatePlan (CreatePlanRequest) returns (PlanResponse);
@@ -22,16 +24,23 @@ service CatalogueService {
 // Common messages
 message Empty {}
 
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
 // Product messages
 message Product {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
   string sku = 5;
   string category = 6;
-  string createdAt = 7;
-  string updatedAt = 8;
+  string imageUrl = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+  string ownerId = 10;
 }
 
 message CreateProductRequest {
@@ -40,10 +49,28 @@ message CreateProductRequest {
   double price = 3;
   string sku = 4;
   string category = 5;
+  string imageUrl = 6;
+  string ownerId = 7;
+}
+
+message GetProductsByOwnerRequest {
+  string ownerId = 1;
+  int32 page = 2;
+  int32 limit = 3;
 }
 
 message ProductByIdRequest {
-  int32 id = 1;
+  string id = 1;
+}
+
+message UpdateProductRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string sku = 5;
+  string category = 6;
+  string imageUrl = 7;
 }
 
 message ProductResponse {
@@ -53,11 +80,15 @@ message ProductResponse {
 
 message ProductListResponse {
   repeated Product products = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
 }
 
 // Plan messages
 message Plan {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
@@ -74,13 +105,13 @@ message CreatePlanRequest {
   string description = 2;
   double price = 3;
   string billingCycle = 4;
-  repeated int32 featureIds = 5;  // Changed field name and type
+  repeated string featureIds = 5;  // Changed field name and type
   bool trialEnabled = 6;
   int32 trialDays = 7;
 }
 
 message PlanByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message PlanResponse {
@@ -94,7 +125,7 @@ message PlanListResponse {
 
 // Feature messages
 message Feature {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   string code = 4;
@@ -109,7 +140,7 @@ message CreateFeatureRequest {
 }
 
 message FeatureByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message FeatureResponse {

@@ -52,9 +52,9 @@ export class QdrantService implements OnModuleInit {
             distance: 'Cosine',
           },
         });
-        this.logger.log(`✅ Collection created: ${this.collectionName}`);
+        this.logger.log(`[CodeIndexer] Collection created: ${this.collectionName}`);
       } else {
-        this.logger.log(`✅ Collection already exists: ${this.collectionName}`);
+        this.logger.log(`[CodeIndexer] Collection already exists: ${this.collectionName}`);
       }
     } catch (error: any) {
       this.logger.error(`Failed to ensure collection: ${error.message}`);
@@ -104,7 +104,7 @@ export class QdrantService implements OnModuleInit {
       this.logger.log(`Upserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(points.length / batchSize)}`);
     }
 
-    this.logger.log(`✅ Upserted total ${points.length} points`);
+    this.logger.log(`[CodeIndexer] Upserted total ${points.length} points`);
   }
 
   /**

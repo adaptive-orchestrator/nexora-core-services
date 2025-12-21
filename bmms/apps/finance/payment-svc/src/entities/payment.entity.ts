@@ -7,23 +7,44 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum PaymentStatus {
+  INITIATED = 'initiated',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  REFUNDED = 'refunded',
+  PARTIALLY_REFUNDED = 'partially_refunded',
+}
+
+export enum PaymentProvider {
+  STRIPE = 'stripe',
+  VNPAY = 'vnpay',
+  MOMO = 'momo',
+  MANUAL = 'manual',
+}
+
 @Entity('payments')
 @Index(['invoiceId'])
 @Index(['customerId'])
 @Index(['status'])
 @Index(['createdAt'])
+@Index(['stripePaymentIntentId'])
+@Index(['stripeSessionId'])
 export class Payment {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ type: 'bigint', nullable: false })
-  invoiceId: number;
+  @Column({ type: 'uuid', nullable: true })
+  invoiceId: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   invoiceNumber: string;
 
-  @Column({ type: 'bigint', nullable: false })
-  customerId: number;
+  @Column({ type: 'uuid', nullable: true })
+  orderId: string;
+
+  @Column({ type: 'uuid', nullable: false })
+  customerId: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: false })
   totalAmount: number;
@@ -36,15 +57,46 @@ export class Payment {
   })
   paidAmount: number;
 
+  @Column({ type: 'varchar', length: 10, default: 'VND' })
+  currency: string;
+
   @Column({
     type: 'enum',
-    enum: ['initiated', 'processing', 'completed', 'failed'],
-    default: 'initiated',
+    enum: PaymentStatus,
+    default: PaymentStatus.INITIATED,
   })
-  status: 'initiated' | 'processing' | 'completed' | 'failed';
+  status: PaymentStatus;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentProvider,
+    default: PaymentProvider.MANUAL,
+  })
+  provider: PaymentProvider;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   transactionId: string;
+
+  // =================== STRIPE SPECIFIC FIELDS ===================
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripePaymentIntentId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeSessionId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeCustomerId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeSubscriptionId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  stripeRefundId?: string;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  refundedAmount: number;
+
+  // =================== END STRIPE FIELDS ===================
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   failureReason: string;
@@ -56,7 +108,13 @@ export class Payment {
   failedAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
+  refundedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
   dueDate: Date;
+
+  @Column({ type: 'json', nullable: true })
+  metadata: Record<string, any>;
 
   @CreateDateColumn()
   createdAt: Date;

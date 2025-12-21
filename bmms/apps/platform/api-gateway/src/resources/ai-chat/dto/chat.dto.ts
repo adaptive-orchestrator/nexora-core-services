@@ -36,7 +36,7 @@ export class ConversationHistoryDto {
   id: number;
 
   @ApiProperty()
-  userId: number;
+  userId: string;
 
   @ApiProperty({ type: [Object] })
   messages: any[];

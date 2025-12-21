@@ -24,7 +24,7 @@ export class PaymentRetryManager {
     config?: PaymentRetryConfig,
   ) {
     this.retryService = new PaymentRetryService(config);
-    this.logger.log('💼 PaymentRetryManager initialized');
+    this.logger.log('[Payment] PaymentRetryManager initialized');
   }
 
   /**
@@ -37,12 +37,12 @@ export class PaymentRetryManager {
    * @returns Created retry record
    */
   async scheduleRetry(
-    paymentId: number,
-    invoiceId: number,
-    subscriptionId: number,
+    paymentId: string,
+    invoiceId: string,
+    subscriptionId: string,
     failureReason: string,
   ): Promise<PaymentRetry> {
-    this.logger.log(`📅 Scheduling retry for payment ${paymentId}`);
+    this.logger.log(`[Payment] Scheduling retry for payment ${paymentId}`);
 
     // Check if retry already exists
     let retry = await this.retryRepository.findOne({
@@ -50,7 +50,7 @@ export class PaymentRetryManager {
     });
 
     if (retry) {
-      this.logger.warn(`⚠️ Retry already exists for payment ${paymentId}`);
+      this.logger.warn(`[WARNING] Retry already exists for payment ${paymentId}`);
       return retry;
     }
 
@@ -82,7 +82,7 @@ export class PaymentRetryManager {
     await this.retryRepository.save(retry);
 
     this.logger.log(
-      `✅ Retry scheduled for payment ${paymentId} - ` +
+      `[Payment] Retry scheduled for payment ${paymentId} - ` +
       `Next attempt: ${nextRetryAt?.toISOString() || 'N/A'}`
     );
 
@@ -98,7 +98,7 @@ export class PaymentRetryManager {
    * @returns Updated retry record
    */
   async recordAttempt(
-    retryId: number,
+    retryId: string,
     success: boolean,
     error?: string,
   ): Promise<PaymentRetry> {
@@ -134,7 +134,7 @@ export class PaymentRetryManager {
       retry.nextRetryAt = null;
       
       this.logger.log(
-        `✅ Payment retry succeeded for payment ${retry.paymentId} ` +
+        `[Payment] Payment retry succeeded for payment ${retry.paymentId} ` +
         `(attempt ${newAttemptNumber}/${retry.maxAttempts})`
       );
     } else {
@@ -153,7 +153,7 @@ export class PaymentRetryManager {
         );
         
         this.logger.warn(
-          `⚠️ Payment retry failed for payment ${retry.paymentId} ` +
+          `[WARNING] Payment retry failed for payment ${retry.paymentId} ` +
           `(attempt ${newAttemptNumber}/${retry.maxAttempts}) - ` +
           `Next retry: ${retry.nextRetryAt.toISOString()}`
         );
@@ -163,7 +163,7 @@ export class PaymentRetryManager {
         retry.nextRetryAt = null;
         
         this.logger.error(
-          `❌ Payment retries exhausted for payment ${retry.paymentId} ` +
+          `[ERROR] Payment retries exhausted for payment ${retry.paymentId} ` +
           `after ${newAttemptNumber} attempts`
         );
       }
@@ -200,7 +200,7 @@ export class PaymentRetryManager {
       },
     });
 
-    this.logger.log(`📋 Found ${retries.length} retries due for processing`);
+    this.logger.log(`[Payment] Found ${retries.length} retries due for processing`);
 
     return retries;
   }
@@ -210,7 +210,7 @@ export class PaymentRetryManager {
    * 
    * @param retryId - Retry record ID
    */
-  async markProcessing(retryId: number): Promise<void> {
+  async markProcessing(retryId: string): Promise<void> {
     await this.retryRepository.update(retryId, {
       status: 'retrying',
     });
@@ -222,7 +222,7 @@ export class PaymentRetryManager {
    * @param paymentId - Payment ID
    * @returns Updated retry record
    */
-  async cancelRetry(paymentId: number): Promise<PaymentRetry | null> {
+  async cancelRetry(paymentId: string): Promise<PaymentRetry | null> {
     const retry = await this.retryRepository.findOne({
       where: { paymentId },
     });
@@ -236,7 +236,7 @@ export class PaymentRetryManager {
 
     await this.retryRepository.save(retry);
 
-    this.logger.log(`🚫 Cancelled retry for payment ${paymentId}`);
+    this.logger.log(`[Payment] Cancelled retry for payment ${paymentId}`);
 
     return retry;
   }
@@ -247,7 +247,7 @@ export class PaymentRetryManager {
    * @param paymentId - Payment ID
    * @returns Retry status or null
    */
-  async getRetryStatus(paymentId: number) {
+  async getRetryStatus(paymentId: string) {
     const retry = await this.retryRepository.findOne({
       where: { paymentId },
     });
@@ -271,7 +271,7 @@ export class PaymentRetryManager {
    * @param subscriptionId - Subscription ID
    * @returns List of retry records
    */
-  async getSubscriptionRetries(subscriptionId: number): Promise<PaymentRetry[]> {
+  async getSubscriptionRetries(subscriptionId: string): Promise<PaymentRetry[]> {
     return this.retryRepository.find({
       where: { subscriptionId },
       order: { createdAt: 'DESC' },
@@ -321,7 +321,7 @@ export class PaymentRetryManager {
       .andWhere('status IN (:...statuses)', { statuses: ['succeeded', 'exhausted', 'cancelled'] })
       .execute();
 
-    this.logger.log(`🧹 Cleaned up ${result.affected} old retry records`);
+    this.logger.log(`[Payment] Cleaned up ${result.affected} old retry records`);
 
     return result.affected || 0;
   }

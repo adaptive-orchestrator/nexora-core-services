@@ -3,13 +3,13 @@ import { InventorySvcModule } from './inventory-svc.module';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { GrpcExceptionFilter } from './filters/grpc-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(InventorySvcModule, { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(InventorySvcModule, { logger: ['error', 'warn'] });
   const configService = app.get(ConfigService);
 
   // Connect Kafka microservice for events
-  console.log('⏳ Starting Kafka microservices...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.KAFKA,
     options: {
@@ -23,11 +23,9 @@ async function bootstrap() {
       },
     },
   });
-  console.log('✅ Kafka consumer configured');
 
   // Connect gRPC microservice
   const grpcUrl = configService.get<string>('GRPC_LISTEN_INVENTORY_URL') || '0.0.0.0:50056';
-  console.log('⏳ Starting gRPC server...');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
@@ -36,13 +34,16 @@ async function bootstrap() {
       url: grpcUrl,
     },
   });
-  console.log(`✅ gRPC server configured on ${grpcUrl}`);
+
+  // Apply global exception filter for gRPC
+  app.useGlobalFilters(new GrpcExceptionFilter());
 
   await app.startAllMicroservices();
-  await app.init();
-  console.log('✅ All microservices started!');
-  
-  console.log(`✅ Inventory Service (gRPC) listening on ${grpcUrl}`);
-  console.log('✅ Inventory Service (Kafka) listening for events');
+
+  // Start HTTP server for health checks
+  const port = configService.get<number>('PORT') || 3014;
+  await app.listen(port);
+
+  console.log(`✅ Inventory Service | HTTP: ${port} | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

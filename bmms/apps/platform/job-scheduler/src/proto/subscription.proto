@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package subscription;
+
+service SubscriptionService {
+  // Subscription operations
+  rpc CreateSubscription (CreateSubscriptionRequest) returns (SubscriptionResponse);
+  rpc GetSubscriptionById (SubscriptionByIdRequest) returns (SubscriptionResponse);
+  rpc GetSubscriptionsByCustomer (SubscriptionsByCustomerRequest) returns (SubscriptionListResponse);
+  rpc GetAllSubscriptions (Empty) returns (SubscriptionListResponse);
+  rpc CancelSubscription (CancelSubscriptionRequest) returns (SubscriptionResponse);
+  rpc RenewSubscription (RenewSubscriptionRequest) returns (SubscriptionResponse);
+  rpc ChangePlan (ChangePlanRequest) returns (SubscriptionResponse);
+  rpc UpdateSubscriptionStatus (UpdateStatusRequest) returns (SubscriptionResponse);
+  rpc ActivateSubscription (ActivateSubscriptionRequest) returns (SubscriptionResponse);
+  rpc GetSubscriptionStats (Empty) returns (SubscriptionStatsResponse);
+  
+  // Trial management
+  rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
+  
+  // Addon operations
+  rpc ListAddons (ListAddonsRequest) returns (AddonListResponse);
+  rpc GetAddonByKey (AddonByKeyRequest) returns (AddonResponse);
+  rpc CreateAddon (CreateAddonRequest) returns (AddonResponse);
+  rpc PurchaseAddons (PurchaseAddonsRequest) returns (UserAddonListResponse);
+  rpc GetUserAddons (UserAddonsBySubscriptionRequest) returns (UserAddonListResponse);
+  rpc CancelAddon (CancelAddonRequest) returns (UserAddonResponse);
+}
+
+// Common messages
+message Empty {}
+
+// Subscription messages
+message Subscription {
+  int32 id = 1;
+  int32 customerId = 2;
+  int32 planId = 3;
+  string planName = 4;
+  double amount = 5;
+  string billingCycle = 6;
+  string status = 7;
+  string currentPeriodStart = 8;
+  string currentPeriodEnd = 9;
+  bool isTrialUsed = 10;
+  string trialStart = 11;
+  string trialEnd = 12;
+  bool cancelAtPeriodEnd = 13;
+  string cancelledAt = 14;
+  string cancellationReason = 15;
+  string createdAt = 16;
+  string updatedAt = 17;
+}
+
+message CreateSubscriptionRequest {
+  int32 customerId = 1;
+  int32 planId = 2;
+  string promotionCode = 3;
+  bool useTrial = 4;
+}
+
+message SubscriptionByIdRequest {
+  int32 id = 1;
+}
+
+message SubscriptionsByCustomerRequest {
+  int32 customerId = 1;
+}
+
+message CancelSubscriptionRequest {
+  int32 id = 1;
+  string reason = 2;
+  bool cancelAtPeriodEnd = 3;
+}
+
+message RenewSubscriptionRequest {
+  int32 id = 1;
+}
+
+message ChangePlanRequest {
+  int32 id = 1;
+  int32 newPlanId = 2;
+  bool immediate = 3;
+}
+
+message UpdateStatusRequest {
+  int32 id = 1;
+  string newStatus = 2;
+  string reason = 3;
+}
+
+message ActivateSubscriptionRequest {
+  int32 subscriptionId = 1;
+}
+
+message SubscriptionResponse {
+  Subscription subscription = 1;
+  string message = 2;
+}
+
+message SubscriptionListResponse {
+  repeated Subscription subscriptions = 1;
+  string message = 2;
+}
+
+message TrialExpiryResponse {
+  int32 processed = 1;
+  int32 converted = 2;
+  int32 failed = 3;
+  string message = 4;
+}
+
+// Addon messages
+message Addon {
+  int32 id = 1;
+  string addonKey = 2;
+  string name = 3;
+  string description = 4;
+  double price = 5;
+  string billingPeriod = 6;
+  bool isActive = 7;
+  string features = 8; // JSON string
+  string createdAt = 9;
+  string updatedAt = 10;
+}
+
+message UserAddon {
+  int32 id = 1;
+  int32 subscriptionId = 2;
+  int32 addonId = 3;
+  int32 customerId = 4;
+  double price = 5;
+  string status = 6;
+  string purchasedAt = 7;
+  string expiresAt = 8;
+  string nextBillingDate = 9;
+  string cancelledAt = 10;
+}
+
+message AddonByKeyRequest {
+  string key = 1;
+}
+
+message ListAddonsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message CreateAddonRequest {
+  string addonKey = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string billingPeriod = 5;
+  string features = 6; // JSON string
+}
+
+message PurchaseAddonsRequest {
+  int32 subscriptionId = 1;
+  int32 customerId = 2;
+  repeated string addonKeys = 3;
+}
+
+message UserAddonsBySubscriptionRequest {
+  int32 subscriptionId = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message CancelAddonRequest {
+  int32 id = 1;
+}
+
+message AddonResponse {
+  Addon addon = 1;
+  string message = 2;
+}
+
+message AddonListResponse {
+  repeated Addon addons = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
+}
+
+message UserAddonResponse {
+  UserAddon userAddon = 1;
+  string message = 2;
+}
+
+message UserAddonListResponse {
+  repeated UserAddon userAddons = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int32 totalPages = 5;
+  string message = 6;
+}
+
+message SubscriptionStatsResponse {
+  int32 activeCount = 1;
+  int32 cancelledCount = 2;
+  int32 churnedCount = 3;
+  double monthlyRevenue = 4;
+  double totalRevenue = 5;
+  double avgSubscriptionValue = 6;
+}
+

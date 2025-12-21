@@ -39,7 +39,7 @@ export class CatalogueStrategyService {
     // Get default from ENV (for dev mode)
     this.defaultStrategy = this.configService.get<string>('CATALOGUE_MODE', 'retail');
     
-    this.logger.log(`🎯 CatalogueStrategyService initialized`);
+    this.logger.log(`[Catalogue] CatalogueStrategyService initialized`);
     this.logger.log(`   Default mode: ${this.defaultStrategy}`);
     this.logger.log(`   Available strategies: ${this.strategies.length}`);
   }
@@ -54,7 +54,7 @@ export class CatalogueStrategyService {
     if (businessModel) {
       const strategy = this.strategies.find(s => s.canHandle(businessModel));
       if (strategy) {
-        this.logger.log(`✅ Selected strategy: ${strategy.getStrategyName()} (from params)`);
+        this.logger.log(`[Catalogue] Selected strategy: ${strategy.getStrategyName()} (from params)`);
         return strategy;
       }
     }
@@ -62,12 +62,12 @@ export class CatalogueStrategyService {
     // Priority 2: Use ENV var (for dev mode)
     const envStrategy = this.strategies.find(s => s.canHandle(this.defaultStrategy));
     if (envStrategy) {
-      this.logger.log(`✅ Selected strategy: ${envStrategy.getStrategyName()} (from ENV)`);
+      this.logger.log(`[Catalogue] Selected strategy: ${envStrategy.getStrategyName()} (from ENV)`);
       return envStrategy;
     }
 
     // Fallback: Use first strategy (retail)
-    this.logger.warn(`⚠️ No matching strategy found, using default: ${this.strategies[0].getStrategyName()}`);
+    this.logger.warn(`[WARNING] No matching strategy found, using default: ${this.strategies[0].getStrategyName()}`);
     return this.strategies[0];
   }
 
@@ -77,12 +77,12 @@ export class CatalogueStrategyService {
   async getItemsByModel(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
     const strategy = this.getStrategy(params);
     
-    this.logger.log(`📦 Getting catalogue items using ${strategy.getStrategyName()}`);
+    this.logger.log(`[Catalogue] Getting catalogue items using ${strategy.getStrategyName()}`);
     
     try {
       return await strategy.getDisplayItems(params);
     } catch (error) {
-      this.logger.error(`❌ Failed to get catalogue items: ${error.message}`);
+      this.logger.error(`[ERROR] Failed to get catalogue items: ${error.message}`);
       throw error;
     }
   }

@@ -26,7 +26,7 @@ export class RecurringBillingStrategy implements IBillingStrategy {
   }
 
   async calculateAmount(params: BillingCalculationParams): Promise<BillingResult> {
-    this.logger.log(`📊 Calculating RECURRING billing for subscription ${params.subscriptionId}`);
+    this.logger.log(`[Billing] Calculating RECURRING billing for subscription ${params.subscriptionId}`);
 
     // For subscription, typically one plan at a time
     const planPrice = params.items[0]?.unitPrice || 0;

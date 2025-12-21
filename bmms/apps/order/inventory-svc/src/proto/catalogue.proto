@@ -24,14 +24,16 @@ message Empty {}
 
 // Product messages
 message Product {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   string description = 3;
   double price = 4;
   string sku = 5;
   string category = 6;
-  string createdAt = 7;
-  string updatedAt = 8;
+  string imageUrl = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+  string ownerId = 10;
 }
 
 message CreateProductRequest {
@@ -40,10 +42,12 @@ message CreateProductRequest {
   double price = 3;
   string sku = 4;
   string category = 5;
+  string imageUrl = 6;
+  string ownerId = 7;
 }
 
 message ProductByIdRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message ProductResponse {

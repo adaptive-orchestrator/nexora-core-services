@@ -1,12 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class OrderItemInputDto {
-  @ApiProperty({ example: 1 })
-  @IsNumber()
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @IsUUID()
   @IsNotEmpty()
-  productId: number;
+  productId: string;
 
   @ApiProperty({ example: 2 })
   @IsNumber()
@@ -25,10 +25,10 @@ export class OrderItemInputDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ example: 1 })
-  @IsNumber()
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
+  @IsUUID()
   @IsNotEmpty()
-  customerId: number;
+  customerId: string;
 
   @ApiProperty({ type: [OrderItemInputDto] })
   @IsArray()

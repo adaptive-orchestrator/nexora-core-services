@@ -29,7 +29,7 @@ export class CodeSearchService {
 
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
-      this.logger.warn('⚠️  GEMINI_API_KEY not found. Code search disabled.');
+      this.logger.warn('[WARNING] GEMINI_API_KEY not found. Code search disabled.');
       this.enabled = false;
       return;
     }
@@ -37,11 +37,11 @@ export class CodeSearchService {
     this.geminiClient = new GoogleGenerativeAI(apiKey);
 
     if (this.enabled) {
-      this.logger.log('✅ Code Search Service initialized');
+      this.logger.log('[LLM] Code Search Service initialized');
       this.logger.log(`   Qdrant: ${this.qdrantUrl}`);
       this.logger.log(`   Collection: ${this.collectionName}`);
     } else {
-      this.logger.log('⏸️  Code Search disabled (USE_RAG=false)');
+      this.logger.log('[LLM] Code Search disabled (USE_RAG=false)');
     }
   }
 
@@ -57,16 +57,22 @@ export class CodeSearchService {
    */
   async searchRelevantCode(query: string, limit = 3): Promise<CodeSearchResult[]> {
     if (!this.enabled) {
+      this.logger.warn(`[CODE-SEARCH] ❌ DISABLED - USE_RAG is false`);
       return [];
     }
 
     try {
-      this.logger.log(`🔍 Searching code for: "${query.substring(0, 50)}..."`);
+      this.logger.log(`[CODE-SEARCH] 🔍 Searching code for: "${query.substring(0, 80)}..."`);
+      this.logger.log(`[CODE-SEARCH] Qdrant: ${this.qdrantUrl}, Collection: ${this.collectionName}`);
 
       // 1. Generate embedding cho query
+      this.logger.log(`[CODE-SEARCH] Step 1: Generating embedding...`);
       const queryVector = await this.generateQueryEmbedding(query);
+      this.logger.log(`[CODE-SEARCH] ✅ Embedding generated (${queryVector.length} dimensions)`);
 
       // 2. Search trong Qdrant
+      const scoreThreshold = 0.3; // Giảm xuống 0.3 để tìm được nhiều kết quả hơn
+      this.logger.log(`[CODE-SEARCH] Step 2: Querying Qdrant (limit: ${limit}, threshold: ${scoreThreshold})...`);
       const response = await fetch(
         `${this.qdrantUrl}/collections/${this.collectionName}/points/search`,
         {
@@ -76,15 +82,18 @@ export class CodeSearchService {
             vector: queryVector,
             limit,
             with_payload: true,
-            score_threshold: 0.5, // Chỉ lấy results có score > 0.5
+            score_threshold: scoreThreshold,
           }),
         }
       );
 
       if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[CODE-SEARCH] ❌ Qdrant failed: ${response.status} - ${errorText}`);
         throw new Error(`Qdrant search failed: ${response.status}`);
       }
 
+      this.logger.log(`[CODE-SEARCH] ✅ Qdrant responded successfully`);
       const data = await response.json();
 
       const results: CodeSearchResult[] = data.result.map((item: any) => ({
@@ -97,18 +106,21 @@ export class CodeSearchService {
         end_line: item.payload.end_line,
       }));
 
-      this.logger.log(`✅ Found ${results.length} relevant code chunks`);
+      this.logger.log(`[CODE-SEARCH] 📊 Found ${results.length} relevant code chunks (total results: ${data.result?.length || 0})`);
 
       if (results.length > 0) {
+        this.logger.log(`[CODE-SEARCH] 📝 Results:`);
         results.forEach((r, i) => {
-          this.logger.log(`   [${i + 1}] ${r.file_path}:${r.start_line} (score: ${r.score.toFixed(3)})`);
+          this.logger.log(`   ✅ [${i + 1}] ${r.file_path}:${r.start_line}-${r.end_line} | ${r.chunk_type} | Score: ${r.score.toFixed(3)}`);
         });
+      } else {
+        this.logger.warn(`[CODE-SEARCH] ⚠️  No results above threshold ${scoreThreshold}`);
       }
 
       return results;
 
     } catch (error) {
-      this.logger.error(`❌ Code search failed: ${error.message}`);
+      this.logger.error(`[ERROR] Code search failed: ${error.message}`);
       return [];
     }
   }
@@ -205,7 +217,7 @@ export class CodeSearchService {
     }
 
     try {
-      this.logger.log(`📋 Fetching embeddings (limit: ${limit}, offset: ${offset})`);
+      this.logger.log(`[LLM] Fetching embeddings (limit: ${limit}, offset: ${offset})`);
 
       // Get collection info để biết tổng số points
       const collectionInfo = await fetch(
@@ -252,7 +264,7 @@ export class CodeSearchService {
 
       const hasMore = (offset + limit) < totalPoints;
 
-      this.logger.log(`✅ Retrieved ${points.length}/${totalPoints} points`);
+      this.logger.log(`[LLM] Retrieved ${points.length}/${totalPoints} points`);
 
       return {
         points,
@@ -261,7 +273,7 @@ export class CodeSearchService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ Get all embeddings failed: ${error.message}`);
+      this.logger.error(`[ERROR] Get all embeddings failed: ${error.message}`);
       throw error;
     }
   }
@@ -301,7 +313,7 @@ export class CodeSearchService {
       };
 
     } catch (error) {
-      this.logger.error(`❌ Get stats failed: ${error.message}`);
+      this.logger.error(`[ERROR] Get stats failed: ${error.message}`);
       throw error;
     }
   }

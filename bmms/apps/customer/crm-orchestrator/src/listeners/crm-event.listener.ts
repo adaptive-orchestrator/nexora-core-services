@@ -72,14 +72,14 @@ export class CrmEventListener implements OnModuleInit {
 
       // Log segment upgrade
       if (customer.segment !== newSegment) {
-        this.logger.log(`🎉 Customer ${customerId} upgraded from ${customer.segment} to ${newSegment}!`);
+        this.logger.log(`Customer ${customerId} upgraded from ${customer.segment} to ${newSegment}!`);
         const benefits = this.segmentationService.getSegmentBenefits(newSegment);
         this.logger.log(`New benefits: ${benefits.join(', ')}`);
       }
 
       // Check if at risk of churning
       if (this.lifecycleService.isAtRiskOfChurning(lastOrderDate, newOrderCount)) {
-        this.logger.warn(`⚠️ Customer ${customerId} is at risk of churning!`);
+        this.logger.warn(`[WARNING] Customer ${customerId} is at risk of churning!`);
       }
 
     } catch (error) {

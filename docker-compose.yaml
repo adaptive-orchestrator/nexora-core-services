@@ -8,7 +8,7 @@ services:
     image: mysql:8.0
     container_name: bmms-customer-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=customer_db
@@ -30,7 +30,7 @@ services:
     image: mysql:8.0
     container_name: bmms-crm-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=crm_db
@@ -55,7 +55,7 @@ services:
     image: mysql:8.0
     container_name: bmms-catalogue-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=catalogue_db
@@ -77,7 +77,7 @@ services:
     image: mysql:8.0
     container_name: bmms-promotion-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=promotion_db
@@ -99,7 +99,7 @@ services:
     image: mysql:8.0
     container_name: bmms-pricing-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=pricing_db
@@ -124,7 +124,7 @@ services:
     image: mysql:8.0
     container_name: bmms-order-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=order_db
@@ -146,7 +146,7 @@ services:
     image: mysql:8.0
     container_name: bmms-subscription-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=subscription_db
@@ -168,7 +168,7 @@ services:
     image: mysql:8.0
     container_name: bmms-inventory-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=inventory_db
@@ -193,7 +193,7 @@ services:
     image: mysql:8.0
     container_name: bmms-billing-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=billing_db
@@ -215,7 +215,7 @@ services:
     image: mysql:8.0
     container_name: bmms-payment-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=payment_db
@@ -240,7 +240,7 @@ services:
     image: mysql:8.0
     container_name: bmms-project-db
     restart: unless-stopped
-    env_file: .env
+    env_file: bmms/.env
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_DATABASE=project_db

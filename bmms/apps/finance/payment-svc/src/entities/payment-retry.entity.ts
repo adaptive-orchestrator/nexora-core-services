@@ -10,17 +10,17 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Index(['nextRetryAt'])
 @Index(['status'])
 export class PaymentRetry {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  paymentId: number;
+  @Column('uuid')
+  paymentId: string;
 
-  @Column()
-  invoiceId: number;
+  @Column('uuid')
+  invoiceId: string;
 
-  @Column()
-  subscriptionId: number;
+  @Column('uuid')
+  subscriptionId: string;
 
   @Column({ default: 0 })
   attemptNumber: number;

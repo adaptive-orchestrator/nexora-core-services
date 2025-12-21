@@ -35,7 +35,7 @@ export class SubscriptionCatalogueStrategy implements ICatalogueStrategy {
   }
 
   async getDisplayItems(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
-    this.logger.log(`📋 Getting SUBSCRIPTION catalogue items`);
+    this.logger.log(`[Catalogue] Getting SUBSCRIPTION catalogue items`);
 
     const query = this.planRepo.createQueryBuilder('plan');
 
@@ -60,7 +60,7 @@ export class SubscriptionCatalogueStrategy implements ICatalogueStrategy {
 
     const [items, total] = await query.getManyAndCount();
 
-    this.logger.log(`✅ Found ${total} subscription plans`);
+    this.logger.log(`[Catalogue] Found ${total} subscription plans`);
 
     return {
       items,

@@ -1,15 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsPositive } from 'class-validator';
+import { IsInt, IsPositive, IsUUID } from 'class-validator';
 
 export class ReserveStockDto {
   @ApiProperty({
     description: 'Product ID to reserve',
-    example: 1,
-    type: Number,
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    type: String,
   })
-  @IsInt()
-  @IsPositive()
-  productId: number;
+  @IsUUID()
+  productId: string;
 
   @ApiProperty({
     description: 'Quantity to reserve',
@@ -22,19 +21,17 @@ export class ReserveStockDto {
 
   @ApiProperty({
     description: 'Order ID',
-    example: 123,
-    type: Number,
+    example: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
+    type: String,
   })
-  @IsInt()
-  @IsPositive()
-  orderId: number;
+  @IsUUID()
+  orderId: string;
 
   @ApiProperty({
     description: 'Customer ID',
-    example: 456,
-    type: Number,
+    example: 'c3d4e5f6-a7b8-9012-cdef-345678901234',
+    type: String,
   })
-  @IsInt()
-  @IsPositive()
-  customerId: number;
+  @IsUUID()
+  customerId: string;
 }

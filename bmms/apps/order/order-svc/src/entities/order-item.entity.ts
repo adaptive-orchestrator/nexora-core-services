@@ -4,19 +4,23 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 import { Order } from './order.entity';
 
 @Entity('order_items')
+@Index('idx_order_items_order', ['orderId'])
+@Index('idx_order_items_product', ['productId'])
+@Index('idx_order_items_order_product', ['orderId', 'productId'])
 export class OrderItem {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  orderId: number;
+  @Column('uuid')
+  orderId: string;
 
-  @Column()
-  productId: number;
+  @Column('uuid')
+  productId: string;
 
   @Column()
   quantity: number;

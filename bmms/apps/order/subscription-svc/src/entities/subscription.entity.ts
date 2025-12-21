@@ -19,14 +19,14 @@ export enum SubscriptionStatus {
 
 @Entity('subscriptions')
 export class Subscription {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  customerId: number;
+  @Column('uuid')
+  customerId: string;
 
-  @Column()
-  planId: number;
+  @Column('uuid')
+  planId: string;
 
   @Column({ nullable: true })
   planName?: string;
@@ -71,13 +71,18 @@ export class Subscription {
   @Column({ nullable: true })
   cancellationReason?: string;
 
+  // Stripe Integration
+  @Column({ nullable: true })
+  stripeSubscriptionId?: string;
+
+  @Column({ nullable: true })
+  stripeCustomerId?: string;
+
   // Metadata
   @Column({ type: 'json', nullable: true })
   metadata?: Record<string, any>;
 
-  @OneToMany(() => SubscriptionHistory, (history) => history.subscription, {
-    cascade: true,
-  })
+  @OneToMany(() => SubscriptionHistory, (history) => history.subscription)
   history: SubscriptionHistory[];
 
   @CreateDateColumn()

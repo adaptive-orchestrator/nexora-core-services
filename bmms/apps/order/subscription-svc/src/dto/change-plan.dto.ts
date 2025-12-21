@@ -1,8 +1,8 @@
-import { IsNumber } from 'class-validator';
+import { IsUUID } from 'class-validator';
 
 export class ChangePlanDto {
-  @IsNumber()
-  newPlanId: number;
+  @IsUUID()
+  newPlanId: string;
 
   // If true, change will take effect immediately
   // If false, change will take effect at the end of current billing period

@@ -42,7 +42,7 @@ export class ArchmindService {
     if (customPatterns) {
       // Từ env: INCLUDE_PATTERNS=**/*.service.ts,**/*.controller.ts
       this.includePatterns = customPatterns.split(',').map(p => p.trim());
-      this.logger.log(`📝 Using custom patterns from .env`);
+      this.logger.log(`[CodeIndexer] Using custom patterns from .env`);
     } else {
       // Mặc định: Chỉ lấy files quan trọng
       const indexMode = this.configService.get<string>('INDEX_MODE') || 'essential';
@@ -58,7 +58,7 @@ export class ArchmindService {
           '**/*.java',
           '**/*.go',
         ];
-        this.logger.log(`📚 Index mode: FULL (all code files)`);
+        this.logger.log(`[CodeIndexer] Index mode: FULL (all code files)`);
       } else if (indexMode === 'essential') {
         // Essential mode: Chỉ service, controller, module
         this.includePatterns = [
@@ -71,7 +71,7 @@ export class ArchmindService {
           '**/*.model.ts',
           '**/*.interface.ts',
         ];
-        this.logger.log(`🎯 Index mode: ESSENTIAL (core files only)`);
+        this.logger.log(`[CodeIndexer] Index mode: ESSENTIAL (core files only)`);
       } else if (indexMode === 'minimal') {
         // Minimal mode: Chỉ service và controller
         this.includePatterns = [
@@ -79,7 +79,7 @@ export class ArchmindService {
           '**/*.controller.ts',
           '**/*.module.ts',
         ];
-        this.logger.log(`⚡ Index mode: MINIMAL (services & controllers only)`);
+        this.logger.log(`[CodeIndexer] Index mode: MINIMAL (services & controllers only)`);
       } else {
         // Custom patterns
         this.includePatterns = [indexMode];
@@ -88,23 +88,23 @@ export class ArchmindService {
 
     this.maxChunkSize = 3000;
     
-    this.logger.log(`📁 Workspace: ${this.workspacePath}`);
-    this.logger.log(`📋 Patterns: ${this.includePatterns.join(', ')}`);
-    this.logger.log(`📏 Max chunk size: ${this.maxChunkSize} chars`);
+    this.logger.log(`[CodeIndexer] Workspace: ${this.workspacePath}`);
+    this.logger.log(`[CodeIndexer] Patterns: ${this.includePatterns.join(', ')}`);
+    this.logger.log(`[CodeIndexer] Max chunk size: ${this.maxChunkSize} chars`);
   }
 
   /**
    * Quét toàn bộ codebase và trả về chunks
    */
   async scanCodebase(): Promise<CodeChunk[]> {
-    this.logger.log('🔍 Scanning codebase...');
+    this.logger.log('[CodeIndexer] Scanning codebase...');
 
     // 1. Tìm tất cả files code
     const files = await this.findCodeFiles();
-    this.logger.log(`📂 Found ${files.length} code files`);
+    this.logger.log(`[CodeIndexer] Found ${files.length} code files`);
 
     if (files.length === 0) {
-      this.logger.warn('⚠️  No files found. Check WORKSPACE_PATH and patterns.');
+      this.logger.warn('[WARNING] No files found. Check WORKSPACE_PATH and patterns.');
       this.logger.warn(`   Workspace: ${this.workspacePath}`);
       this.logger.warn(`   Patterns: ${this.includePatterns.join(', ')}`);
       return [];
@@ -112,7 +112,7 @@ export class ArchmindService {
 
     // Show preview
     if (files.length > 0) {
-      this.logger.log(`📄 Sample files:`);
+      this.logger.log(`[CodeIndexer] Sample files:`);
       files.slice(0, 5).forEach(f => {
         this.logger.log(`   - ${f.path} (${(f.size / 1024).toFixed(1)}KB)`);
       });
@@ -133,7 +133,7 @@ export class ArchmindService {
       }
     }
 
-    this.logger.log(`✅ Extracted ${allChunks.length} chunks from ${files.length} files`);
+    this.logger.log(`[CodeIndexer] Extracted ${allChunks.length} chunks from ${files.length} files`);
     
     // Show chunk type distribution
     const typeCount = allChunks.reduce((acc, chunk) => {
@@ -141,7 +141,7 @@ export class ArchmindService {
       return acc;
     }, {} as Record<string, number>);
     
-    this.logger.log(`📊 Chunk types: ${JSON.stringify(typeCount)}`);
+    this.logger.log(`[CodeIndexer] Chunk types: ${JSON.stringify(typeCount)}`);
     
     return allChunks;
   }
@@ -152,7 +152,7 @@ export class ArchmindService {
   private async findCodeFiles(): Promise<CodeFile[]> {
     const filePaths: string[] = [];
     
-    this.logger.log(`🔎 Searching with patterns...`);
+    this.logger.log(`[CodeIndexer] Searching with patterns...`);
     
     for (const pattern of this.includePatterns) {
       try {
@@ -182,7 +182,7 @@ export class ArchmindService {
         
         // Skip files quá lớn (>500KB)
         if (stats.size > 500000) {
-          this.logger.warn(`⏭️  Skipping large file: ${filePath} (${(stats.size / 1024).toFixed(0)}KB)`);
+          this.logger.warn(`[CodeIndexer] Skipping large file: ${filePath} (${(stats.size / 1024).toFixed(0)}KB)`);
           continue;
         }
 

@@ -24,21 +24,6 @@
         ]
       }
     },
-    "k8s-generator": {
-      "type": "application",
-      "root": "apps/platform/k8s-generator",
-      "entryFile": "main",
-      "sourceRoot": "apps/platform/k8s-generator/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/platform/k8s-generator/tsconfig.app.json",
-        "assets": [
-          {
-            "include": "proto/*.proto",
-            "outDir": "dist/out-tsc/apps/platform/k8s-generator/src"
-          }
-        ]
-      }
-    },
     "auth": {
       "type": "library",
       "root": "libs/auth",
@@ -268,13 +253,13 @@
         ]
       }
     },
-    "rl-scheduler": {
+    "job-scheduler": {
       "type": "application",
-      "root": "apps/platform/rl-scheduler",
+      "root": "apps/platform/job-scheduler",
       "entryFile": "main",
-      "sourceRoot": "apps/platform/rl-scheduler/src",
+      "sourceRoot": "apps/platform/job-scheduler/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/platform/rl-scheduler/tsconfig.app.json"
+        "tsConfigPath": "apps/platform/job-scheduler/tsconfig.app.json"
       }
     },
     "subscription-svc": {

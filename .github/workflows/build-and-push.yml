@@ -78,7 +78,6 @@ jobs:
               {"service": "crm-orchestrator", "dockerfile": "Dockerfile.crm-orchestrator"},
               {"service": "customer-svc", "dockerfile": "Dockerfile.customer-svc"},
               {"service": "inventory-svc", "dockerfile": "Dockerfile.inventory-svc"},
-              {"service": "k8s-generator", "dockerfile": "Dockerfile.k8s-generator"},
               {"service": "llm-orchestrator", "dockerfile": "Dockerfile.llm-orchestrator"},
               {"service": "order-svc", "dockerfile": "Dockerfile.order-svc"},
               {"service": "payment-svc", "dockerfile": "Dockerfile.payment-svc"},

@@ -35,7 +35,7 @@ export class RetailCatalogueStrategy implements ICatalogueStrategy {
   }
 
   async getDisplayItems(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
-    this.logger.log(`📦 Getting RETAIL catalogue items`);
+    this.logger.log(`[Catalogue] Getting RETAIL catalogue items`);
 
     const query = this.productRepo.createQueryBuilder('product');
 
@@ -62,7 +62,7 @@ export class RetailCatalogueStrategy implements ICatalogueStrategy {
 
     const [items, total] = await query.getManyAndCount();
 
-    this.logger.log(`✅ Found ${total} retail products`);
+    this.logger.log(`[Catalogue] Found ${total} retail products`);
 
     return {
       items,

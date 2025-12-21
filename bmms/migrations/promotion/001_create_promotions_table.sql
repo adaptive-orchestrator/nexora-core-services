@@ -9,7 +9,7 @@ USE promotion_db;
 
 -- Create promotions table
 CREATE TABLE IF NOT EXISTS promotions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT NULL,

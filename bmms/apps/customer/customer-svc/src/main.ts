@@ -11,6 +11,7 @@ dotenv.config({ path: envPath });
 
 async function bootstrap() {
   const configService = new ConfigService();
+  const grpcUrl = configService.get('GRPC_LISTEN_CUSTOMER_URL') || '0.0.0.0:50054';
   
   // Create hybrid application (both gRPC and Kafka)
   const app = await NestFactory.create(CustomerSvcModule);
@@ -21,7 +22,7 @@ async function bootstrap() {
     options: {
       package: 'customer',
       protoPath: path.join(__dirname, './proto/customer.proto'),
-      url: configService.get('GRPC_LISTEN_CUSTOMER_URL') || '0.0.0.0:50052',
+      url: grpcUrl,
     },
   });
 
@@ -41,7 +42,6 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  console.log('✅ Customer Service (gRPC) running on port 50052');
-  console.log('✅ Customer Service (Kafka) listening for events');
+  console.log(`[CustomerSvc] Customer Service | gRPC: ${grpcUrl} | Kafka: listening`);
 }
 bootstrap();

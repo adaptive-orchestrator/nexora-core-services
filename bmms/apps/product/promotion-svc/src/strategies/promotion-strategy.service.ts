@@ -44,8 +44,8 @@ export class PromotionStrategyService {
     ];
 
     const mode = this.configService.get<string>('PROMOTION_MODE', 'retail');
-    this.logger.log(`🎯 PromotionStrategyService initialized with mode: ${mode}`);
-    this.logger.log(`📦 Registered strategies: ${this.strategies.map((s) => s.getStrategyName()).join(', ')}`);
+    this.logger.log(`[Promotion] PromotionStrategyService initialized with mode: ${mode}`);
+    this.logger.log(`[Promotion] Registered strategies: ${this.strategies.map((s) => s.getStrategyName()).join(', ')}`);
   }
 
   /**
@@ -57,11 +57,11 @@ export class PromotionStrategyService {
     const strategy = this.strategies.find((s) => s.canHandle(normalizedModel));
 
     if (!strategy) {
-      this.logger.warn(`⚠️ No strategy found for model: ${businessModel}, falling back to retail`);
+      this.logger.warn(`[WARNING] No strategy found for model: ${businessModel}, falling back to retail`);
       return this.retailStrategy;
     }
 
-    this.logger.log(`✅ Selected ${strategy.getStrategyName()} for model: ${businessModel}`);
+    this.logger.log(`[Promotion] Selected ${strategy.getStrategyName()} for model: ${businessModel}`);
     return strategy;
   }
 

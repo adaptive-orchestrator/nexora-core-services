@@ -27,8 +27,8 @@ export enum ApplicableTo {
 
 @Entity('promotions')
 export class Promotion {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ unique: true, length: 50 })
   code: string; // Mã giảm giá (VD: SUMMER2024)
@@ -71,7 +71,7 @@ export class Promotion {
   applicableTo: ApplicableTo;
 
   @Column({ type: 'simple-array', nullable: true })
-  specificPlanIds: number[]; // Danh sách plan IDs nếu SPECIFIC_PLANS
+  specificPlanIds: string[]; // Danh sách plan IDs nếu SPECIFIC_PLANS
 
   // Giới hạn sử dụng
   @Column({ type: 'int', nullable: true })
@@ -124,7 +124,7 @@ export class Promotion {
     return true;
   }
 
-  canApplyToPlan(planId: number): boolean {
+  canApplyToPlan(planId: string): boolean {
     if (this.applicableTo === ApplicableTo.ALL_PLANS) return true;
     if (
       this.applicableTo === ApplicableTo.SPECIFIC_PLANS &&

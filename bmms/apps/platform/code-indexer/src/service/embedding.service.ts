@@ -24,8 +24,8 @@ export class EmbeddingService {
     this.requestDelay = this.configService.get<number>('GEMINI_REQUEST_DELAY') || 13000;
     
     this.geminiClient = new GoogleGenerativeAI(apiKey);
-    this.logger.log('🤖 Gemini Embedding service initialized');
-    this.logger.log(`⏱️  Rate limit: ${this.requestDelay}ms between requests`);
+    this.logger.log('[CodeIndexer] Gemini Embedding service initialized');
+    this.logger.log(`[CodeIndexer] Rate limit: ${this.requestDelay}ms between requests`);
   }
 
   getVectorSize(): number {
@@ -41,9 +41,9 @@ export class EmbeddingService {
     const totalChunks = chunks.length;
     const estimatedTimeMinutes = Math.ceil((totalChunks * this.requestDelay) / 1000 / 60);
     
-    this.logger.log(`📊 Generating embeddings for ${totalChunks} chunks...`);
-    this.logger.log(`⏰ Estimated time: ~${estimatedTimeMinutes} minutes`);
-    this.logger.log(`🐢 Rate limit: 1 request every ${this.requestDelay / 1000}s`);
+    this.logger.log(`[CodeIndexer] Generating embeddings for ${totalChunks} chunks...`);
+    this.logger.log(`[CodeIndexer] Estimated time: ~${estimatedTimeMinutes} minutes`);
+    this.logger.log(`[CodeIndexer] Rate limit: 1 request every ${this.requestDelay / 1000}s`);
 
     const points: EmbeddingPoint[] = [];
     const startTime = Date.now();
@@ -63,24 +63,24 @@ export class EmbeddingService {
         if (progress % 10 === 0) {
           const elapsed = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
           const remaining = ((totalChunks - progress) * this.requestDelay / 1000 / 60).toFixed(1);
-          this.logger.log(`📈 Progress: ${progress}/${totalChunks} | Elapsed: ${elapsed}min | Remaining: ~${remaining}min`);
+          this.logger.log(`[CodeIndexer] Progress: ${progress}/${totalChunks} | Elapsed: ${elapsed}min | Remaining: ~${remaining}min`);
         }
 
         // Delay giữa các requests (trừ request cuối)
         if (i < chunks.length - 1) {
-          this.logger.debug(`⏳ Waiting ${this.requestDelay / 1000}s...`);
+          this.logger.debug(`[CodeIndexer] Waiting ${this.requestDelay / 1000}s...`);
           await this.sleep(this.requestDelay);
         }
 
       } catch (error) {
-        this.logger.error(`❌ Failed chunk ${chunk.id} after retries: ${error.message}`);
-        this.logger.warn(`⏭️  Skipping and continuing...`);
+        this.logger.error(`[ERROR] Failed chunk ${chunk.id} after retries: ${error.message}`);
+        this.logger.warn(`[CodeIndexer] Skipping and continuing...`);
         // Continue với chunks khác
       }
     }
 
     const totalTime = ((Date.now() - startTime) / 1000 / 60).toFixed(1);
-    this.logger.log(`✅ Generated ${points.length}/${chunks.length} embeddings in ${totalTime} minutes`);
+    this.logger.log(`[CodeIndexer] Generated ${points.length}/${chunks.length} embeddings in ${totalTime} minutes`);
     
     if (points.length === 0) {
       throw new Error('Failed to generate any embeddings');
@@ -119,7 +119,7 @@ export class EmbeddingService {
       if (attempt < this.maxRetries) {
         const delay = this.retryDelay * attempt;
         this.logger.warn(
-          `⚠️  Retry ${attempt}/${this.maxRetries} for ${chunk.filePath}:${chunk.startLine} after ${delay / 1000}s`
+          `[WARNING] Retry ${attempt}/${this.maxRetries} for ${chunk.filePath}:${chunk.startLine} after ${delay / 1000}s`
         );
         await this.sleep(delay);
         return this.generateSingleEmbeddingWithRetry(chunk, attempt + 1);
@@ -147,7 +147,7 @@ export class EmbeddingService {
     } catch (error) {
       if (attempt < this.maxRetries) {
         const delay = this.retryDelay * attempt;
-        this.logger.warn(`⚠️  Retry ${attempt}/${this.maxRetries} after ${delay / 1000}s`);
+        this.logger.warn(`[WARNING] Retry ${attempt}/${this.maxRetries} after ${delay / 1000}s`);
         await this.sleep(delay);
         return this.generateGeminiEmbeddingWithRetry(text, attempt + 1);
       }
@@ -182,7 +182,7 @@ export class EmbeddingService {
     } catch (error) {
       // Log chi tiết để debug
       if (error.message?.includes('429')) {
-        this.logger.error('🚫 Rate limit exceeded! Increase delay in .env');
+        this.logger.error('[ERROR] Rate limit exceeded! Increase delay in .env');
       }
       throw error;
     }

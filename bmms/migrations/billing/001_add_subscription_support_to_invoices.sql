@@ -31,7 +31,7 @@ SET @preparedStatement = (SELECT IF(
        AND (table_schema = @dbname)
        AND (column_name = 'subscriptionId')) > 0,
     "SELECT 'Column subscriptionId already exists' AS msg",
-    "ALTER TABLE invoices ADD COLUMN subscriptionId INT NULL AFTER invoiceType"
+    "ALTER TABLE invoices ADD COLUMN subscriptionId CHAR(36) NULL AFTER invoiceType"
 ));
 PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;

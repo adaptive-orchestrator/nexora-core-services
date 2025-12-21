@@ -4,25 +4,30 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 import { Inventory } from './inventory.entity';
 
 @Entity('inventory_reservations')
+@Index('idx_reservation_product', ['productId'])
+@Index('idx_reservation_order', ['orderId'])
+@Index('idx_reservation_status', ['status'])
+@Index('idx_reservation_product_order_status', ['productId', 'orderId', 'status'])
 export class InventoryReservation {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  productId: number;
+  @Column('uuid')
+  productId: string;
 
   @Column()
   quantity: number;
 
-  @Column()
-  orderId: number;
+  @Column('uuid')
+  orderId: string;
 
-  @Column()
-  customerId: number;
+  @Column('uuid')
+  customerId: string;
 
   @Column({ type: 'enum', enum: ['active', 'completed', 'cancelled'] })
   status: 'active' | 'completed' | 'cancelled';

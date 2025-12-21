@@ -46,6 +46,10 @@ lerna-debug.log*
 .temp
 .tmp
 
+# LLM & Helm generated output
+/helm_changesets
+#/llm_output # Uncomment if you want to ignore LLM generated output
+
 # Runtime data
 pids
 *.pid

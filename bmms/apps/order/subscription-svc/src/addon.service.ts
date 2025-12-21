@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 import { EventTopics } from '@bmms/event';
 import * as crypto from 'crypto';
@@ -9,19 +9,24 @@ import { Addon } from './entities/addon.entity';
 import { UserAddon } from './entities/user-addon.entity';
 
 /**
- * Add-on Service
+ * Add-on Service (Optimized)
  * 
  * Manages purchasable add-ons for freemium and subscription users.
  * 
- * Features:
- * - List available add-ons
- * - Purchase add-ons
- * - Check user's active add-ons
- * - Handle add-on billing events
+ * Optimizations:
+ * - In-memory caching for addon list
+ * - Batch queries instead of N+1
+ * - Async Kafka publishing
+ * - Query optimization with select fields
  */
 @Injectable()
 export class AddonService {
   private readonly logger = new Logger(AddonService.name);
+  
+  // [Addon] In-memory cache for addons (rarely changes)
+  private addonCache: Map<string, Addon> = new Map();
+  private addonListCache: { data: Addon[]; timestamp: number } | null = null;
+  private readonly CACHE_TTL = 60000; // 60 seconds
 
   constructor(
     @InjectRepository(Addon)
@@ -32,31 +37,103 @@ export class AddonService {
 
     @Inject('KAFKA_SERVICE')
     private readonly kafka: ClientKafka,
-  ) {}
+  ) {
+    // Pre-warm cache on startup
+    this.warmupCache();
+  }
+
+  /**
+   * Pre-warm cache on service startup
+   */
+  private async warmupCache(): Promise<void> {
+    try {
+      const addons = await this.addonRepo.find({
+        where: { isActive: true },
+        order: { price: 'ASC' },
+      });
+      
+      this.addonListCache = { data: addons, timestamp: Date.now() };
+      addons.forEach(addon => this.addonCache.set(addon.addonKey, addon));
+      
+      this.logger.log(`[Addon] Cache warmed up with ${addons.length} addons`);
+    } catch (error) {
+      this.logger.warn(`[WARNING] Failed to warmup cache: ${error.message}`);
+    }
+  }
+
+  /**
+   * Invalidate cache (call after create/update/delete)
+   */
+  private invalidateCache(): void {
+    this.addonCache.clear();
+    this.addonListCache = null;
+  }
 
   // ============= ADDON MANAGEMENT =============
 
   /**
-   * List all available add-ons
+   * List all available add-ons with pagination (cached)
    */
-  async listAddons(): Promise<Addon[]> {
-    return this.addonRepo.find({
+  async listAddons(page: number = 1, limit: number = 20): Promise<{ addons: Addon[]; total: number; page: number; limit: number; totalPages: number }> {
+    const take = Math.min(limit, 100);
+    const skip = (page - 1) * take;
+
+    // Check cache for full list
+    if (this.addonListCache && (Date.now() - this.addonListCache.timestamp) < this.CACHE_TTL) {
+      const cachedData = this.addonListCache.data;
+      const paginatedAddons = cachedData.slice(skip, skip + take);
+      
+      return {
+        addons: paginatedAddons,
+        total: cachedData.length,
+        page,
+        limit: take,
+        totalPages: Math.ceil(cachedData.length / take),
+      };
+    }
+
+    // Fetch from DB and cache
+    const [addons, total] = await this.addonRepo.findAndCount({
       where: { isActive: true },
       order: { price: 'ASC' },
+      select: ['id', 'addonKey', 'name', 'description', 'price', 'billingPeriod', 'isActive', 'features'],
     });
+
+    // Update cache
+    this.addonListCache = { data: addons, timestamp: Date.now() };
+    addons.forEach(addon => this.addonCache.set(addon.addonKey, addon));
+
+    const paginatedAddons = addons.slice(skip, skip + take);
+
+    return {
+      addons: paginatedAddons,
+      total,
+      page,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    };
   }
 
   /**
-   * Get add-on by key
+   * Get add-on by key (cached)
    */
   async getAddonByKey(addonKey: string): Promise<Addon> {
+    // Check cache first
+    if (this.addonCache.has(addonKey)) {
+      return this.addonCache.get(addonKey)!;
+    }
+
     const addon = await this.addonRepo.findOne({
       where: { addonKey, isActive: true },
+      select: ['id', 'addonKey', 'name', 'description', 'price', 'billingPeriod', 'isActive', 'features'],
     });
 
     if (!addon) {
       throw new NotFoundException(`Add-on ${addonKey} not found`);
     }
+
+    // Cache for future use
+    this.addonCache.set(addonKey, addon);
 
     return addon;
   }
@@ -76,7 +153,10 @@ export class AddonService {
       this.addonRepo.create(data),
     );
 
-    this.logger.log(`✅ Created add-on: ${addon.name} (${addon.addonKey})`);
+    // Invalidate cache
+    this.invalidateCache();
+
+    this.logger.log(`[Addon] Created add-on: ${addon.name} (${addon.addonKey})`);
 
     return addon;
   }
@@ -84,39 +164,54 @@ export class AddonService {
   // ============= USER ADD-ON PURCHASES =============
 
   /**
-   * Purchase add-on(s) for a user
-   * 
-   * Emits ADDON_PURCHASED event for billing
+   * Purchase add-on(s) for a user (Optimized)
+   * - Batch fetch addons
+   * - Batch check existing
+   * - Async Kafka emit
    */
   async purchaseAddons(
-    subscriptionId: number,
-    customerId: number,
+    subscriptionId: string,
+    customerId: string,
     addonKeys: string[],
   ): Promise<UserAddon[]> {
-    this.logger.log(`💎 User ${customerId} purchasing ${addonKeys.length} add-ons`);
+    if (!addonKeys || addonKeys.length === 0) {
+      return [];
+    }
 
-    const purchases: UserAddon[] = [];
+    this.logger.log(`[Addon] User ${customerId} purchasing ${addonKeys.length} add-ons`);
 
-    for (const addonKey of addonKeys) {
-      // Check if addon exists
-      const addon = await this.getAddonByKey(addonKey);
+    // [Addon] Batch fetch all addons at once
+    const addons = await Promise.all(
+      addonKeys.map(key => this.getAddonByKey(key).catch(() => null))
+    );
+    const validAddons = addons.filter((a): a is Addon => a !== null);
 
-      // Check if user already has this addon
-      const existing = await this.userAddonRepo.findOne({
-        where: {
-          subscriptionId,
-          addonId: addon.id,
-          status: 'active',
-        },
-      });
+    if (validAddons.length === 0) {
+      return [];
+    }
 
-      if (existing) {
-        this.logger.warn(`⚠️ User already has add-on: ${addonKey}`);
-        continue;
-      }
+    // [Addon] Batch check existing user addons
+    const existingAddons = await this.userAddonRepo.find({
+      where: {
+        subscriptionId,
+        addonId: In(validAddons.map(a => a.id)),
+        status: 'active',
+      },
+      select: ['addonId'],
+    });
+    const existingAddonIds = new Set(existingAddons.map(e => e.addonId));
 
-      // Calculate expiry date
-      const purchasedAt = new Date();
+    // Filter out already purchased addons
+    const toPurchase = validAddons.filter(a => !existingAddonIds.has(a.id));
+
+    if (toPurchase.length === 0) {
+      this.logger.warn(`[WARNING] User already has all requested add-ons`);
+      return [];
+    }
+
+    // [Addon] Batch create user addons
+    const purchasedAt = new Date();
+    const userAddons = toPurchase.map(addon => {
       let expiresAt: Date | null = null;
       let nextBillingDate: Date | null = null;
 
@@ -130,7 +225,6 @@ export class AddonService {
         nextBillingDate = new Date(expiresAt);
       }
 
-      // Create purchase record
       const userAddon = new UserAddon();
       userAddon.subscriptionId = subscriptionId;
       userAddon.addonId = addon.id;
@@ -141,113 +235,159 @@ export class AddonService {
       userAddon.expiresAt = expiresAt;
       userAddon.nextBillingDate = nextBillingDate;
 
-      const savedAddon = await this.userAddonRepo.save(userAddon);
+      return userAddon;
+    });
 
-      purchases.push(savedAddon);
+    // [Addon] Batch save
+    const savedAddons = await this.userAddonRepo.save(userAddons);
 
-      this.logger.log(`✅ Purchased add-on: ${addon.name} for ${addon.price} VND`);
-    }
+    this.logger.log(`[Addon] Purchased ${savedAddons.length} add-ons`);
 
-    // Emit event for billing
-    if (purchases.length > 0) {
-      this.kafka.emit(EventTopics.ADDON_PURCHASED, {
-        eventId: crypto.randomUUID(),
-        eventType: EventTopics.ADDON_PURCHASED,
-        timestamp: new Date(),
-        source: 'subscription-svc',
-        data: {
-          subscriptionId,
-          customerId,
-          addons: purchases.map(p => ({
-            userAddonId: p.id,
-            addonId: p.addonId,
-            price: p.price,
-            purchasedAt: p.purchasedAt,
-            nextBillingDate: p.nextBillingDate,
-          })),
-        },
-      });
+    // [Addon] Async Kafka emit (non-blocking)
+    setImmediate(() => {
+      try {
+        this.kafka.emit(EventTopics.ADDON_PURCHASED, {
+          eventId: crypto.randomUUID(),
+          eventType: EventTopics.ADDON_PURCHASED,
+          timestamp: new Date(),
+          source: 'subscription-svc',
+          data: {
+            subscriptionId,
+            customerId,
+            addons: savedAddons.map(p => ({
+              userAddonId: p.id,
+              addonId: p.addonId,
+              price: p.price,
+              purchasedAt: p.purchasedAt,
+              nextBillingDate: p.nextBillingDate,
+            })),
+          },
+        });
+        this.logger.log(`[Addon] Emitted ADDON_PURCHASED event (async)`);
+      } catch (error) {
+        this.logger.error(`Failed to emit ADDON_PURCHASED: ${error.message}`);
+      }
+    });
 
-      this.logger.log(`📤 Emitted ADDON_PURCHASED event`);
-    }
-
-    return purchases;
+    return savedAddons;
   }
 
   /**
-   * Get user's active add-ons
+   * Get user's active add-ons with pagination
    */
-  async getUserAddons(subscriptionId: number): Promise<UserAddon[]> {
-    return this.userAddonRepo.find({
+  async getUserAddons(
+    subscriptionId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ userAddons: UserAddon[]; total: number; page: number; limit: number; totalPages: number }> {
+    const skip = (page - 1) * limit;
+    const take = Math.min(limit, 100);
+
+    const [userAddons, total] = await this.userAddonRepo.findAndCount({
       where: {
         subscriptionId,
         status: 'active',
       },
       order: { purchasedAt: 'DESC' },
+      skip,
+      take,
+      select: ['id', 'subscriptionId', 'addonId', 'customerId', 'price', 'status', 'purchasedAt', 'expiresAt', 'nextBillingDate'],
     });
+
+    return {
+      userAddons,
+      total,
+      page,
+      limit: take,
+      totalPages: Math.ceil(total / take),
+    };
   }
 
   /**
    * Cancel add-on
    */
-  async cancelAddon(userAddonId: number): Promise<UserAddon> {
+  async cancelAddon(userAddonId: string): Promise<UserAddon> {
     const userAddon = await this.userAddonRepo.findOne({
       where: { id: userAddonId },
+      select: ['id', 'subscriptionId', 'addonId', 'customerId', 'price', 'status', 'purchasedAt', 'expiresAt', 'nextBillingDate', 'cancelledAt'],
     });
 
     if (!userAddon) {
       throw new NotFoundException(`User add-on ${userAddonId} not found`);
     }
 
-    userAddon.status = 'cancelled';
-    await this.userAddonRepo.save(userAddon);
+    // Already cancelled - return as is
+    if (userAddon.status === 'cancelled') {
+      return userAddon;
+    }
 
-    this.logger.log(`❌ Cancelled add-on ${userAddonId}`);
+    // [Addon] Use update instead of save for better performance
+    await this.userAddonRepo.update(userAddonId, {
+      status: 'cancelled',
+      cancelledAt: new Date(),
+    });
+
+    userAddon.status = 'cancelled';
+    userAddon.cancelledAt = new Date();
+
+    this.logger.log(`[ERROR] Cancelled add-on ${userAddonId}`);
 
     return userAddon;
   }
 
   /**
-   * Renew recurring add-ons (called by cron job)
+   * Renew recurring add-ons (Optimized - called by cron job)
    */
   async renewRecurringAddons(): Promise<void> {
     const now = new Date();
 
-    const expiredAddons = await this.userAddonRepo.find({
-      where: {
-        status: 'active',
-      },
-    });
+    // [Addon] Use query builder for efficient filtering
+    const toRenew = await this.userAddonRepo
+      .createQueryBuilder('ua')
+      .where('ua.status = :status', { status: 'active' })
+      .andWhere('ua.next_billing_date <= :now', { now })
+      .select(['ua.id', 'ua.subscriptionId', 'ua.customerId', 'ua.addonId', 'ua.price', 'ua.nextBillingDate'])
+      .getMany();
 
-    const toRenew = expiredAddons.filter(
-      a => a.nextBillingDate && a.nextBillingDate <= now,
-    );
+    if (toRenew.length === 0) {
+      return;
+    }
 
-    this.logger.log(`🔄 Renewing ${toRenew.length} add-ons`);
+    this.logger.log(`[Addon] Renewing ${toRenew.length} add-ons`);
+
+    // [Addon] Batch emit and update
+    const updates: Promise<any>[] = [];
 
     for (const userAddon of toRenew) {
-      // Emit billing event
-      this.kafka.emit(EventTopics.ADDON_RENEWED, {
-        eventId: crypto.randomUUID(),
-        eventType: EventTopics.ADDON_RENEWED,
-        timestamp: new Date(),
-        source: 'subscription-svc',
-        data: {
-          userAddonId: userAddon.id,
-          subscriptionId: userAddon.subscriptionId,
-          customerId: userAddon.customerId,
-          addonId: userAddon.addonId,
-          price: userAddon.price,
-        },
+      // Async emit
+      setImmediate(() => {
+        this.kafka.emit(EventTopics.ADDON_RENEWED, {
+          eventId: crypto.randomUUID(),
+          eventType: EventTopics.ADDON_RENEWED,
+          timestamp: new Date(),
+          source: 'subscription-svc',
+          data: {
+            userAddonId: userAddon.id,
+            subscriptionId: userAddon.subscriptionId,
+            customerId: userAddon.customerId,
+            addonId: userAddon.addonId,
+            price: userAddon.price,
+          },
+        });
       });
 
-      // Update next billing date
+      // Calculate next billing date
       if (userAddon.nextBillingDate) {
         const nextBillingDate = new Date(userAddon.nextBillingDate);
         nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-        userAddon.nextBillingDate = nextBillingDate;
-        await this.userAddonRepo.save(userAddon);
+        
+        updates.push(
+          this.userAddonRepo.update(userAddon.id, { nextBillingDate })
+        );
       }
     }
+
+    // [Addon] Batch execute updates
+    await Promise.all(updates);
   }
 }

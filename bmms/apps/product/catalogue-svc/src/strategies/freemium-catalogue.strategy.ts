@@ -35,7 +35,7 @@ export class FreemiumCatalogueStrategy implements ICatalogueStrategy {
   }
 
   async getDisplayItems(params: CatalogueQueryParams): Promise<CatalogueDisplayResult> {
-    this.logger.log(`💎 Getting FREEMIUM catalogue items`);
+    this.logger.log(`[Catalogue] Getting FREEMIUM catalogue items`);
 
     // Get free plan (price = 0)
     const freePlanQuery = this.planRepo.createQueryBuilder('plan')
@@ -57,7 +57,7 @@ export class FreemiumCatalogueStrategy implements ICatalogueStrategy {
     // Combine free plans + addons
     const items = [...freePlans, ...addons];
 
-    this.logger.log(`✅ Found ${freePlans.length} free plans + ${addons.length} add-ons`);
+    this.logger.log(`[Catalogue] Found ${freePlans.length} free plans + ${addons.length} add-ons`);
 
     return {
       items,

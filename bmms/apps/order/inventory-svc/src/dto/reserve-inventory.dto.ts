@@ -1,7 +1,7 @@
 export class ReserveInventoryDto {
-  productId: number;
+  productId: string;
   quantity: number;
-  orderId: number;      // Order ID mà đang reserve
-  customerId: number;
+  orderId: string;      // Order ID mà đang reserve
+  customerId: string;
   reservationExpiry?: Date; // Khi nào hết hạn reservation
 }

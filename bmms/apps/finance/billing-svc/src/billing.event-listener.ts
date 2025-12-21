@@ -7,16 +7,16 @@ import { BillingService } from './billing-svc.service';
 import * as event from '@bmms/event';
 
 interface IOrderGrpcService {
-  getOrderById(data: { id: number }): any;
+  getOrderById(data: { id: string }): any;
 }
 
 @Controller()
 export class BillingEventListener implements OnModuleInit {
   // Track reserved items by orderId for aggregation
-  private orderReservations: Map<number, Array<{
-    productId: number;
+  private orderReservations: Map<string, Array<{
+    productId: string;
     quantity: number;
-    reservationId: number;
+    reservationId: string;
   }>> = new Map();
 
   private orderService: IOrderGrpcService;
@@ -36,12 +36,12 @@ export class BillingEventListener implements OnModuleInit {
   @EventPattern(event.EventTopics.INVENTORY_RESERVED)
   async handleInventoryReserved(@Payload() event: event.InventoryReservedEvent) {
     try {
-      console.log('📥 [billing-group] Received INVENTORY_RESERVED event');
+      console.log('[BillingEvent] Received INVENTORY_RESERVED event');
       this.logEvent(event);
 
       const { reservationId, productId, quantity, orderId, customerId } = event.data;
 
-      console.log(`📦 Inventory reserved:`);
+      console.log(`[BillingEvent] Inventory reserved:`);
       console.log(`   Order ID: ${orderId}`);
       console.log(`   Product ID: ${productId}`);
       console.log(`   Quantity: ${quantity}`);
@@ -58,7 +58,7 @@ export class BillingEventListener implements OnModuleInit {
         reservationId,
       });
 
-      console.log(`📊 Current reservations for order ${orderId}: ${this.orderReservations.get(orderId)!.length} items`);
+      console.log(`[BillingEvent] Current reservations for order ${orderId}: ${this.orderReservations.get(orderId)!.length} items`);
 
       // Note: We need to check if all items for this order are reserved
       // This requires knowing the expected item count from the original order
@@ -75,23 +75,23 @@ export class BillingEventListener implements OnModuleInit {
       }, 2000);
 
     } catch (error) {
-      console.error('❌ Error handling INVENTORY_RESERVED:', error);
+      console.error('[BillingEvent] Error handling INVENTORY_RESERVED:', error);
     }
   }
 
   /**
    * Try to create invoice if all reservations for order are ready
    */
-  private async tryCreateInvoiceForOrder(orderId: number, customerId: number) {
+  private async tryCreateInvoiceForOrder(orderId: string, customerId: string) {
     try {
       const reservations = this.orderReservations.get(orderId);
       
       if (!reservations || reservations.length === 0) {
-        console.log(`⚠️ No reservations found for order ${orderId}`);
+        console.log(`[BillingEvent] No reservations found for order ${orderId}`);
         return;
       }
 
-      console.log(`💰 Creating invoice for order ${orderId} with ${reservations.length} items`);
+      console.log(`[BillingEvent] Creating invoice for order ${orderId} with ${reservations.length} items`);
 
       // Fetch order details from Order Service via gRPC
       let orderDetails: any;
@@ -100,14 +100,14 @@ export class BillingEventListener implements OnModuleInit {
           this.orderService.getOrderById({ id: orderId })
         );
         orderDetails = response.order;
-        console.log(`✅ Fetched order details for order ${orderId}:`, {
+        console.log(`[BillingEvent] Fetched order details for order ${orderId}:`, {
           orderNumber: orderDetails.orderNumber,
           customerId: orderDetails.customerId,
           totalAmount: orderDetails.totalAmount,
           itemCount: orderDetails.items?.length || 0,
         });
       } catch (error) {
-        console.error(`❌ Failed to fetch order ${orderId} from Order Service:`, error.message);
+        console.error(`[BillingEvent] Failed to fetch order ${orderId} from Order Service:`, error.message);
         // Fallback to basic invoice creation
         orderDetails = {
           orderNumber: `ORD-${Date.now()}-${orderId}`,
@@ -156,7 +156,7 @@ export class BillingEventListener implements OnModuleInit {
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       });
 
-      console.log(`✅ Invoice created for order ${orderId}:`, {
+      console.log(`[BillingEvent] Invoice created for order ${orderId}:`, {
         invoiceNumber: invoice.invoiceNumber,
         totalAmount: invoice.totalAmount,
         itemCount: items.length,
@@ -169,7 +169,7 @@ export class BillingEventListener implements OnModuleInit {
       // Payment service will listen to that event
 
     } catch (error) {
-      console.error(`❌ Error creating invoice for order ${orderId}:`, error);
+      console.error(`[BillingEvent] Error creating invoice for order ${orderId}:`, error);
     }
   }
 
@@ -187,30 +187,30 @@ export class BillingEventListener implements OnModuleInit {
   @EventPattern(event.EventTopics.ORDER_UPDATED)
   async handleOrderUpdated(@Payload() event: event.OrderUpdatedEvent) {
     try {
-      console.log('🔥 [billing-group] Received ORDER_UPDATED event');
+      console.log('[BillingEvent] Received ORDER_UPDATED event');
       this.logEvent(event);
       
       const { orderId, orderNumber, customerId, previousStatus, newStatus, updatedAt } = event.data;
 
-      console.log(`📝 Order ${orderNumber} updated:`);
+      console.log(`[BillingEvent] Order ${orderNumber} updated:`);
       console.log(`   Customer: ${customerId}`);
       console.log(`   Status: ${previousStatus} → ${newStatus}`);
       console.log(`   Updated at: ${updatedAt}`);
 
       // Nếu order bị cancelled, có thể cần void invoice
       if (newStatus === 'cancelled') {
-        console.log(`⚠️ Order ${orderNumber} cancelled - considering invoice void`);
+        console.log(`[BillingEvent] Order ${orderNumber} cancelled - considering invoice void`);
         // await this.billingService.voidInvoiceByOrderId(orderId);
       }
 
       // Nếu order completed, có thể trigger reminder
       if (newStatus === 'completed') {
-        console.log(`✅ Order ${orderNumber} completed - checking invoice payment status`);
+        console.log(`[BillingEvent] Order ${orderNumber} completed - checking invoice payment status`);
         // await this.billingService.sendPaymentReminderIfUnpaid(orderId);
       }
 
     } catch (error) {
-      console.error('❌ Error handling ORDER_UPDATED:', error);
+      console.error('[BillingEvent] Error handling ORDER_UPDATED:', error);
     }
   }
   /** -------- Payment Events -------- */
@@ -221,7 +221,7 @@ export class BillingEventListener implements OnModuleInit {
       this.logEvent(event);
       const { invoiceId, paymentId, amount, transactionId, customerId, orderId } = event.data;
 
-      console.log(`💳 Payment successful for invoice ${invoiceId}`);
+      console.log(`[BillingEvent] Payment successful for invoice ${invoiceId}`);
       console.log(`   Payment ID: ${paymentId}`);
       console.log(`   Order ID: ${orderId || 'N/A'}`);
       console.log(`   Amount: ${amount}`);
@@ -229,20 +229,20 @@ export class BillingEventListener implements OnModuleInit {
 
       // 1. Update invoice status to 'paid'
       await this.billingService.updateInvoiceStatus(invoiceId, 'paid');
-      console.log(`✅ Invoice ${invoiceId} marked as PAID`);
+      console.log(`[BillingEvent] Invoice ${invoiceId} marked as PAID`);
 
       // 2. If there's an orderId, emit ORDER_COMPLETED event for inventory to deduct stock
       if (orderId) {
         await this.billingService.emitOrderCompleted(orderId, invoiceId);
-        console.log(`✅ ORDER_COMPLETED event emitted for order ${orderId}`);
+        console.log(`[BillingEvent] ORDER_COMPLETED event emitted for order ${orderId}`);
       }
 
       // TODO: Send payment receipt to customer
       // await this.notificationService.sendPaymentReceipt(customerId, invoiceId, amount, transactionId);
 
-      console.log(`✅ Payment receipt sent for invoice ${invoiceId}`);
+      console.log(`[BillingEvent] Payment receipt sent for invoice ${invoiceId}`);
     } catch (error) {
-      console.error('❌ Error handling PAYMENT_SUCCESS:', error);
+      console.error('[BillingEvent] Error handling PAYMENT_SUCCESS:', error);
     }
   }
 
@@ -255,9 +255,9 @@ export class BillingEventListener implements OnModuleInit {
       // Send payment failure notification
       // await this.notificationService.sendPaymentFailureNotice(orderId, reason);
 
-      console.log(`❌ Payment failure notice sent for order ${orderId}`);
+      console.log(`[BillingEvent] Payment failure notice sent for order ${orderId}`);
     } catch (error) {
-      console.error('❌ Error handling PAYMENT_FAILED:', error);
+      console.error('[BillingEvent] Error handling PAYMENT_FAILED:', error);
     }
   }
 
@@ -270,9 +270,9 @@ export class BillingEventListener implements OnModuleInit {
       // Send overdue payment reminder
       // await this.notificationService.sendOverdueReminder(customerId, invoiceNumber, dueAmount);
 
-      console.log(`⚠️ Overdue reminder sent for invoice ${invoiceNumber}`);
+      console.log(`[BillingEvent] Overdue reminder sent for invoice ${invoiceNumber}`);
     } catch (error) {
-      console.error('❌ Error handling INVOICE_OVERDUE:', error);
+      console.error('[BillingEvent] Error handling INVOICE_OVERDUE:', error);
     }
   }
 
@@ -281,7 +281,7 @@ export class BillingEventListener implements OnModuleInit {
   @EventPattern(event.EventTopics.SUBSCRIPTION_CREATED)
   async handleSubscriptionCreated(@Payload() event: event.SubscriptionCreatedEvent) {
     try {
-      console.log('📥 [billing-group] Received SUBSCRIPTION_CREATED event');
+      console.log('[BillingEvent] Received SUBSCRIPTION_CREATED event');
       this.logEvent(event);
 
       const { 
@@ -294,7 +294,7 @@ export class BillingEventListener implements OnModuleInit {
         status 
       } = event.data;
 
-      console.log(`📋 Subscription Details:`);
+      console.log(`[BillingEvent] Subscription Details:`);
       console.log(`   Subscription ID: ${subscriptionId}`);
       console.log(`   Customer ID: ${customerId}`);
       console.log(`   Plan: ${planName}`);
@@ -317,19 +317,19 @@ export class BillingEventListener implements OnModuleInit {
           dueDate,
         });
 
-        console.log(`✅ Recurring invoice created for subscription ${subscriptionId}`);
+        console.log(`[BillingEvent] Recurring invoice created for subscription ${subscriptionId}`);
       } else {
-        console.log(`ℹ️ Subscription ${subscriptionId} is on trial, invoice will be created after trial`);
+        console.log(`[INFO] Subscription ${subscriptionId} is on trial, invoice will be created after trial`);
       }
     } catch (error) {
-      console.error('❌ Error handling SUBSCRIPTION_CREATED:', error);
+      console.error('[BillingEvent] Error handling SUBSCRIPTION_CREATED:', error);
     }
   }
 
   @EventPattern(event.EventTopics.SUBSCRIPTION_RENEWED)
   async handleSubscriptionRenewed(@Payload() event: event.SubscriptionRenewedEvent) {
     try {
-      console.log('📥 [billing-group] Received SUBSCRIPTION_RENEWED event');
+      console.log('[BillingEvent] Received SUBSCRIPTION_RENEWED event');
       this.logEvent(event);
 
       const { 
@@ -341,7 +341,7 @@ export class BillingEventListener implements OnModuleInit {
         amount 
       } = event.data;
 
-      console.log(`🔄 Subscription ${subscriptionId} renewed`);
+      console.log(`[BillingEvent] Subscription ${subscriptionId} renewed`);
 
       // Get plan name (you might want to call catalogue service here)
       const planName = `Plan #${planId}`;
@@ -360,30 +360,30 @@ export class BillingEventListener implements OnModuleInit {
         dueDate,
       });
 
-      console.log(`✅ Renewal invoice created for subscription ${subscriptionId}`);
+      console.log(`[BillingEvent] Renewal invoice created for subscription ${subscriptionId}`);
     } catch (error) {
-      console.error('❌ Error handling SUBSCRIPTION_RENEWED:', error);
+      console.error('[BillingEvent] Error handling SUBSCRIPTION_RENEWED:', error);
     }
   }
 
   @EventPattern(event.EventTopics.SUBSCRIPTION_TRIAL_ENDED)
   async handleSubscriptionTrialEnded(@Payload() event: event.SubscriptionTrialEndedEvent) {
     try {
-      console.log('📥 [billing-group] Received SUBSCRIPTION_TRIAL_ENDED event');
+      console.log('[BillingEvent] Received SUBSCRIPTION_TRIAL_ENDED event');
       this.logEvent(event);
 
       const { subscriptionId, customerId, planId, convertedToActive } = event.data;
 
       if (convertedToActive) {
-        console.log(`🎁 Trial ended for subscription ${subscriptionId}, creating first invoice`);
+        console.log(`[BillingEvent] Trial ended for subscription ${subscriptionId}, creating first invoice`);
         
         // TODO: Fetch subscription details to create invoice
         // You might want to call subscription service here to get current period details
         
-        console.log(`✅ First invoice will be created for subscription ${subscriptionId}`);
+        console.log(`[BillingEvent] First invoice will be created for subscription ${subscriptionId}`);
       }
     } catch (error) {
-      console.error('❌ Error handling SUBSCRIPTION_TRIAL_ENDED:', error);
+      console.error('[BillingEvent] Error handling SUBSCRIPTION_TRIAL_ENDED:', error);
     }
   }
 
@@ -394,7 +394,7 @@ export class BillingEventListener implements OnModuleInit {
       : event.timestamp.toISOString();
 
     console.log(
-      `🔥 [BILLING] Received event [${event.eventType}] at ${timestamp}`,
+      `[BillingEvent] Received event [${event.eventType}] at ${timestamp}`,
     );
   }
 }
