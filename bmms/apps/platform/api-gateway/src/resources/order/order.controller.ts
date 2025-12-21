@@ -27,7 +27,7 @@ export class OrderController {
 
   @Post()
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create new order' })
   @ApiResponse({ status: 201, description: 'Order created successfully', type: OrderResponseDto })
   async createOrder(
@@ -43,7 +43,7 @@ export class OrderController {
 
   @Get('my')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get current user orders' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -59,7 +59,7 @@ export class OrderController {
 
   @Get('my/:id')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get specific order for current user' })
   @ApiResponse({ status: 200, description: 'Order found', type: OrderResponseDto })
   @ApiResponse({ status: 403, description: 'Order does not belong to user' })
@@ -82,7 +82,7 @@ export class OrderController {
 
   @Get()
   @UseGuards(JwtGuard, AdminGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get all orders (Admin only)' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -98,7 +98,7 @@ export class OrderController {
 
   @Get(':id')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get order by ID' })
   @ApiResponse({ status: 200, description: 'Order found', type: OrderResponseDto })
   @ApiResponse({ status: 403, description: 'Order does not belong to user' })
@@ -119,7 +119,7 @@ export class OrderController {
 
   @Get('customer/:customerId')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get orders by customer ID' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -140,7 +140,7 @@ export class OrderController {
 
   @Patch(':id/status')
   @UseGuards(JwtGuard, AdminGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Update order status (Admin only)' })
   @ApiResponse({ status: 200, description: 'Order status updated', type: OrderResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid status transition' })
@@ -153,7 +153,7 @@ export class OrderController {
 
   @Delete(':id')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Cancel order' })
   @ApiResponse({ status: 200, description: 'Order cancelled', type: OrderResponseDto })
   @ApiResponse({ status: 400, description: 'Cannot cancel order' })
@@ -173,7 +173,7 @@ export class OrderController {
 
   @Post(':id/items')
   @UseGuards(JwtGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Add item to order' })
   @ApiResponse({ status: 200, description: 'Item added to order', type: OrderResponseDto })
   @ApiResponse({ status: 400, description: 'Cannot add item to order' })

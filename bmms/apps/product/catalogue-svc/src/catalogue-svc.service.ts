@@ -18,6 +18,10 @@ import { Feature, Plan, Product } from './catalogue.entity';
 import { CatalogueStrategyService } from './strategies/catalogue-strategy.service';
 import { CatalogueQueryParams, CatalogueDisplayResult } from './strategies/catalogue-strategy.interface';
 
+// Import event utilities
+import { createBaseEvent, ProductCreatedEvent, EventTopics } from '@bmms/event';
+import { debug } from '@bmms/common';
+
 
 @Injectable()
 export class CatalogueSvcService {
@@ -43,14 +47,23 @@ export class CatalogueSvcService {
   async createProduct(dto: CreateProductDto): Promise<Product> {
     const product = await this.productRepo.save(this.productRepo.create(dto));
 
-    this.kafka.emit('product.created', {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      sku: product.sku,
-      ownerId: product.ownerId,
-      createdAt: product.createdAt,
-    });
+    // Emit product.created event with proper event structure
+    const productCreatedEvent: ProductCreatedEvent = {
+      ...createBaseEvent(EventTopics.PRODUCT_CREATED, 'catalogue-svc'),
+      eventType: 'product.created',
+      data: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        sku: product.sku,
+        category: product.category || 'Uncategorized',
+        ownerId: product.ownerId, // Include ownerId so inventory can be created for the correct owner
+        createdAt: product.createdAt,
+      },
+    };
+
+    debug.log('[Catalogue] Emitting product.created event:', productCreatedEvent);
+    this.kafka.emit(EventTopics.PRODUCT_CREATED, productCreatedEvent);
 
     return product;
   }

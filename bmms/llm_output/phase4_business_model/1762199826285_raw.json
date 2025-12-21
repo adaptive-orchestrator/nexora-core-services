@@ -1,0 +1,20 @@
+{
+  "proposal_text": "Để chuyển đổi sản phẩm Premium Plan từ mô hình bán lẻ sang mô hình đăng ký theo tháng với giá 199.000 VNĐ, hệ thống sẽ cần kích hoạt hoặc cập nhật các dịch vụ quản lý đăng ký (SubscriptionService), khuyến mãi (PromotionService), và cấu hình lại dịch vụ thanh toán (BillingService) để hỗ trợ hình thức thanh toán định kỳ. Thông tin sản phẩm trong CatalogueService cũng cần được cập nhật.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "subscription_price", "value": 199000},
+      {"key": "subscription_frequency", "value": "monthly"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.98,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription",
+    "billing_mode": "RECURRING"
+  }
+}

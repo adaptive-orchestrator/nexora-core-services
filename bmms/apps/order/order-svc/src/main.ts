@@ -4,6 +4,7 @@ import { OrderSvcModule } from './order-svc.module';
 import { ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { GrpcExceptionFilter } from './filters/grpc-exception.filter';
 
 async function bootstrap() {
   const grpcUrl = process.env.GRPC_LISTEN_ORDER_URL || '0.0.0.0:50057';
@@ -44,6 +45,7 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalFilters(new GrpcExceptionFilter());
 
   // Start only microservices (no HTTP server)
   await app.startAllMicroservices();

@@ -59,6 +59,9 @@ message DeleteCustomerResponse {
 message CreateCustomerInternalRequest {
   string name = 1;
   string email = 2;
+  optional string userId = 3;
+  optional string phone = 4;
+  optional string address = 5;
 }
 
 message CustomerResponse {

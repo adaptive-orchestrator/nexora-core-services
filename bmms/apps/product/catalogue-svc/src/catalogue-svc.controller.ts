@@ -10,8 +10,13 @@ export class CatalogueSvcController {
   // Products
   @GrpcMethod('CatalogueService', 'CreateProduct')
   async createProduct(data: any) {
-    const product = await this.service.createProduct(data);
-    return { product };
+    try {
+      const product = await this.service.createProduct(data);
+      return { product };
+    } catch (error) {
+      debug.error('[CatalogueController] Error creating product:', error.message);
+      throw error;
+    }
   }
 
   @GrpcMethod('CatalogueService', 'GetAllProducts')
@@ -41,9 +46,14 @@ export class CatalogueSvcController {
 
   @GrpcMethod('CatalogueService', 'UpdateProduct')
   async updateProduct(data: any) {
-    const { id, ...updateData } = data;
-    const product = await this.service.updateProduct(id, updateData);
-    return { product, message: 'Product updated successfully' };
+    try {
+      const { id, ...updateData } = data;
+      const product = await this.service.updateProduct(id, updateData);
+      return { product, message: 'Product updated successfully' };
+    } catch (error) {
+      debug.error(`[CatalogueController] Error updating product ${data.id}:`, error.message);
+      throw error;
+    }
   }
 
   // Plans
@@ -61,8 +71,13 @@ export class CatalogueSvcController {
 
   @GrpcMethod('CatalogueService', 'GetPlanById')
   async getPlanById(data: { id: string }) {
-    const plan = await this.service.findPlanById(data.id);
-    return { plan, message: 'Plan found' };
+    try {
+      const plan = await this.service.findPlanById(data.id);
+      return { plan, message: 'Plan found' };
+    } catch (error) {
+      debug.error(`[CatalogueController] Error getting plan ${data.id}:`, error.message);
+      throw error;
+    }
   }
 
   // Features

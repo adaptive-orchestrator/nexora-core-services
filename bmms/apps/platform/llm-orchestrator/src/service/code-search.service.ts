@@ -57,16 +57,22 @@ export class CodeSearchService {
    */
   async searchRelevantCode(query: string, limit = 3): Promise<CodeSearchResult[]> {
     if (!this.enabled) {
+      this.logger.warn(`[CODE-SEARCH] ❌ DISABLED - USE_RAG is false`);
       return [];
     }
 
     try {
-      this.logger.log(`[LLM] Searching code for: "${query.substring(0, 50)}..."`);
+      this.logger.log(`[CODE-SEARCH] 🔍 Searching code for: "${query.substring(0, 80)}..."`);
+      this.logger.log(`[CODE-SEARCH] Qdrant: ${this.qdrantUrl}, Collection: ${this.collectionName}`);
 
       // 1. Generate embedding cho query
+      this.logger.log(`[CODE-SEARCH] Step 1: Generating embedding...`);
       const queryVector = await this.generateQueryEmbedding(query);
+      this.logger.log(`[CODE-SEARCH] ✅ Embedding generated (${queryVector.length} dimensions)`);
 
       // 2. Search trong Qdrant
+      const scoreThreshold = 0.3; // Giảm xuống 0.3 để tìm được nhiều kết quả hơn
+      this.logger.log(`[CODE-SEARCH] Step 2: Querying Qdrant (limit: ${limit}, threshold: ${scoreThreshold})...`);
       const response = await fetch(
         `${this.qdrantUrl}/collections/${this.collectionName}/points/search`,
         {
@@ -76,15 +82,18 @@ export class CodeSearchService {
             vector: queryVector,
             limit,
             with_payload: true,
-            score_threshold: 0.5, // Chỉ lấy results có score > 0.5
+            score_threshold: scoreThreshold,
           }),
         }
       );
 
       if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`[CODE-SEARCH] ❌ Qdrant failed: ${response.status} - ${errorText}`);
         throw new Error(`Qdrant search failed: ${response.status}`);
       }
 
+      this.logger.log(`[CODE-SEARCH] ✅ Qdrant responded successfully`);
       const data = await response.json();
 
       const results: CodeSearchResult[] = data.result.map((item: any) => ({
@@ -97,12 +106,15 @@ export class CodeSearchService {
         end_line: item.payload.end_line,
       }));
 
-      this.logger.log(`[LLM] Found ${results.length} relevant code chunks`);
+      this.logger.log(`[CODE-SEARCH] 📊 Found ${results.length} relevant code chunks (total results: ${data.result?.length || 0})`);
 
       if (results.length > 0) {
+        this.logger.log(`[CODE-SEARCH] 📝 Results:`);
         results.forEach((r, i) => {
-          this.logger.log(`   [${i + 1}] ${r.file_path}:${r.start_line} (score: ${r.score.toFixed(3)})`);
+          this.logger.log(`   ✅ [${i + 1}] ${r.file_path}:${r.start_line}-${r.end_line} | ${r.chunk_type} | Score: ${r.score.toFixed(3)}`);
         });
+      } else {
+        this.logger.warn(`[CODE-SEARCH] ⚠️  No results above threshold ${scoreThreshold}`);
       }
 
       return results;

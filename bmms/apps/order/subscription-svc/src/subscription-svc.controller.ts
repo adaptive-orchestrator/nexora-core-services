@@ -382,4 +382,147 @@ export class subscriptionSvcController {
       throw error;
     }
   }
+
+  // =================== STRIPE INTEGRATION GRPC HANDLERS ===================
+
+  @GrpcMethod('SubscriptionService', 'CheckSubscriptionStatus')
+  async checkSubscriptionStatus(data: { customerId: string }) {
+    try {
+      debug.log(`[SubscriptionController] Checking subscription status for ${data.customerId}...`);
+      const result = await this.subscriptionSvcService.checkSubscriptionStatus(data.customerId);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC CheckSubscriptionStatus] Error:', error);
+      throw error;
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'GetPlanLimits')
+  async getPlanLimits(data: { customerId: string; planId?: string }) {
+    try {
+      debug.log(`[SubscriptionController] Getting plan limits for ${data.customerId}...`);
+      const result = await this.subscriptionSvcService.getPlanLimits(data.customerId, data.planId);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC GetPlanLimits] Error:', error);
+      throw error;
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'GetActiveSubscription')
+  async getActiveSubscription(data: { customerId: string }) {
+    try {
+      debug.log(`[SubscriptionController] Getting active subscription for ${data.customerId}...`);
+      const subscription = await this.subscriptionSvcService.getActiveSubscription(data.customerId);
+      
+      if (!subscription) {
+        return { subscription: null, message: 'No active subscription found' };
+      }
+
+      return {
+        subscription: {
+          id: subscription.id,
+          customerId: subscription.customerId,
+          planId: subscription.planId,
+          planName: subscription.planName,
+          amount: subscription.amount,
+          billingCycle: subscription.billingCycle,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart?.toISOString(),
+          currentPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
+          isTrialUsed: subscription.isTrialUsed,
+          trialStart: subscription.trialStart?.toISOString() || '',
+          trialEnd: subscription.trialEnd?.toISOString() || '',
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          cancelledAt: subscription.cancelledAt?.toISOString() || '',
+          cancellationReason: subscription.cancellationReason || '',
+          createdAt: subscription.createdAt?.toISOString(),
+          updatedAt: subscription.updatedAt?.toISOString(),
+        },
+        message: 'Active subscription found',
+      };
+    } catch (error) {
+      debug.error('[gRPC GetActiveSubscription] Error:', error);
+      throw error;
+    }
+  }
+
+  // =================== WEBHOOK EVENT HANDLERS ===================
+  // These are called from payment-svc when Stripe webhooks are received
+
+  @GrpcMethod('SubscriptionService', 'HandlePaymentSucceeded')
+  async handlePaymentSucceeded(data: {
+    paymentId: string;
+    customerId: string;
+    orderId?: string;
+    amount: number;
+    stripePaymentIntentId?: string;
+    subscriptionId?: string;
+  }) {
+    try {
+      debug.log(`[SubscriptionController] Handling payment succeeded for ${data.customerId}...`);
+      const result = await this.subscriptionSvcService.handlePaymentSucceeded(data);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC HandlePaymentSucceeded] Error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'HandleSubscriptionUpdated')
+  async handleSubscriptionUpdated(data: {
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    status: string;
+    currentPeriodStart?: string;
+    currentPeriodEnd?: string;
+    cancelAtPeriodEnd: boolean;
+    canceledAt?: string;
+    metadata?: Record<string, string>;
+  }) {
+    try {
+      debug.log(`[SubscriptionController] Handling Stripe subscription updated: ${data.stripeSubscriptionId}...`);
+      const result = await this.subscriptionSvcService.handleStripeSubscriptionUpdated(data);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC HandleSubscriptionUpdated] Error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'HandleSubscriptionDeleted')
+  async handleSubscriptionDeleted(data: {
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    canceledAt?: string;
+    metadata?: Record<string, string>;
+  }) {
+    try {
+      debug.log(`[SubscriptionController] Handling Stripe subscription deleted: ${data.stripeSubscriptionId}...`);
+      const result = await this.subscriptionSvcService.handleStripeSubscriptionDeleted(data);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC HandleSubscriptionDeleted] Error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  @GrpcMethod('SubscriptionService', 'HandleInvoicePaid')
+  async handleInvoicePaid(data: {
+    stripeInvoiceId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    amountPaid: number;
+    currency: string;
+    paidAt: string;
+  }) {
+    try {
+      debug.log(`[SubscriptionController] Handling invoice paid: ${data.stripeInvoiceId}...`);
+      const result = await this.subscriptionSvcService.handleInvoicePaid(data);
+      return result;
+    } catch (error) {
+      debug.error('[gRPC HandleInvoicePaid] Error:', error);
+      return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
 }

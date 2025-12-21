@@ -4,13 +4,21 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as express from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(paymentSvcModule);
+  const app = await NestFactory.create(paymentSvcModule, {
+    // Enable raw body for Stripe webhook signature verification
+    rawBody: true,
+  });
   const configService = app.get(ConfigService);
 
   // Enable CORS for HTTP endpoints
   app.enableCors();
+
+  // IMPORTANT: Configure raw body parsing for Stripe webhook endpoint
+  // This must be before any JSON body parser middleware
+  app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
 
   // Connect Kafka microservice for events
   app.connectMicroservice<MicroserviceOptions>({

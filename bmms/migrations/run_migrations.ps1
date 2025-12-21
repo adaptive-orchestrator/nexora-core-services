@@ -21,6 +21,7 @@ $DatabaseConfig = @{
         Container = "bmms-customer-db"  # auth uses customer_db container
         Database = "customer_db"        # auth tables are in customer_db
         Migrations = @(
+            "auth/000_create_users_table.sql",
             "auth/001_add_business_model_and_seed_admin.sql"
         )
         Rollback = @()

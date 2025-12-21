@@ -48,7 +48,7 @@ export class DbModule {
               password,
               database,
               autoLoadEntities: true,
-              synchronize: false, // [FIX] Disabled to prevent index conflict with foreign keys
+              synchronize: true, // IMPORTANT: Enabled to allow automatic schema synchronization
               logging: false, // [DbModule] Disable logging for performance
               // [DbModule] Connection Pool Optimization for High Concurrency (1000 VUs)
               extra: {

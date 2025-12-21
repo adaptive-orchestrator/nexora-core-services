@@ -26,8 +26,13 @@ export class InventoryController {
 
   @GrpcMethod('InventoryService', 'GetInventoryByProduct')
   async getInventoryByProduct(data: { productId: string; ownerId?: string }) {
-    const inventory = await this.service.getByProduct(data.productId, data.ownerId);
-    return { inventory, message: 'Inventory retrieved' };
+    try {
+      const inventory = await this.service.getByProduct(data.productId, data.ownerId);
+      return { inventory, message: 'Inventory retrieved' };
+    } catch (error: any) {
+      console.error('[InventoryController] getInventoryByProduct error:', error.message);
+      throw error; // Let GrpcExceptionFilter handle it
+    }
   }
 
   @GrpcMethod('InventoryService', 'GetAllInventory')
@@ -48,30 +53,41 @@ export class InventoryController {
 
   @GrpcMethod('InventoryService', 'AdjustStock')
   async adjustStock(data: any) {
-    console.log('[InventoryController.adjustStock] Received data:', JSON.stringify(data, null, 2));
-    console.log('[InventoryController.adjustStock] ownerId:', data.ownerId);
-    const inventory = await this.service.adjust(
-      data.productId,
-      {
-        adjustment: data.quantity,
-        reason: data.reason || 'adjustment',
-        notes: data.notes || data.reason,
-      },
-      data.ownerId, // Pass ownerId to create inventory for correct owner
-    );
-    console.log('[InventoryController.adjustStock] Created inventory:', JSON.stringify(inventory, null, 2));
-    return { inventory, message: 'Stock adjusted successfully' };
+    try {
+      console.log('[InventoryController.adjustStock] Received data:', JSON.stringify(data, null, 2));
+      console.log('[InventoryController.adjustStock] ownerId:', data.ownerId);
+      const inventory = await this.service.adjust(
+        data.productId,
+        {
+          adjustment: data.quantity,
+          reason: data.reason || 'adjustment',
+          notes: data.notes || data.reason,
+        },
+        data.ownerId, // Pass ownerId to create inventory for correct owner
+      );
+      console.log('[InventoryController.adjustStock] Created inventory:', JSON.stringify(inventory, null, 2));
+      return { inventory, message: 'Stock adjusted successfully' };
+    } catch (error: any) {
+      console.error('[InventoryController] adjustStock error:', error.message);
+      throw error; // Let GrpcExceptionFilter handle it
+    }
   }
 
   @GrpcMethod('InventoryService', 'ReserveStock')
   async reserveStock(data: any) {
-    const reservation = await this.service.reserveStock(
-      data.productId,
-      data.quantity,
-      data.orderId,
-      data.customerId,
-    );
-    return { reservation, message: 'Stock reserved successfully' };
+    try {
+      const reservation = await this.service.reserveStock(
+        data.productId,
+        data.quantity,
+        data.orderId,
+        data.customerId,
+      );
+      return { reservation, message: 'Stock reserved successfully' };
+    } catch (error: any) {
+      // Re-throw with proper context for gRPC filter
+      console.error('[InventoryController] reserveStock error:', error.message);
+      throw error; // Let GrpcExceptionFilter handle it
+    }
   }
 
   @GrpcMethod('InventoryService', 'ReleaseStock')
@@ -126,5 +142,11 @@ export class InventoryController {
   async getLowStockItems(data: { threshold?: number }) {
     const items = await this.service.getLowStockItems();
     return { items, total: items.length };
+  }
+
+  @GrpcMethod('InventoryService', 'CleanupDuplicateInventory')
+  async cleanupDuplicateInventory() {
+    const result = await this.service.cleanupDuplicateInventory();
+    return result;
   }
 }

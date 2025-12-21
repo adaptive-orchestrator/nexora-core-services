@@ -16,6 +16,15 @@ import { ProjectService } from './project.service';
           url: process.env.PROJECT_SERVICE_URL || 'localhost:50062',
         },
       },
+      {
+        name: 'SUBSCRIPTION_PACKAGE',
+        transport: Transport.GRPC,
+        options: {
+          package: 'subscription',
+          protoPath: join(__dirname, '../../proto/subscription.proto'),
+          url: process.env.SUBSCRIPTION_SERVICE_URL || 'localhost:50059',
+        },
+      },
     ]),
   ],
   controllers: [ProjectController],

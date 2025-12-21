@@ -6,7 +6,7 @@ import { AdminStatsService } from './admin-stats.service';
 import { AdminDashboardStatsDto } from './dto/admin-stats.dto';
 
 @ApiTags('Admin Statistics')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 @UseGuards(JwtGuard, AdminGuard)
 @Controller('admin/stats')
 export class AdminStatsController {

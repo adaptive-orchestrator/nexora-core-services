@@ -1,0 +1,30 @@
+{
+  "proposal_text": "Chuyển đổi nhóm sản phẩm \"A\" sang mô hình đăng ký theo tháng.",
+  "changeset": {
+    "model": "product_group",
+    "features": [
+      {
+        "key": "product_group_name",
+        "value": "A"
+      },
+      {
+        "key": "billing_model",
+        "value": "subscription"
+      },
+      {
+        "key": "subscription_period",
+        "value": "monthly"
+      }
+    ],
+    "impacted_services": [
+      "ProductCatalogService",
+      "BillingService",
+      "SubscriptionService"
+    ]
+  },
+  "metadata": {
+    "intent": "update_product_group_billing_model",
+    "confidence": 0.9,
+    "risk": "medium"
+  }
+}

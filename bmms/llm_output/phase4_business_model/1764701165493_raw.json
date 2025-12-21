@@ -1,0 +1,20 @@
+{
+  "proposal_text": "Đề xuất chuyển đổi nhóm sản phẩm 'A' từ mô hình bán lẻ truyền thống (giả định) sang mô hình đăng ký theo tháng. Điều này yêu cầu kích hoạt và cấu hình các dịch vụ liên quan đến quản lý đăng ký, khuyến mãi, và chu trình thanh toán định kỳ. Các dịch vụ như SubscriptionService, PromotionService, BillingService, PaymentService, CatalogueService, AuthService, CustomerService, CRMOrchestratorService, và APIGatewayService sẽ bị ảnh hưởng hoặc cần được triển khai/cập nhật để hỗ trợ mô hình mới.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "product_group", "value": "A"},
+      {"key": "billing_cycle", "value": "monthly"},
+      {"key": "billing_service_mode", "value": "RECURRING"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService", "AuthService", "CustomerService", "CRMOrchestratorService", "APIGatewayService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.95,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
@@ -11,6 +12,7 @@ import {
   UseGuards,
   NotFoundException,
   InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { CustomerService } from './customer.service';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { CreateCustomerDto } from './dto/create-customer.dto';
 import { CustomerResponseDto, CustomersListResponseDto } from './dto/customer-response.dto';
 import { CustomerInsightsDto, SegmentCalculationDto } from './dto/customer-insights.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
@@ -58,6 +61,36 @@ export class CustomerController {
     @Query('segment') segment?: string,
   ) {
     return this.customerService.getAllCustomers(page, limit, segment);
+  }
+
+  @Post()
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
+  @ApiOperation({
+    summary: 'Create new customer',
+    description: 'Create a new customer profile with optional user ID association',
+  })
+  @ApiBody({ type: CreateCustomerDto })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Customer created successfully',
+    type: CustomerResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Customer with this email already exists',
+  })
+  async createCustomer(@Body() dto: CreateCustomerDto) {
+    try {
+      const result: any = await this.customerService.createCustomer(dto);
+      return result.customer;
+    } catch (error: any) {
+      // Handle duplicate email error
+      if (error?.code === 6 || error?.details?.includes('duplicate') || error?.details?.includes('already exists')) {
+        throw new ConflictException(`Customer with email ${dto.email} already exists`);
+      }
+      throw new InternalServerErrorException(error?.details || 'Failed to create customer');
+    }
   }
 
   // ============ Static routes MUST come before dynamic :id route ============
@@ -171,7 +204,7 @@ export class CustomerController {
 
   @UseGuards(JwtGuard)
   @Patch('me')
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({
     summary: 'Update current user profile',
     description: 'Update the profile of the currently authenticated user (name, email). Requires JWT authentication.',

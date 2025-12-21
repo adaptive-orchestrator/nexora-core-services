@@ -1,0 +1,48 @@
+{
+  "proposal_text": "Yêu cầu chuyển đổi sản phẩm Premium Plan từ mô hình Retail (bán lẻ) sang mô hình Subscription với chu kỳ thanh toán hàng tháng. Giá subscription là 199,000 VNĐ/tháng. Hệ thống cần:\n1. Deploy SubscriptionService để quản lý đăng ký\n2. Deploy PromotionService để xử lý khuyến mãi subscription\n3. Cập nhật BillingService để xử lý thanh toán định kỳ\n4. Cập nhật PaymentService để hỗ trợ recurring payment\n5. Ngừng hoặc scale down OrderService và InventoryService (không cần cho subscription)\n6. Cập nhật CatalogueService để hiển thị pricing subscription",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {
+        "key": "business_model",
+        "value": "subscription"
+      },
+      {
+        "key": "product_name",
+        "value": "Premium Plan"
+      },
+      {
+        "key": "billing_period",
+        "value": "monthly"
+      },
+      {
+        "key": "subscription_price",
+        "value": 199000
+      },
+      {
+        "key": "currency",
+        "value": "VND"
+      },
+      {
+        "key": "plan_name",
+        "value": "Plan 1"
+      }
+    ],
+    "impacted_services": [
+      "SubscriptionService",
+      "PromotionService",
+      "BillingService",
+      "PaymentService",
+      "CatalogueService"
+    ]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "from_model": "retail",
+    "to_model": "subscription",
+    "confidence": 0.95,
+    "risk": "high",
+    "requires_data_migration": true,
+    "estimated_downtime": "5 minutes"
+  }
+}

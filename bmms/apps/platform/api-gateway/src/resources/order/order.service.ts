@@ -36,7 +36,34 @@ export class OrderService implements OnModuleInit {
   }
 
   async createOrder(dto: CreateOrderDto) {
-    return firstValueFrom(this.orderService.createOrder(dto));
+    try {
+      return await firstValueFrom(this.orderService.createOrder(dto));
+    } catch (error: any) {
+      // Handle gRPC errors and convert to HTTP-friendly errors
+      const grpcCode = error?.code;
+      const details = error?.details || error?.message || 'Unknown error';
+      
+      // gRPC code 5 = NOT_FOUND
+      if (grpcCode === 5 || details.toLowerCase().includes('not found')) {
+        throw new (require('@nestjs/common').NotFoundException)(details);
+      }
+      
+      // gRPC code 3 = INVALID_ARGUMENT
+      if (grpcCode === 3 || details.toLowerCase().includes('invalid') || details.toLowerCase().includes('insufficient stock')) {
+        throw new (require('@nestjs/common').BadRequestException)(details);
+      }
+      
+      // gRPC code 6 = ALREADY_EXISTS
+      if (grpcCode === 6 || details.toLowerCase().includes('already exists')) {
+        throw new (require('@nestjs/common').ConflictException)(details);
+      }
+      
+      // Default: pass through as Internal Server Error with meaningful message
+      console.error('[OrderService] createOrder gRPC error:', error);
+      throw new (require('@nestjs/common').InternalServerErrorException)(
+        `Failed to create order: ${details}`
+      );
+    }
   }
 
   async getAllOrders(page: number = 1, limit: number = 10, customerId?: string) {

@@ -1,0 +1,33 @@
+{
+  "proposal_text": "Để hỗ trợ việc bán lẻ sản phẩm B, chúng ta cần đảm bảo mô hình kinh doanh bán lẻ (Retail Model) đã được thiết lập. Điều này bao gồm việc triển khai và cấu hình các dịch vụ chính như Dịch vụ Đặt hàng (OrderService), Dịch vụ Quản lý Kho hàng (InventoryService) cùng với các dịch vụ nền tảng khác để xử lý giao dịch một lần và quản lý sản phẩm. Chế độ thanh toán sẽ là 'ONETIME'.",
+  "changeset": {
+    "model": "RetailModel",
+    "features": [
+      {
+        "key": "business_model",
+        "value": "retail"
+      },
+      {
+        "key": "billing_mode",
+        "value": "ONETIME"
+      }
+    ],
+    "impacted_services": [
+      "AuthService",
+      "CustomerService",
+      "CRMOrchestratorService",
+      "APIGatewayService",
+      "CatalogueService",
+      "BillingService",
+      "PaymentService",
+      "OrderService",
+      "InventoryService"
+    ]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.95,
+    "risk": "low",
+    "to_model": "retail"
+  }
+}
