@@ -32,21 +32,29 @@ export class InventoryEventListener {
         return;
       }
 
-      const { id: productId, name } = eventData;
+      const { id: productId, name, ownerId } = eventData;
 
-      debug.log(`📦 [INVENTORY] Processing PRODUCT_CREATED for product: ${name} (ID: ${productId})`);
+      debug.log(`📦 [INVENTORY] Processing PRODUCT_CREATED for product: ${name} (ID: ${productId}, Owner: ${ownerId || 'none'})`);
 
-      // Create initial inventory record (with duplicate check)
-      const inventory = await this.inventoryService.createInventoryForProduct(productId, 0, 10);
+      // Create initial inventory record WITH ownerId from product event
+      // This ensures inventory is created for the correct owner
+      const inventory = await this.inventoryService.createInventoryForProduct(
+        productId, 
+        0, // Initial quantity
+        10, // Default reorder level
+        undefined, // warehouseLocation
+        undefined, // maxStock
+        ownerId // Pass ownerId from product event
+      );
 
       if (inventory.createdAt.getTime() === inventory.updatedAt.getTime()) {
-        debug.log(`✅ Inventory initialized for new product: ${name} (ID: ${productId})`);
+        debug.log(`✅ Inventory initialized for new product: ${name} (ID: ${productId}, Owner: ${ownerId || 'none'})`);
       } else {
         debug.log(`ℹ️ Inventory already existed for product: ${name} (ID: ${productId}), skipped creation`);
       }
     } catch (error) {
       // Only log non-duplicate errors
-      if (error.code !== 'ER_DUP_ENTRY') {
+      if (error.code !== 'ER_DUP_ENTRY' && error.code !== '23505') {
         debug.error('❌ Error handling PRODUCT_CREATED:', error);
       }
     }

@@ -143,4 +143,10 @@ export class InventoryController {
     const items = await this.service.getLowStockItems();
     return { items, total: items.length };
   }
+
+  @GrpcMethod('InventoryService', 'CleanupDuplicateInventory')
+  async cleanupDuplicateInventory() {
+    const result = await this.service.cleanupDuplicateInventory();
+    return result;
+  }
 }

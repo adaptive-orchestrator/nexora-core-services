@@ -91,24 +91,16 @@ export class CatalogueController {
   }
 
   @Get('products/:id')
-  @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('accessToken')
-  @ApiOperation({ summary: 'Get product by ID', description: 'Retrieve a specific product' })
+  @ApiOperation({ summary: 'Get product by ID', description: 'Retrieve a specific product (public access)' })
   @ApiOkResponse({ description: 'Product retrieved successfully' })
   @ApiNotFoundResponse({ description: 'Product not found' })
   async getProductById(
-    @CurrentUser() user: JwtUserPayload,
     @Param('id') id: string,
   ) {
-    const result = await this.catalogueService.getProductById(id) as { product?: { id: string; ownerId?: string } };
-    const ownerId = String(getUserIdAsCustomerId(user));
-    
-    // Check ownership (allow if no ownerId set or user owns it)
-    if (result?.product?.ownerId && result.product.ownerId !== ownerId && user.role !== 'admin') {
-      throw new ForbiddenException('You do not have access to this product');
-    }
-    
+    // Public access - no ownership check needed for viewing
+    // Products are publicly viewable for browsing
+    const result = await this.catalogueService.getProductById(id);
     return result;
   }
 

@@ -98,8 +98,15 @@ export class InventoryService implements OnModuleInit {
     await this.validateProduct(productId);
 
     // ✅ Check if inventory already exists for this product AND owner
+    // Properly handle null/undefined ownerId comparison
+    const whereCondition: any = { productId };
+    if (ownerId) {
+      whereCondition.ownerId = ownerId;
+    }
+    // If ownerId is undefined, TypeORM will find records with ownerId = null
+    
     const existing = await this.inventoryRepo.findOne({
-      where: { productId, ownerId: ownerId || undefined },
+      where: whereCondition,
     });
 
     if (existing) {
@@ -114,7 +121,7 @@ export class InventoryService implements OnModuleInit {
       reorderLevel,
       warehouseLocation,
       maxStock: maxStock || 1000,
-      ownerId,
+      ownerId: ownerId,  // undefined will be stored as null in DB
       isActive: true,
     });
 
@@ -122,9 +129,11 @@ export class InventoryService implements OnModuleInit {
       return await this.inventoryRepo.save(inventory);
     } catch (error) {
       // Handle duplicate error gracefully (race condition edge case)
-      if (error.code === 'ER_DUP_ENTRY') {
+      if (error.code === 'ER_DUP_ENTRY' || error.code === '23505') {
         debug.warn(`⚠️ Duplicate inventory detected for productId: ${productId} (race condition), fetching existing`);
-        const existing = await this.inventoryRepo.findOne({ where: { productId, ownerId: ownerId || undefined } });
+        const whereCondition: any = { productId };
+        if (ownerId) whereCondition.ownerId = ownerId;
+        const existing = await this.inventoryRepo.findOne({ where: whereCondition });
         if (existing) return existing;
       }
       throw error;
@@ -268,13 +277,19 @@ export class InventoryService implements OnModuleInit {
     }
   }
   async create(dto: CreateInventoryDto): Promise<Inventory> {
+    // Properly handle null/undefined ownerId comparison
+    const whereCondition: any = { productId: dto.productId };
+    if (dto.ownerId) {
+      whereCondition.ownerId = dto.ownerId;
+    }
+    
     const existing = await this.inventoryRepo.findOne({
-      where: { productId: dto.productId, ownerId: dto.ownerId || undefined },
+      where: whereCondition,
     });
 
     if (existing) {
       // If inventory exists, update the quantity instead of throwing error
-      debug.log(`[Inventory] Inventory for product ${dto.productId} (owner: ${dto.ownerId}) already exists, updating quantity...`);
+      debug.log(`[Inventory] Inventory for product ${dto.productId} (owner: ${dto.ownerId || 'undefined'}) already exists, updating quantity...`);
       existing.quantity += dto.quantity;
       if (dto.reorderLevel !== undefined) existing.reorderLevel = dto.reorderLevel;
       if (dto.maxStock !== undefined) existing.maxStock = dto.maxStock;
@@ -331,6 +346,7 @@ export class InventoryService implements OnModuleInit {
     if (ownerId) {
       whereCondition.ownerId = ownerId;
     }
+    // If ownerId is undefined, TypeORM will find records with ownerId = null
     
     const inventory = await this.inventoryRepo.findOne({
       where: whereCondition,
@@ -338,7 +354,7 @@ export class InventoryService implements OnModuleInit {
     });
 
     if (!inventory) {
-      throw new NotFoundException(`Inventory for product ${productId} not found`);
+      throw new NotFoundException(`Inventory for product ${productId}${ownerId ? ` (owner: ${ownerId})` : ''} not found`);
     }
 
     return inventory;
@@ -354,9 +370,11 @@ export class InventoryService implements OnModuleInit {
     const skip = (page - 1) * limit;
     
     const whereCondition: any = {};
-    if (ownerId) {
+    if (ownerId !== undefined) {
+      // If ownerId is explicitly provided, use it for filtering
       whereCondition.ownerId = ownerId;
     }
+    // If ownerId is undefined, don't filter by ownerId at all (admin mode)
     
     console.log('[InventoryService.listAll] Query with ownerId:', ownerId, 'whereCondition:', whereCondition);
     
@@ -401,12 +419,14 @@ export class InventoryService implements OnModuleInit {
       console.log('[InventoryService.adjust] Found existing inventory:', inventory.id, 'ownerId:', inventory.ownerId);
     } catch (error) {
       // If not found, create new inventory for this owner
-      if (error instanceof NotFoundException && ownerId) {
-        debug.log(`[Inventory] Creating new inventory for product ${productId}, owner ${ownerId}`);
+      if (error instanceof NotFoundException) {
+        debug.log(`[Inventory] Creating new inventory for product ${productId}, owner ${ownerId || 'undefined'}`);
         inventory = await this.createInventoryForProduct(
           productId,
           0, // Start with 0, will be adjusted below
           10, // Default reorder level
+          undefined, // warehouseLocation
+          undefined, // maxStock
           ownerId,
         );
         console.log('[InventoryService.adjust] Created new inventory:', inventory.id, 'ownerId:', inventory.ownerId);
@@ -630,4 +650,58 @@ export class InventoryService implements OnModuleInit {
 
     debug.log(`[Inventory] Cleaned up ${expired.length} expired reservations`);
   }
-}
+  /**
+   * Clean up duplicate inventory records
+   * Remove inventory records with:
+   * - No ownerId (null/undefined) AND quantity = 0
+   * - When there exists another inventory for same product with an ownerId
+   */
+  async cleanupDuplicateInventory(): Promise<{ deleted: number; details: any[] }> {
+    const allInventory = await this.inventoryRepo.find();
+    
+    // Group by productId
+    const grouped = new Map<string, Inventory[]>();
+    allInventory.forEach(inv => {
+      const list = grouped.get(inv.productId) || [];
+      list.push(inv);
+      grouped.set(inv.productId, list);
+    });
+
+    const toDelete: Inventory[] = [];
+    const details: any[] = [];
+
+    // For each product, if there are multiple inventory records
+    grouped.forEach((inventories, productId) => {
+      if (inventories.length > 1) {
+        // Check if there's one with ownerId and one without
+        const withOwner = inventories.filter(inv => inv.ownerId);
+        const withoutOwner = inventories.filter(inv => !inv.ownerId);
+
+        // If both exist, delete the one without owner if it has 0 quantity
+        if (withOwner.length > 0 && withoutOwner.length > 0) {
+          withoutOwner.forEach(inv => {
+            if (inv.quantity === 0 && inv.reserved === 0) {
+              toDelete.push(inv);
+              details.push({
+                productId,
+                deletedInventoryId: inv.id,
+                reason: 'Duplicate without ownerId, quantity=0',
+                keptInventories: withOwner.map(i => ({ id: i.id, ownerId: i.ownerId, quantity: i.quantity }))
+              });
+            }
+          });
+        }
+      }
+    });
+
+    // Delete the identified duplicates
+    if (toDelete.length > 0) {
+      await this.inventoryRepo.remove(toDelete);
+      debug.log(`🧹 Cleaned up ${toDelete.length} duplicate inventory records`);
+    }
+
+    return {
+      deleted: toDelete.length,
+      details
+    };
+  }}

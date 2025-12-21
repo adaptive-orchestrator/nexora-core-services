@@ -62,6 +62,7 @@ export interface ProductCreatedEvent extends BaseEvent {
     price: number;
     sku: string;
     category: string;
+    ownerId?: string; // Owner of the product (for multi-tenant support)
     createdAt: Date;
   };
 }

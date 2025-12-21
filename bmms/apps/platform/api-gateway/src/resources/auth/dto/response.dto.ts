@@ -6,6 +6,17 @@ export class LoginResponseDto {
     description: 'JWT access token',
   })
   accessToken: string;
+
+  @ApiProperty({
+    example: { id: 1, email: 'user@example.com', name: 'John Doe', role: 'user' },
+    description: 'User information',
+  })
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+  };
 }
 
 export class SignupResponseDto {
