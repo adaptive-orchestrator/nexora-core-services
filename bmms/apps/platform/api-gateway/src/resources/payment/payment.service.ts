@@ -36,6 +36,7 @@ interface IPaymentGrpcService {
   getOrCreateCustomer(data: any): any;
   createBillingPortalSession(data: any): any;
   cancelStripeSubscription(data: any): any;
+  getStripeSession(data: any): any;
 }
 
 @Injectable()
