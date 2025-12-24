@@ -3,9 +3,11 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  UnprocessableEntityException,
   Inject,
   OnModuleInit,
 } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
@@ -32,7 +34,7 @@ interface ICatalogueGrpcService {
 }
 
 interface IInventoryGrpcService {
-  checkAvailability(data: { productId: string; quantity: number }): any;
+  checkAvailability(data: { productId: string; requestedQuantity: number }): any;
   reserveStock(data: { productId: string; quantity: number; orderId: string; customerId: string }): any;
 }
 
@@ -105,20 +107,25 @@ export class OrderSvcService implements OnModuleInit {
     const validatedItems = await this.validateProducts(dto.items);
     //console.log('[OrderSvc] create Products validated:', validatedItems);
 
-    // 3. Generate order number
-    //console.log('[OrderSvc] create Step 3: Generating order number...');
+    // 3. Validate inventory availability (throws 422 if out of stock)
+    console.log('[OrderSvc] create Step 3: Validating inventory availability...');
+    await this.validateInventory(validatedItems);
+    console.log('[OrderSvc] create Inventory validation passed');
+
+    // 4. Generate order number
+    //console.log('[OrderSvc] create Step 4: Generating order number...');
     const orderNumber = await this.generateOrderNumber();
     //  console.log('[OrderSvc] create Order number generated:', orderNumber);
 
-    // 4. Calculate totals
+    // 5. Calculate totals
     const subtotal = validatedItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
     //console.log('[OrderSvc] create Subtotal calculated:', subtotal);
 
-    // 5. Create order
-    //console.log('[OrderSvc] create Step 4: Creating order in DB...');
+    // 6. Create order
+    //console.log('[OrderSvc] create Step 6: Creating order in DB...');
     const order = await this.orderRepo.save(
       this.orderRepo.create({
         orderNumber,
@@ -133,7 +140,7 @@ export class OrderSvcService implements OnModuleInit {
     );
     //console.log('[OrderSvc] create Order created:', order.id);
 
-    // 6. Add items
+    // 7. Add items
     const items = await Promise.all(
       validatedItems.map((item) =>
         this.itemRepo.save(
@@ -153,7 +160,7 @@ export class OrderSvcService implements OnModuleInit {
     order.totalAmount = order.calculateTotal();
     await this.orderRepo.save(order);
 
-    // 7. Save history
+    // 8. Save history
     await this.historyRepo.save(
       this.historyRepo.create({
         orderId: order.id,
@@ -164,7 +171,7 @@ export class OrderSvcService implements OnModuleInit {
       }),
     );
 
-    // 8. Emit order.created event (Inventory will listen and reserve stock)
+    // 9. Emit order.created event (Inventory will reserve and confirm stock)
     const orderCreatedEvent = {
       ...createBaseEvent('order.created', 'order-svc'),
       eventType: 'order.created',
@@ -268,6 +275,72 @@ export class OrderSvcService implements OnModuleInit {
     }
 
     return validatedItems;
+  }
+
+  /**
+   * Validate inventory availability for all items before creating order
+   * Throws UnprocessableEntityException (422) if any item is out of stock
+   */
+  private async validateInventory(items: ValidatedOrderItem[]): Promise<void> {
+    const unavailableItems: Array<{
+      productId: string;
+      requestedQuantity: number;
+      availableQuantity: number;
+    }> = [];
+
+    for (const item of items) {
+      try {
+        debug.log(`[OrderSvc] validateInventory Checking availability for product ${item.productId}, quantity ${item.quantity}...`);
+
+        // Call inventory service to check stock availability
+        const response: any = await firstValueFrom(
+          this.inventoryService.checkAvailability({
+            productId: item.productId,
+            requestedQuantity: item.quantity
+          })
+        );
+
+        debug.log(`[OrderSvc] validateInventory Response:`, response);
+
+        // Check if stock is available
+        if (!response.available) {
+          unavailableItems.push({
+            productId: item.productId,
+            requestedQuantity: item.quantity,
+            availableQuantity: response.availableQuantity || 0,
+          });
+          debug.warn(`[OrderSvc] validateInventory Product ${item.productId} is out of stock. Requested: ${item.quantity}, Available: ${response.availableQuantity}`);
+        }
+
+      } catch (error) {
+        debug.error(`[ERROR] validateInventory Error checking availability for product ${item.productId}:`, error);
+        // If inventory service is down or error, treat as unavailable
+        unavailableItems.push({
+          productId: item.productId,
+          requestedQuantity: item.quantity,
+          availableQuantity: 0,
+        });
+      }
+    }
+
+    // If any items are unavailable, throw RPC error with OUT_OF_STOCK message
+    if (unavailableItems.length > 0) {
+      const errorMessage = `OUT_OF_STOCK: Cannot create order - ${unavailableItems.length} item(s) out of stock`;
+      debug.error(`[OrderSvc] validateInventory ${errorMessage}`, unavailableItems);
+
+      // Throw RpcException so the error message is properly transmitted via gRPC
+      // The API Gateway will check for "OUT_OF_STOCK" in the error message
+      throw new RpcException({
+        code: 9, // gRPC FAILED_PRECONDITION
+        message: errorMessage,
+        details: {
+          error: 'OUT_OF_STOCK',
+          unavailableItems,
+        },
+      });
+    }
+
+    debug.log(`[OrderSvc] validateInventory All items have sufficient stock`);
   }
 
   async listByCustomer(customerId: string, page = 1, limit = 20): Promise<Order[]> {
