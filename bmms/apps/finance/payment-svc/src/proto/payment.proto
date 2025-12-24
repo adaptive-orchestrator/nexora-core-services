@@ -22,6 +22,7 @@ service PaymentService {
   rpc GetOrCreateCustomer (GetOrCreateCustomerRequest) returns (CustomerResponse);
   rpc CreateBillingPortalSession (BillingPortalRequest) returns (BillingPortalResponse);
   rpc CancelStripeSubscription (CancelStripeSubscriptionRequest) returns (CancelSubscriptionResponse);
+  rpc GetStripeSession (GetStripeSessionRequest) returns (GetStripeSessionResponse);
 }
 
 // Common messages
@@ -251,4 +252,21 @@ message CancelSubscriptionResponse {
   string status = 2;
   optional string canceledAt = 3;
   optional string message = 4;
+}
+
+// Get Stripe Session
+message GetStripeSessionRequest {
+  string sessionId = 1;
+}
+
+message GetStripeSessionResponse {
+  string id = 1;
+  string paymentStatus = 2;
+  string status = 3;
+  int64 amountTotal = 4;
+  string currency = 5;
+  string customerEmail = 6;
+  string metadata = 7;
+  bool success = 8;
+  optional string message = 9;
 }

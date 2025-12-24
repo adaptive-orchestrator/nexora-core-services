@@ -459,16 +459,46 @@ export class PaymentController {
     });
   }
 
+  @Get('stripe/session/:sessionId')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Stripe Checkout Session details',
+    description: 'Retrieves details of a Stripe checkout session by session ID.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session details retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        paymentStatus: { type: 'string' },
+        status: { type: 'string' },
+        amountTotal: { type: 'number' },
+        currency: { type: 'string' },
+        customerEmail: { type: 'string' },
+        metadata: { type: 'object' },
+      }
+    }
+  })
+  async getStripeSession(
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.paymentService.getStripeSession(sessionId);
+  }
+
   // =================== WEBHOOK ENDPOINT ===================
   /**
    * Stripe Webhook Handler
-   * 
+   *
    * IMPORTANT: This endpoint receives webhooks from Stripe.
    * Configure in main.ts: app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
    */
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Stripe webhook handler',
     description: 'Receives and processes Stripe webhook events. No authentication required - uses Stripe signature verification.'
   })

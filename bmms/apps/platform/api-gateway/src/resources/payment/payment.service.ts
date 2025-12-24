@@ -276,4 +276,30 @@ export class PaymentService implements OnModuleInit {
     );
     return response;
   }
+
+  /**
+   * Get Stripe Checkout Session details
+   */
+  async getStripeSession(sessionId: string) {
+    const response: any = await firstValueFrom(
+      this.paymentService.getStripeSession({ sessionId })
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to get session details');
+    }
+
+    // Parse metadata from JSON string to object
+    const metadata = response.metadata ? JSON.parse(response.metadata) : {};
+
+    return {
+      id: response.id,
+      paymentStatus: response.paymentStatus,
+      status: response.status,
+      amountTotal: response.amountTotal,
+      currency: response.currency,
+      customerEmail: response.customerEmail,
+      metadata,
+    };
+  }
 }

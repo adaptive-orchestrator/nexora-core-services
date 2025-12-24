@@ -710,7 +710,7 @@ export class PaymentController {
       return {
         success: true,
         status: subscription.status,
-        canceledAt: subscription.canceled_at 
+        canceledAt: subscription.canceled_at
           ? new Date(subscription.canceled_at * 1000).toISOString()
           : null,
       };
@@ -718,6 +718,30 @@ export class PaymentController {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to cancel subscription',
+      };
+    }
+  }
+
+  @GrpcMethod('PaymentService', 'GetStripeSession')
+  async grpcGetStripeSession(data: { sessionId: string }) {
+    try {
+      const session = await this.stripeService.retrieveCheckoutSession(data.sessionId);
+
+      return {
+        id: session.id,
+        paymentStatus: session.payment_status,
+        status: session.status,
+        amountTotal: session.amount_total || 0,
+        currency: session.currency || 'usd',
+        customerEmail: session.customer_email || '',
+        metadata: session.metadata ? JSON.stringify(session.metadata) : '{}',
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('[gRPC GetStripeSession] Error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get session details',
       };
     }
   }
