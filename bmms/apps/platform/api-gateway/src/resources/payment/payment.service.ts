@@ -29,6 +29,7 @@ interface IPaymentGrpcService {
   // Stripe operations
   createCheckoutSession(data: any): any;
   createSubscriptionCheckout(data: any): any;
+  createSubscriptionPaymentCheckout(data: any): any;
   createPaymentIntent(data: any): any;
   createRefund(data: any): any;
   handleStripeWebhook(data: any): any;
@@ -169,6 +170,25 @@ export class PaymentService implements OnModuleInit {
   }) {
     const response: any = await firstValueFrom(
       this.paymentService.createSubscriptionCheckout(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Create Stripe checkout session for subscription payment (one-time)
+   */
+  async createSubscriptionPaymentCheckout(dto: {
+    customerId: string;
+    email: string;
+    amount: number;
+    currency?: string;
+    subscriptionId?: string;
+    planName?: string;
+    successUrl?: string;
+    cancelUrl?: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createSubscriptionPaymentCheckout(dto)
     );
     return response;
   }

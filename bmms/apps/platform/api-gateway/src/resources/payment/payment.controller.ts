@@ -261,7 +261,7 @@ export class PaymentController {
   @UseGuards(JwtGuard)
   @ApiBearerAuth('accessToken')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create Stripe subscription checkout',
     description: 'Creates a Stripe checkout session for subscription purchase.'
   })
@@ -277,8 +277,8 @@ export class PaymentController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Subscription checkout session created',
     schema: {
       type: 'object',
@@ -305,6 +305,64 @@ export class PaymentController {
       cancelUrl: dto.cancelUrl,
       trialDays: dto.trialDays,
       metadata: { userId: user.userId },
+    });
+  }
+
+  @Post('stripe/checkout/subscription-payment')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Create Stripe checkout for subscription payment (one-time)',
+    description: 'Creates a Stripe checkout session for subscription payment using one-time payment mode. Use this when you don\'t have a Stripe Price ID and need to charge a specific amount.'
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['email', 'amount'],
+      properties: {
+        email: { type: 'string', example: 'customer@example.com', description: 'Customer email' },
+        amount: { type: 'number', example: 2999, description: 'Amount in cents' },
+        currency: { type: 'string', example: 'usd', default: 'usd', description: 'Currency code' },
+        subscriptionId: { type: 'string', example: 'sub-123', description: 'Associated subscription ID' },
+        planName: { type: 'string', example: 'Premium Plan', description: 'Plan name for display' },
+        successUrl: { type: 'string', example: 'https://yourapp.com/subscription/success?session_id={CHECKOUT_SESSION_ID}' },
+        cancelUrl: { type: 'string', example: 'https://yourapp.com/subscription/cancel' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscription payment checkout session created',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', example: 'cs_test_xxx' },
+        url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_xxx' },
+      }
+    }
+  })
+  async createSubscriptionPaymentCheckout(
+    @CurrentUser() user: JwtUserPayload,
+    @Body() dto: {
+      email: string;
+      amount: number;
+      currency?: string;
+      subscriptionId?: string;
+      planName?: string;
+      successUrl?: string;
+      cancelUrl?: string;
+    },
+  ) {
+    return this.paymentService.createSubscriptionPaymentCheckout({
+      customerId: user.userId,
+      email: dto.email,
+      amount: dto.amount,
+      currency: dto.currency,
+      subscriptionId: dto.subscriptionId,
+      planName: dto.planName,
+      successUrl: dto.successUrl,
+      cancelUrl: dto.cancelUrl,
     });
   }
 

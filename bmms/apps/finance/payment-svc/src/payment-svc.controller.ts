@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   DefaultValuePipe,
+  Logger,
 } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
@@ -33,6 +34,8 @@ import { StripeService } from './stripe/stripe.service';
 @ApiTags('Payments')
 @Controller('payments')
 export class PaymentController {
+  private readonly logger = new Logger(PaymentController.name);
+
   constructor(
     private readonly paymentService: PaymentService,
     private readonly stripeService: StripeService,
@@ -547,6 +550,42 @@ export class PaymentController {
         success: false,
         message: error instanceof Error ? error.message : 'Failed to create subscription checkout',
       };
+    }
+  }
+
+  @GrpcMethod('PaymentService', 'CreateSubscriptionPaymentCheckout')
+  async grpcCreateSubscriptionPaymentCheckout(data: any) {
+    try {
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+      // Create Stripe customer if not exists
+      const customer = await this.stripeService.createCustomer(data.email, {
+        customer_id: data.customerId,
+      });
+
+      // Create checkout session with payment mode (one-time payment)
+      const session = await this.stripeService.createOneTimeCheckoutSession({
+        customerId: customer.id,
+        amount: Number(data.amount),
+        currency: data.currency || 'usd',
+        productName: data.planName || 'Subscription Payment',
+        successUrl: data.successUrl || `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: data.cancelUrl || `${baseUrl}/subscription/cancel`,
+        metadata: {
+          customer_id: data.customerId,
+          subscription_id: data.subscriptionId || '',
+          plan_name: data.planName || '',
+          payment_type: 'subscription_payment',
+        },
+      });
+
+      return {
+        sessionId: session.id,
+        url: session.url || '',
+      };
+    } catch (error) {
+      this.logger.error('[gRPC CreateSubscriptionPaymentCheckout] Error:', error);
+      throw error;
     }
   }
 

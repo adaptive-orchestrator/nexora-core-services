@@ -15,6 +15,7 @@ service PaymentService {
   // =================== STRIPE OPERATIONS ===================
   rpc CreateCheckoutSession (CreateCheckoutSessionRequest) returns (CheckoutSessionResponse);
   rpc CreateSubscriptionCheckout (CreateSubscriptionCheckoutRequest) returns (CheckoutSessionResponse);
+  rpc CreateSubscriptionPaymentCheckout (CreateSubscriptionPaymentCheckoutRequest) returns (SubscriptionPaymentCheckoutResponse);
   rpc CreatePaymentIntent (CreatePaymentIntentRequest) returns (PaymentIntentResponse);
   rpc CreateRefund (CreateRefundRequest) returns (RefundResponse);
   rpc HandleStripeWebhook (StripeWebhookRequest) returns (StripeWebhookResponse);
@@ -147,11 +148,27 @@ message CreateSubscriptionCheckoutRequest {
   map<string, string> metadata = 6;
 }
 
+message CreateSubscriptionPaymentCheckoutRequest {
+  string customerId = 1;
+  string email = 2;
+  int64 amount = 3;  // Amount in smallest currency unit (cents)
+  optional string currency = 4;
+  optional string subscriptionId = 5;
+  optional string planName = 6;
+  optional string successUrl = 7;
+  optional string cancelUrl = 8;
+}
+
 message CheckoutSessionResponse {
   string sessionId = 1;
   string checkoutUrl = 2;
   bool success = 3;
   optional string message = 4;
+}
+
+message SubscriptionPaymentCheckoutResponse {
+  string sessionId = 1;
+  string url = 2;
 }
 
 // Payment Intent

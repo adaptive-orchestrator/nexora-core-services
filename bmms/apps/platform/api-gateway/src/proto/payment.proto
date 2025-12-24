@@ -11,6 +11,17 @@ service PaymentService {
   rpc GetPaymentsByInvoice (InvoiceIdRequest) returns (PaymentListResponse);
   rpc GetPaymentStats (Empty) returns (PaymentStatsResponse);
   rpc ProcessPayment (ProcessPaymentRequest) returns (ProcessPaymentResponse);
+
+  // =================== STRIPE OPERATIONS ===================
+  rpc CreateCheckoutSession (CreateCheckoutSessionRequest) returns (CheckoutSessionResponse);
+  rpc CreateSubscriptionCheckout (CreateSubscriptionCheckoutRequest) returns (CheckoutSessionResponse);
+  rpc CreateSubscriptionPaymentCheckout (CreateSubscriptionPaymentCheckoutRequest) returns (SubscriptionPaymentCheckoutResponse);
+  rpc CreatePaymentIntent (CreatePaymentIntentRequest) returns (PaymentIntentResponse);
+  rpc CreateRefund (CreateRefundRequest) returns (RefundResponse);
+  rpc HandleStripeWebhook (StripeWebhookRequest) returns (StripeWebhookResponse);
+  rpc GetOrCreateCustomer (GetOrCreateCustomerRequest) returns (CustomerResponse);
+  rpc CreateBillingPortalSession (BillingPortalRequest) returns (BillingPortalResponse);
+  rpc CancelStripeSubscription (CancelStripeSubscriptionRequest) returns (CancelSubscriptionResponse);
 }
 
 // Common messages
@@ -104,4 +115,140 @@ message ProcessPaymentResponse {
   string message = 2;
   Payment payment = 3;
   optional string subscriptionId = 4;
+}
+
+// =================== STRIPE MESSAGES ===================
+
+// Checkout Session
+message LineItem {
+  string productId = 1;
+  string name = 2;
+  int64 price = 3;  // Price in smallest currency unit (cents)
+  int32 quantity = 4;
+  optional string description = 5;
+  optional string imageUrl = 6;
+}
+
+message CreateCheckoutSessionRequest {
+  string customerId = 1;
+  string orderId = 2;
+  repeated LineItem items = 3;
+  string successUrl = 4;
+  string cancelUrl = 5;
+  optional string currency = 6;
+  map<string, string> metadata = 7;
+}
+
+message CreateSubscriptionCheckoutRequest {
+  string customerId = 1;
+  string priceId = 2;  // Stripe Price ID
+  string successUrl = 3;
+  string cancelUrl = 4;
+  optional int32 trialDays = 5;
+  map<string, string> metadata = 6;
+}
+
+message CreateSubscriptionPaymentCheckoutRequest {
+  string customerId = 1;
+  string email = 2;
+  int64 amount = 3;  // Amount in smallest currency unit (cents)
+  optional string currency = 4;
+  optional string subscriptionId = 5;
+  optional string planName = 6;
+  optional string successUrl = 7;
+  optional string cancelUrl = 8;
+}
+
+message CheckoutSessionResponse {
+  string sessionId = 1;
+  string checkoutUrl = 2;
+  bool success = 3;
+  optional string message = 4;
+}
+
+message SubscriptionPaymentCheckoutResponse {
+  string sessionId = 1;
+  string url = 2;
+}
+
+// Payment Intent
+message CreatePaymentIntentRequest {
+  int64 amount = 1;  // Amount in smallest currency unit
+  string currency = 2;
+  optional string customerId = 3;
+  optional string orderId = 4;
+  map<string, string> metadata = 5;
+  optional string paymentMethodType = 6;
+}
+
+message PaymentIntentResponse {
+  string paymentIntentId = 1;
+  string clientSecret = 2;
+  string status = 3;
+  bool success = 4;
+  optional string message = 5;
+}
+
+// Refund
+message CreateRefundRequest {
+  string paymentIntentId = 1;
+  optional int64 amount = 2;  // Partial refund amount, null for full
+  optional string reason = 3;
+}
+
+message RefundResponse {
+  string refundId = 1;
+  int64 amount = 2;
+  string status = 3;
+  bool success = 4;
+  optional string message = 5;
+}
+
+// Webhook
+message StripeWebhookRequest {
+  bytes rawBody = 1;
+  string signature = 2;
+}
+
+message StripeWebhookResponse {
+  bool received = 1;
+  string eventType = 2;
+  optional string message = 3;
+}
+
+// Customer
+message GetOrCreateCustomerRequest {
+  string userId = 1;
+  string email = 2;
+  optional string name = 3;
+}
+
+message CustomerResponse {
+  string stripeCustomerId = 1;
+  bool isNew = 2;
+  bool success = 3;
+}
+
+// Billing Portal
+message BillingPortalRequest {
+  string stripeCustomerId = 1;
+  string returnUrl = 2;
+}
+
+message BillingPortalResponse {
+  string portalUrl = 1;
+  bool success = 2;
+}
+
+// Cancel Stripe Subscription
+message CancelStripeSubscriptionRequest {
+  string stripeSubscriptionId = 1;
+  optional bool cancelAtPeriodEnd = 2;
+}
+
+message CancelSubscriptionResponse {
+  bool success = 1;
+  string status = 2;
+  optional string canceledAt = 3;
+  optional string message = 4;
 }
