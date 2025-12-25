@@ -119,22 +119,30 @@ export class InventoryController {
 
   @GrpcMethod('InventoryService', 'CheckAvailability')
   async checkAvailability(data: { productId: string; requestedQuantity: number }) {
+    console.log('[InventoryController.checkAvailability] Called with:', JSON.stringify(data));
+
     // Aggregate ALL inventory records for this product to get total available quantity
     const inventories = await this.service.getAllInventoriesForProduct(data.productId);
+    console.log(`[InventoryController.checkAvailability] Found ${inventories.length} inventory records for product ${data.productId}`);
+
     const availableQty = inventories.reduce(
       (sum, inv) => sum + inv.getAvailableQuantity(),
       0
     );
+    console.log(`[InventoryController.checkAvailability] Total available: ${availableQty}, Requested: ${data.requestedQuantity}`);
 
     const available = availableQty >= data.requestedQuantity;
 
-    return {
+    const result = {
       available,
       availableQuantity: availableQty,
       message: available
         ? 'Stock available'
         : `Insufficient stock. Available: ${availableQty}, Requested: ${data.requestedQuantity}`,
     };
+
+    console.log('[InventoryController.checkAvailability] Returning:', JSON.stringify(result));
+    return result;
   }
 
   @GrpcMethod('InventoryService', 'GetInventoryHistory')
@@ -153,5 +161,56 @@ export class InventoryController {
   async cleanupDuplicateInventory() {
     const result = await this.service.cleanupDuplicateInventory();
     return result;
+  }
+
+  @GrpcMethod('InventoryService', 'CreateDefaultInventory')
+  async createDefaultInventory(data: {
+    productId: string;
+    ownerId?: string;
+    initialQuantity?: number;
+    warehouseLocation?: string;
+  }) {
+    console.log('[InventoryController.createDefaultInventory] Called with:', JSON.stringify(data));
+
+    // Check if inventory already exists for this product
+    const existing = await this.service.getAllInventoriesForProduct(data.productId);
+
+    if (existing.length > 0) {
+      console.log(`[InventoryController.createDefaultInventory] Product ${data.productId} already has ${existing.length} inventory records`);
+      return {
+        success: false,
+        message: `Product already has ${existing.length} inventory record(s)`,
+        existingInventories: existing.map(inv => ({
+          id: inv.id,
+          ownerId: inv.ownerId,
+          quantity: inv.quantity,
+          reserved: inv.reserved,
+        })),
+      };
+    }
+
+    // Create default inventory
+    const inventory = await this.service.createInventoryForProduct(
+      data.productId,
+      data.initialQuantity || 0,
+      10, // reorderLevel
+      data.warehouseLocation || 'Main Warehouse',
+      1000, // maxStock
+      data.ownerId,
+    );
+
+    console.log('[InventoryController.createDefaultInventory] Created inventory:', inventory.id);
+
+    return {
+      success: true,
+      message: 'Default inventory created successfully',
+      inventory: {
+        id: inventory.id,
+        productId: inventory.productId,
+        ownerId: inventory.ownerId,
+        quantity: inventory.quantity,
+        reserved: inventory.reserved,
+      },
+    };
   }
 }

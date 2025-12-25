@@ -74,6 +74,30 @@ export class InventoryController {
     return this.inventoryService.createInventory({ ...body, ownerId });
   }
 
+  @Post('my/product/:productId/create-default')
+  @UseGuards(JwtGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth('accessToken')
+  @ApiOperation({
+    summary: 'Create default inventory for product',
+    description: 'Create default inventory record for a product if it does not exist. Useful for migrating products without inventory.'
+  })
+  @ApiCreatedResponse({ description: 'Default inventory created or already exists' })
+  @ApiBadRequestResponse({ description: 'Invalid request' })
+  async createDefaultInventoryForProduct(
+    @CurrentUser() user: JwtUserPayload,
+    @Param('productId') productId: string,
+    @Body() body?: { initialQuantity?: number; warehouseLocation?: string },
+  ) {
+    const ownerId = String(getUserIdAsCustomerId(user));
+    return this.inventoryService.createDefaultInventory({
+      productId,
+      ownerId,
+      initialQuantity: body?.initialQuantity,
+      warehouseLocation: body?.warehouseLocation,
+    });
+  }
+
   // ========== ADMIN ENDPOINTS ==========
 
   @Post()

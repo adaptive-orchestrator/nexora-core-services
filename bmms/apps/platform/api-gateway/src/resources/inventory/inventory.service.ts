@@ -15,6 +15,7 @@ interface InventoryGrpcService {
   checkAvailability(data: { productId: string; requestedQuantity: number }): any;
   getInventoryHistory(data: { productId: string }): any;
   getLowStockItems(data: { threshold?: number }): any;
+  createDefaultInventory(data: { productId: string; ownerId?: string; initialQuantity?: number; warehouseLocation?: string }): any;
 }
 
 @Injectable()
@@ -168,6 +169,21 @@ export class InventoryService implements OnModuleInit {
         this.inventoryGrpcService.getLowStockItems({ threshold }).pipe(
           catchError(error => {
             throw new HttpException(error.details || 'Failed to get low stock items', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Inventory service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  async createDefaultInventory(data: { productId: string; ownerId?: string; initialQuantity?: number; warehouseLocation?: string }) {
+    try {
+      return await firstValueFrom(
+        this.inventoryGrpcService.createDefaultInventory(data).pipe(
+          catchError(error => {
+            throw new HttpException(error.details || 'Failed to create default inventory', HttpStatus.INTERNAL_SERVER_ERROR);
           }),
         ),
       );
