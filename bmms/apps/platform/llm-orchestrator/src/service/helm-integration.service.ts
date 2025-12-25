@@ -297,24 +297,33 @@ export class HelmIntegrationService {
   ): Promise<any> {
     const results: any[] = [];
 
+    // Setup in-cluster authentication ONCE for all kubectl/helm commands
+    const kubeEnv = await this.setupInClusterAuth();
+
     try {
+      // Step 0: Delete disabled services BEFORE helm upgrade
+      this.logger.log('[LLM] Step 0: Cleaning up disabled services...');
+      await this.deleteDisabledServices(changeset);
+
       // Step 1: Deploy databases
-      this.logger.log('[LLM] Step 1/2: Deploying databases...');
+      this.logger.log('[LLM] Step 1/3: Deploying databases...');
       const dbResult = await this.helmUpgrade(
         'databases',
         join(this.helmChartsPath, 'databases'),
         'database',
         changesetPath,
+        kubeEnv,
       );
       results.push({ component: 'databases', ...dbResult });
 
       // Step 2: Deploy dynamic services
-      this.logger.log('[LLM] Step 2/2: Deploying dynamic services...');
+      this.logger.log('[LLM] Step 2/3: Deploying dynamic services...');
       const svcResult = await this.helmUpgrade(
         'dynamic-services',
         join(this.helmChartsPath, 'dynamic-services'),
         'business-services',
         changesetPath,
+        kubeEnv,
       );
       results.push({ component: 'dynamic-services', ...svcResult });
 
@@ -327,6 +336,93 @@ export class HelmIntegrationService {
   }
 
   /**
+   * Setup in-cluster authentication for kubectl/helm
+   */
+  private async setupInClusterAuth(): Promise<NodeJS.ProcessEnv> {
+    const kubeEnv = {
+      KUBECONFIG: '/tmp/kubeconfig',
+      ...process.env,
+    };
+
+    // Create kubeconfig for in-cluster authentication
+    const kubeconfigContent = `
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    server: https://kubernetes.default.svc
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    namespace: default
+    user: default-user
+  name: default-context
+current-context: default-context
+users:
+- name: default-user
+  user:
+    tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+`;
+
+    try {
+      await writeFile('/tmp/kubeconfig', kubeconfigContent, 'utf8');
+      this.logger.log('[LLM] ✓ Created in-cluster kubeconfig at /tmp/kubeconfig');
+    } catch (error) {
+      this.logger.warn('[LLM] ⚠ Failed to create kubeconfig, using default');
+    }
+
+    return kubeEnv;
+  }
+
+  /**
+   * Delete disabled services and databases
+   * This is necessary because Helm's {{- if .enabled }} doesn't delete existing resources
+   */
+  private async deleteDisabledServices(changeset: HelmChangeset): Promise<void> {
+    const servicesToDelete: string[] = [];
+    const databasesToDelete: string[] = [];
+
+    // Find disabled services
+    for (const [serviceName, config] of Object.entries(changeset.services)) {
+      if (!config.enabled) {
+        servicesToDelete.push(`${serviceName}-service`);
+      }
+    }
+
+    // Find disabled databases
+    for (const [dbName, config] of Object.entries(changeset.databases)) {
+      if (!config.enabled) {
+        databasesToDelete.push(dbName);
+      }
+    }
+
+    this.logger.log(`[LLM] Services to delete: ${servicesToDelete.join(', ') || 'none'}`);
+    this.logger.log(`[LLM] Databases to delete: ${databasesToDelete.join(', ') || 'none'}`);
+
+    // Delete disabled services
+    for (const service of servicesToDelete) {
+      try {
+        await execAsync(`kubectl delete deployment ${service} -n business-services --ignore-not-found=true`);
+        this.logger.log(`[LLM]   ✓ Deleted deployment: ${service}`);
+      } catch (error: any) {
+        this.logger.warn(`[LLM]   ! Failed to delete ${service}: ${error.message}`);
+      }
+    }
+
+    // Delete disabled databases (StatefulSets)
+    for (const db of databasesToDelete) {
+      try {
+        await execAsync(`kubectl delete statefulset ${db} -n database --ignore-not-found=true`);
+        this.logger.log(`[LLM]   ✓ Deleted statefulset: ${db}`);
+      } catch (error: any) {
+        this.logger.warn(`[LLM]   ! Failed to delete ${db}: ${error.message}`);
+      }
+    }
+  }
+
+  /**
    * Execute helm upgrade --install command
    */
   private async helmUpgrade(
@@ -334,6 +430,7 @@ export class HelmIntegrationService {
     chartPath: string,
     namespace: string,
     valuesFile: string,
+    kubeEnv: NodeJS.ProcessEnv,
   ): Promise<any> {
     const command = [
       'helm upgrade --install',
@@ -351,6 +448,7 @@ export class HelmIntegrationService {
     try {
       const { stdout, stderr } = await execAsync(command, {
         timeout: 600000, // 10 minutes
+        env: kubeEnv,
       });
 
       if (stderr && !stderr.includes('WARNING')) {

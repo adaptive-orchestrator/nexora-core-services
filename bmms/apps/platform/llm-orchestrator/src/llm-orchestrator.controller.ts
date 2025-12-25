@@ -1,5 +1,5 @@
 // @ts-nocheck - Disable TypeScript strict checking for NestJS decorators
-import { Body, Controller, Get, Post, Query, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Param, Logger } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { LlmOrchestratorService } from './llm-orchestrator.service';
 import type { LlmChatRequest, LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
@@ -9,6 +9,8 @@ import { HelmIntegrationService } from './service/helm-integration.service';
 
 @Controller()
 export class LlmOrchestratorController {
+  private readonly logger = new Logger(LlmOrchestratorController.name);
+
   constructor(
     private readonly llmOrchestratorService: LlmOrchestratorService,
     private readonly codeSearchService: CodeSearchService,
@@ -179,8 +181,11 @@ export class LlmOrchestratorController {
     dry_run?: boolean;
     error?: string;
   }> {
+    this.logger.log(`[GRPC-SWITCH] Received request: to_model=${data.to_model}, tenant=${data.tenant_id}, dry_run=${data.dry_run}`);
+
     const validModels = ['retail', 'subscription', 'freemium', 'multi'];
     if (!data.to_model || !validModels.includes(data.to_model)) {
+      this.logger.error(`[GRPC-SWITCH] Invalid model: ${data.to_model}`);
       throw new Error(`Invalid model. Must be one of: ${validModels.join(', ')}`);
     }
 
@@ -196,11 +201,14 @@ export class LlmOrchestratorController {
       },
     };
 
+    this.logger.log(`[GRPC-SWITCH] Calling helmIntegrationService.triggerDeployment...`);
     // Trigger Helm deployment
     const result = await this.helmIntegrationService.triggerDeployment(
-      mockLlmResponse, 
+      mockLlmResponse,
       data.dry_run ?? false
     );
+
+    this.logger.log(`[GRPC-SWITCH] Deployment result: success=${result.success}, deployed=${result.deployed}, dryRun=${result.dryRun}`);
 
     return {
       success: result.success,
