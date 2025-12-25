@@ -370,10 +370,8 @@ export class InventoryService implements OnModuleInit {
       relations: ['reservations'],
     });
 
-    if (inventories.length === 0) {
-      throw new NotFoundException(`No inventory found for product ${productId}`);
-    }
-
+    // Return empty array instead of throwing error
+    // This allows the caller to handle "no inventory" gracefully
     return inventories;
   }
 

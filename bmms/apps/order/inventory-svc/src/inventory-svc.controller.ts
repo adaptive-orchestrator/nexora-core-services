@@ -119,14 +119,14 @@ export class InventoryController {
 
   @GrpcMethod('InventoryService', 'CheckAvailability')
   async checkAvailability(data: { productId: string; requestedQuantity: number }) {
-    const available = await this.service.checkStock(data.productId, data.requestedQuantity);
-
     // Aggregate ALL inventory records for this product to get total available quantity
     const inventories = await this.service.getAllInventoriesForProduct(data.productId);
     const availableQty = inventories.reduce(
       (sum, inv) => sum + inv.getAvailableQuantity(),
       0
     );
+
+    const available = availableQty >= data.requestedQuantity;
 
     return {
       available,
