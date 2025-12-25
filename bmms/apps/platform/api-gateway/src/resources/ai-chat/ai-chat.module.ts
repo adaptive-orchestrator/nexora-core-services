@@ -13,7 +13,7 @@ import { AiChatService } from './ai-chat.service';
         options: {
           package: 'llm',
           protoPath: join(__dirname, '../../proto/llm-orchestrator.proto'),
-          url: process.env.LLM_SERVICE_URL || 'localhost:50052',
+          url: process.env.GRPC_SERVER_LLM_URL || 'localhost:50052',
         },
       },
     ]),
