@@ -1,9 +1,9 @@
-import { 
-  Controller, 
-  Post, 
-  Get, 
-  Body, 
-  Param, 
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
   Query,
   Req,
   Res,
@@ -20,6 +20,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PaymentService, PaginatedPaymentsResponse } from './payment.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto, PaymentStatsDto } from './dto/payment-response.dto';
@@ -37,8 +38,11 @@ interface RawBodyRequest {
 @Controller('payments')
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
-  
-  constructor(private readonly paymentService: PaymentService) {}
+
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly subscriptionService: SubscriptionService,
+  ) {}
 
   // ============ User-specific endpoints ============
 
@@ -342,6 +346,10 @@ export class PaymentController {
       }
     }
   })
+  @ApiResponse({
+    status: 400,
+    description: 'User already has an active subscription',
+  })
   async createSubscriptionPaymentCheckout(
     @CurrentUser() user: JwtUserPayload,
     @Body() dto: {
@@ -354,6 +362,31 @@ export class PaymentController {
       cancelUrl?: string;
     },
   ) {
+    // Check if user already has an active subscription (only if subscriptionId is not provided)
+    // If subscriptionId is provided, this might be a renewal/reactivation
+    if (!dto.subscriptionId) {
+      try {
+        this.logger.log(`[Payment] Checking subscription status for user ${user.userId} before creating checkout`);
+        const subscriptionStatus: any = await this.subscriptionService.checkSubscriptionStatus(user.userId);
+
+        if (subscriptionStatus && subscriptionStatus.isActive) {
+          this.logger.warn(`[Payment] User ${user.userId} already has an active subscription: ${subscriptionStatus.planName}`);
+          throw new BadRequestException(
+            `Bạn đã có gói ${subscriptionStatus.planName || 'subscription'} đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.`
+          );
+        }
+
+        this.logger.log(`[Payment] No active subscription found, proceeding with checkout`);
+      } catch (error) {
+        // If it's a BadRequestException, re-throw it
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        // For other errors (like subscription service unavailable), log and continue
+        this.logger.warn(`[Payment] Error checking subscription status: ${error.message}`);
+      }
+    }
+
     return this.paymentService.createSubscriptionPaymentCheckout({
       customerId: user.userId,
       email: dto.email,

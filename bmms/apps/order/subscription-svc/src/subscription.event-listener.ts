@@ -82,13 +82,23 @@ export class SubscriptionEventListener {
 
       // Activate subscription
       try {
+        // First check if subscription exists and its current status
+        const subscription = await this.subscriptionService.findById(subscriptionId);
+
+        if (subscription.status === 'active') {
+          console.log(`[SubscriptionEvent] Subscription ${subscriptionId} is already active. Payment received will be logged but no status change needed.`);
+          // Optionally extend the subscription period or log as a renewal
+          return;
+        }
+
+        // Only activate if status is PENDING
         await this.subscriptionService.activateSubscription(subscriptionId);
         console.log(`[SubscriptionEvent] Subscription ${subscriptionId} activated successfully`);
       } catch (activateError) {
         console.error(`[SubscriptionEvent] Failed to activate subscription ${subscriptionId}:`, activateError.message);
         // Still log success because payment was received
       }
-      
+
     } catch (error) {
       console.error('[SubscriptionEvent] Error handling subscription.payment.success:', error);
     }
@@ -185,6 +195,14 @@ export class SubscriptionEventListener {
       // Activate subscription
       if (subscriptionId) {
         try {
+          // First check if subscription exists and its current status
+          const subscription = await this.subscriptionService.findById(subscriptionId);
+
+          if (subscription.status === 'active') {
+            console.log(`[SubscriptionEvent] Subscription ${subscriptionId} is already active. Payment received will be logged but no status change needed.`);
+            return;
+          }
+
           await this.subscriptionService.activateSubscription(subscriptionId);
           console.log(`[SubscriptionEvent] Subscription ${subscriptionId} activated successfully via Stripe payment`);
         } catch (activateError) {
@@ -193,7 +211,7 @@ export class SubscriptionEventListener {
       } else {
         console.warn('[SubscriptionEvent] No subscriptionId in event, cannot activate');
       }
-      
+
     } catch (error) {
       console.error('[SubscriptionEvent] Error handling subscription.payment.completed:', error);
     }

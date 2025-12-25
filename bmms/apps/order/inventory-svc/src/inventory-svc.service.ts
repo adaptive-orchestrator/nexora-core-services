@@ -347,7 +347,7 @@ export class InventoryService implements OnModuleInit {
       whereCondition.ownerId = ownerId;
     }
     // If ownerId is undefined, TypeORM will find records with ownerId = null
-    
+
     const inventory = await this.inventoryRepo.findOne({
       where: whereCondition,
       relations: ['reservations'],
@@ -358,6 +358,23 @@ export class InventoryService implements OnModuleInit {
     }
 
     return inventory;
+  }
+
+  /**
+   * Get ALL inventory records for a product (aggregate across all owners/warehouses)
+   * Use this for checking total available stock
+   */
+  async getAllInventoriesForProduct(productId: string): Promise<Inventory[]> {
+    const inventories = await this.inventoryRepo.find({
+      where: { productId },
+      relations: ['reservations'],
+    });
+
+    if (inventories.length === 0) {
+      throw new NotFoundException(`No inventory found for product ${productId}`);
+    }
+
+    return inventories;
   }
 
   async listAll(page: number = 1, limit: number = 20, ownerId?: string): Promise<{
@@ -619,8 +636,25 @@ export class InventoryService implements OnModuleInit {
   // ============= UTILITIES =============
 
   async checkStock(productId: string, requiredQuantity: number): Promise<boolean> {
-    const inventory = await this.getByProduct(productId);
-    return inventory.getAvailableQuantity() >= requiredQuantity;
+    // IMPORTANT: Aggregate ALL inventory records for this product
+    // A product can have multiple inventory records (different warehouses, owners, etc.)
+    const inventories = await this.inventoryRepo.find({
+      where: { productId },
+      relations: ['reservations'],
+    });
+
+    if (inventories.length === 0) {
+      return false; // No inventory exists
+    }
+
+    // Calculate total available quantity across all inventory records
+    const totalAvailable = inventories.reduce(
+      (sum, inv) => sum + inv.getAvailableQuantity(),
+      0
+    );
+
+    debug.log(`[Inventory] checkStock productId=${productId}: totalAvailable=${totalAvailable}, requiredQuantity=${requiredQuantity}`);
+    return totalAvailable >= requiredQuantity;
   }
 
   async getInventoryHistory(productId: string, limit = 50): Promise<InventoryHistory[]> {
