@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { mkdir, writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
@@ -7,6 +7,7 @@ import { LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
 import { HelmIntegrationService } from './service/helm-integration.service';
+import { MultiDatabaseService } from './service/multi-database.service';
 
 
 // Import prompts and schemas
@@ -70,7 +71,7 @@ export interface KeyPoolStatus {
 type LLMReply = import('./schemas/llm-output.schema').LLMReply;
 
 @Injectable()
-export class LlmOrchestratorService {
+export class LlmOrchestratorService implements OnModuleDestroy {
   private readonly logger = new Logger(LlmOrchestratorService.name);
   
   // API Key Pool for Round-Robin rotation
@@ -89,11 +90,13 @@ export class LlmOrchestratorService {
 
   // Optional DataSource for Text-to-SQL
   private dataSource?: DataSource;
+  private dataSources: Map<string, DataSource> = new Map();
 
   constructor(
     private readonly codeSearchService: CodeSearchService,
     private readonly validator: LlmOutputValidator,
     private readonly helmIntegrationService: HelmIntegrationService,
+    private readonly multiDbService: MultiDatabaseService,
   ) {
     this.initializeApiKeyPool();
   }
@@ -103,6 +106,92 @@ export class LlmOrchestratorService {
    */
   setDataSource(dataSource: DataSource): void {
     this.dataSource = dataSource;
+  }
+
+  /**
+   * Set multiple DataSources for multi-database Text-to-SQL
+   */
+  setDataSources(dataSources: Map<string, DataSource>): void {
+    this.dataSources = dataSources;
+    dataSources.forEach((ds, name) => {
+      this.multiDbService.registerDataSource(name, ds);
+    });
+    this.logger.log(`[LLM Service] Registered ${dataSources.size} database connection(s)`);
+  }
+
+  /**
+   * Initialize database connections programmatically
+   * This works better in standalone mode compared to TypeOrmModule
+   */
+  async initializeDatabaseConnections(): Promise<void> {
+    const databases = [
+      { name: 'billing', port: 3314, database: 'billing_db' },
+      { name: 'payment', port: 3315, database: 'payment_db' },
+      { name: 'order', port: 3311, database: 'order_db' },
+      { name: 'customer', port: 3306, database: 'customer_db' },
+      { name: 'catalogue', port: 3308, database: 'catalogue_db' },
+      { name: 'subscription', port: 3312, database: 'subscription_db' },
+      { name: 'inventory', port: 3313, database: 'inventory_db' },
+    ];
+
+    const host = process.env.DB_HOST || 'localhost';
+    const username = process.env.DB_USERNAME || 'bmms_user';
+    const password = process.env.DB_PASSWORD || 'bmms_password';
+    const logging = process.env.DB_LOGGING === 'true';
+
+    for (const dbConfig of databases) {
+      try {
+        const dataSource = new DataSource({
+          type: 'mysql',
+          host,
+          port: dbConfig.port,
+          username,
+          password,
+          database: dbConfig.database,
+          synchronize: false,
+          logging,
+          entities: [], // No entities needed for raw queries
+          connectTimeout: 5000, // 5 second timeout
+        });
+
+        await dataSource.initialize();
+        
+        this.dataSources.set(dbConfig.name, dataSource);
+        this.multiDbService.registerDataSource(dbConfig.name, dataSource);
+        
+        this.logger.log(`[DB] ✅ Connected to ${dbConfig.name} (${dbConfig.database}:${dbConfig.port})`);
+      } catch (error) {
+        this.logger.warn(`[DB] ⚠️  Failed to connect to ${dbConfig.name}: ${error.message}`);
+      }
+    }
+
+    if (this.dataSources.size > 0) {
+      this.logger.log(`[DB] ✅ Initialized ${this.dataSources.size}/${databases.length} database connection(s)`);
+    } else {
+      this.logger.error('[DB] ❌ No database connections available - Text-to-SQL will not work');
+      this.logger.error('[DB] Make sure Docker containers are running: docker-compose up -d');
+    }
+  }
+
+  /**
+   * Remove database prefix from SQL query
+   * Converts: `database`.`table` → `table`
+   * Converts: database.table → `table`
+   */
+  private cleanDatabasePrefix(sql: string): string {
+    // Pattern 1: `database`.`table` → `table`
+    let cleaned = sql.replace(/`[a-zA-Z0-9_]+`\.`([a-zA-Z0-9_]+)`/g, '`$1`');
+    
+    // Pattern 2: database.table → `table`
+    cleaned = cleaned.replace(/\b[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)\b/g, '`$1`');
+    
+    // Pattern 3: `database`.table → `table`
+    cleaned = cleaned.replace(/`[a-zA-Z0-9_]+`\.([a-zA-Z0-9_]+)\b/g, '`$1`');
+    
+    // Pattern 4: database.`table` → `table`
+    cleaned = cleaned.replace(/\b[a-zA-Z0-9_]+\.`([a-zA-Z0-9_]+)`/g, '`$1`');
+    
+    return cleaned;
   }
 
   // =============================================================================
@@ -793,8 +882,69 @@ Yêu cầu: ${message}`;
     try {
       this.logger.log(`[Text-to-SQL] Processing: "${question.substring(0, 50)}..."`);
 
+      // Check if any DataSource is available
+      if (!this.multiDbService.hasAnyDataSource()) {
+        return {
+          success: false,
+          question,
+          naturalResponse: 'Database connection not available. Please configure DataSource.',
+          error: 'DataSource not initialized',
+        };
+      }
+
+      // Detect which database to use based on the question
+      const targetDb = this.multiDbService.detectDatabase(question);
+      const dataSource = this.multiDbService.getDataSource(targetDb);
+      
+      if (!dataSource || !dataSource.isInitialized) {
+        const availableDbs = this.multiDbService.getAvailableDatabases();
+        this.logger.warn(`[Text-to-SQL] Database '${targetDb}' not available. Available: ${availableDbs.join(', ')}`);
+        
+        // Fallback to first available database
+        if (availableDbs.length > 0) {
+          const fallbackDb = availableDbs[0];
+          const fallbackDs = this.multiDbService.getDataSource(fallbackDb);
+          if (fallbackDs && fallbackDs.isInitialized) {
+            this.logger.log(`[Text-to-SQL] Using fallback database: ${fallbackDb}`);
+            return this.executeTextToSqlQuery(question, fallbackDs, fallbackDb);
+          }
+        }
+        
+        return {
+          success: false,
+          question,
+          naturalResponse: `Database '${targetDb}' is not available.`,
+          error: 'Target database not initialized',
+        };
+      }
+
+      this.logger.log(`[Text-to-SQL] Using database: ${targetDb}`);
+      return this.executeTextToSqlQuery(question, dataSource, targetDb);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Text-to-SQL] Error: ${message}`);
+      return {
+        success: false,
+        question,
+        naturalResponse: `Có lỗi xảy ra khi xử lý câu hỏi: ${message}`,
+        error: message,
+      };
+    }
+  }
+
+  /**
+   * Execute Text-to-SQL query on a specific database
+   */
+  private async executeTextToSqlQuery(
+    question: string,
+    dataSource: DataSource,
+    dbName: string,
+    skipRedetection = false
+  ): Promise<TextToSQLResult> {
+    try {
       // Check if DataSource is available
-      if (!this.dataSource || !this.dataSource.isInitialized) {
+      if (!dataSource || !dataSource.isInitialized) {
         return {
           success: false,
           question,
@@ -819,6 +969,7 @@ Yêu cầu: ${message}`;
       const sqlGenPrompt = fillPromptTemplate(TEXT_TO_SQL_GEN_PROMPT, {
         SCHEMA_CONTEXT: schemaContext,
         USER_QUESTION: question,
+        DATABASE_NAME: dbName,
       });
 
       const sqlResponse = await this.callGeminiWithRetry(
@@ -839,14 +990,34 @@ Yêu cầu: ${message}`;
       }
 
       const { sql, params } = sqlParseResult.data;
-      this.logger.log(`[Text-to-SQL] Generated SQL: ${sql}`);
+      
+      // Step 2.1: FORCE REMOVE database prefix from SQL (LLM sometimes ignores instructions)
+      let cleanedSql = this.cleanDatabasePrefix(sql);
+      
+      this.logger.log(`[Text-to-SQL] Generated SQL for ${dbName}: ${cleanedSql}`);
+
+      // Step 2.5: Re-check database based on SQL query content (only on first attempt)
+      if (!skipRedetection) {
+        const sqlDetectedDb = this.multiDbService.detectDatabaseFromSQL(cleanedSql);
+        if (sqlDetectedDb && sqlDetectedDb !== dbName) {
+          this.logger.warn(`[Text-to-SQL] SQL query uses tables from '${sqlDetectedDb}', switching from '${dbName}'`);
+          const correctDataSource = this.multiDbService.getDataSource(sqlDetectedDb);
+          
+          if (correctDataSource && correctDataSource.isInitialized) {
+            this.logger.log(`[Text-to-SQL] Switched to correct database: ${sqlDetectedDb}`);
+            return this.executeTextToSqlQuery(question, correctDataSource, sqlDetectedDb, true);
+          } else {
+            this.logger.error(`[Text-to-SQL] Detected database '${sqlDetectedDb}' is not available`);
+          }
+        }
+      }
 
       // Step 3: Validate SQL is read-only
-      if (!validateSQLReadOnly(sql)) {
+      if (!validateSQLReadOnly(cleanedSql)) {
         return {
           success: false,
           question,
-          sql,
+          sql: cleanedSql,
           naturalResponse: 'Chỉ hỗ trợ truy vấn đọc dữ liệu (SELECT). Không thể thực hiện các thao tác thay đổi dữ liệu.',
           error: 'SQL query is not read-only',
         };
@@ -855,35 +1026,51 @@ Yêu cầu: ${message}`;
       // Step 4: Execute SQL query
       let rawData: any[];
       try {
-        rawData = await this.dataSource.query(sql, params);
-        this.logger.log(`[Text-to-SQL] Query returned ${rawData.length} rows`);
+        rawData = await dataSource.query(cleanedSql, params);
+        this.logger.log(`[Text-to-SQL] Query returned ${rawData.length} rows from ${dbName}`);
       } catch (dbError: any) {
         this.logger.error(`[Text-to-SQL] Database error: ${dbError.message}`);
         return {
           success: false,
           question,
-          sql,
+          sql: cleanedSql,
           naturalResponse: `Lỗi khi truy vấn database: ${dbError.message}`,
           error: dbError.message,
         };
       }
 
       // Step 5: Generate natural language response
-      const reporterPrompt = fillPromptTemplate(DATA_REPORTER_PROMPT, {
-        USER_QUESTION: question,
-        SQL_QUERY: sql,
-        SQL_RESULT: JSON.stringify(rawData.slice(0, 50)), // Limit for context size
-      });
-
-      const naturalResponse = await this.callGeminiWithRetry(
-        'Generate a natural response in Vietnamese based on the data.',
-        reporterPrompt,
+      // Check if data contains only null values
+      const hasNonNullValue = rawData.some(row => 
+        Object.values(row).some(val => val !== null && val !== undefined)
       );
+
+      let naturalResponse: string;
+      
+      if (!hasNonNullValue || rawData.length === 0) {
+        naturalResponse = '📊 Không tìm thấy dữ liệu phù hợp với điều kiện tìm kiếm.\n\n' +
+          '💡 **Gợi ý**: Có thể không có dữ liệu trong khoảng thời gian này, hoặc điều kiện lọc quá chặt. ' +
+          'Hãy thử:\n' +
+          '- Kiểm tra lại khoảng thời gian\n' +
+          '- Mở rộng điều kiện tìm kiếm\n' +
+          '- Xem tổng quan dữ liệu có sẵn';
+      } else {
+        const reporterPrompt = fillPromptTemplate(DATA_REPORTER_PROMPT, {
+          USER_QUESTION: question,
+          SQL_QUERY: cleanedSql,
+          SQL_RESULT: JSON.stringify(rawData.slice(0, 50)), // Limit for context size
+        });
+
+        naturalResponse = await this.callGeminiWithRetry(
+          'Generate a natural response in Vietnamese based on the data.',
+          reporterPrompt,
+        );
+      }
 
       return {
         success: true,
         question,
-        sql,
+        sql: cleanedSql,
         rawData,
         naturalResponse: naturalResponse.trim(),
       };
@@ -903,6 +1090,10 @@ Yêu cầu: ${message}`;
   /**
    * Load and cache entity schemas for Text-to-SQL context
    */
+  /**
+   * Load entity schemas from all available databases
+   * Returns formatted schema context for LLM
+   */
   private async loadEntitySchemas(): Promise<string | null> {
     // Check cache
     const now = Date.now();
@@ -911,80 +1102,74 @@ Yêu cầu: ${message}`;
     }
 
     try {
-      // Search for entity files using code search service
-      const entityResults = await this.codeSearchService.searchRelevantCode(
-        'entity TypeORM Column Table PrimaryGeneratedColumn',
-        20,
-      );
-
-      if (entityResults.length === 0) {
-        this.logger.warn('[Text-to-SQL] No entity files found via RAG');
-        return this.buildSchemaFromDataSource();
-      }
-
-      // Filter only .entity.ts files
-      const entityFiles = entityResults.filter(r => 
-        r.file_path.endsWith('.entity.ts')
-      );
-
-      // Build schema context
-      let schemaContext = '=== DATABASE ENTITIES ===\n\n';
+      let schemaContext = '=== AVAILABLE DATABASES AND TABLES ===\n\n';
       
-      for (const entity of entityFiles.slice(0, 10)) { // Limit to 10 entities
-        schemaContext += `// ${entity.file_path}\n`;
-        schemaContext += entity.content.substring(0, 2000); // Limit content size
-        schemaContext += '\n\n';
+      // Build schema from all connected DataSources
+      for (const [dbName, dataSource] of this.dataSources) {
+        if (!dataSource.isInitialized) continue;
+        
+        schemaContext += `📁 DATABASE: ${dbName}\n`;
+        
+        // Add context notes for specific databases
+        if (dbName === 'order') {
+          schemaContext += '   💡 Use this for: REVENUE, SALES, ORDERS, PURCHASES\n';
+        } else if (dbName === 'payment') {
+          schemaContext += '   💡 Use this for: PAYMENT TRANSACTIONS, GATEWAYS\n';
+        } else if (dbName === 'customer') {
+          schemaContext += '   💡 Use this for: CUSTOMERS, USERS, PROFILES\n';
+        }
+        
+        schemaContext += '─'.repeat(50) + '\n';
+        
+        try {
+          // Get all tables from this database
+          const tables = await dataSource.query(`SHOW TABLES`);
+          
+          for (const tableObj of tables.slice(0, 10)) { // Limit tables per DB
+            const tableName = Object.values(tableObj)[0] as string;
+            
+            // Get columns for this table
+            const columns = await dataSource.query(`DESCRIBE \`${tableName}\``);
+            
+            schemaContext += `\n📊 Table: \`${tableName}\`\n`;
+            schemaContext += 'Columns:\n';
+            
+            for (const col of columns) {
+              schemaContext += `  - ${col.Field} (${col.Type})`;
+              if (col.Key === 'PRI') schemaContext += ' [PRIMARY KEY]';
+              if (col.Null === 'YES') schemaContext += ' [nullable]';
+              if (col.Default) schemaContext += ` [default: ${col.Default}]`;
+              schemaContext += '\n';
+            }
+          }
+          
+          schemaContext += '\n';
+        } catch (dbError) {
+          this.logger.warn(`[Schema] Error loading schema for ${dbName}: ${dbError.message}`);
+        }
       }
+      
+      // Add important notes
+      schemaContext += `\n${'='.repeat(50)}\n`;
+      schemaContext += '⚠️  IMPORTANT SQL WRITING RULES:\n';
+      schemaContext += '─'.repeat(50) + '\n';
+      schemaContext += '1. ✅ Use ONLY table names: FROM `orders`\n';
+      schemaContext += '2. ❌ NEVER use database prefix: FROM `order_db`.`orders`\n';
+      schemaContext += '3. ✅ Always use backticks: `tableName`, `columnName`\n';
+      schemaContext += '4. ✅ Use lowercase for keywords: SELECT, FROM, WHERE\n';
+      schemaContext += '5. ✅ For dates: CURDATE(), NOW(), DATE_FORMAT()\n';
+      schemaContext += '6. ✅ For safety: Always add LIMIT clause\n';
+      schemaContext += `${'='.repeat(50)}\n`;
 
       // Cache the result
       this.entitySchemaCache = schemaContext;
       this.entitySchemaCacheTime = now;
 
+      this.logger.log(`[Schema] Loaded schema from ${this.dataSources.size} database(s)`);
       return schemaContext;
 
     } catch (error) {
-      this.logger.error(`[Text-to-SQL] Error loading entity schemas: ${error}`);
-      return this.buildSchemaFromDataSource();
-    }
-  }
-
-  /**
-   * Fallback: Build schema from DataSource metadata
-   */
-  private buildSchemaFromDataSource(): string | null {
-    if (!this.dataSource?.isInitialized) {
-      return null;
-    }
-
-    try {
-      const entities = this.dataSource.entityMetadatas;
-      let schema = '=== DATABASE SCHEMA (from metadata) ===\n\n';
-
-      for (const entity of entities) {
-        schema += `Table: ${entity.tableName}\n`;
-        schema += `Columns:\n`;
-        
-        for (const column of entity.columns) {
-          schema += `  - ${column.propertyName} (${column.type})`;
-          if (column.isPrimary) schema += ' [PK]';
-          if (column.isNullable) schema += ' [nullable]';
-          schema += '\n';
-        }
-        
-        // Relations
-        if (entity.relations.length > 0) {
-          schema += `Relations:\n`;
-          for (const relation of entity.relations) {
-            schema += `  - ${relation.propertyName} -> ${relation.inverseEntityMetadata?.tableName || 'unknown'}\n`;
-          }
-        }
-        
-        schema += '\n';
-      }
-
-      return schema;
-    } catch (error) {
-      this.logger.error(`[Text-to-SQL] Error building schema from DataSource: ${error}`);
+      this.logger.error(`[Schema] Error loading entity schemas: ${error.message}`);
       return null;
     }
   }
@@ -1237,6 +1422,26 @@ Hãy tư vấn thật thân thiện, dễ hiểu bằng ${lang === 'vi' ? 'tiế
         to_model,
       },
     };
+  }
+
+  /**
+   * Cleanup database connections when module is destroyed
+   */
+  async onModuleDestroy() {
+    this.logger.log('[DB] Closing database connections...');
+    
+    for (const [name, dataSource] of this.dataSources) {
+      try {
+        if (dataSource.isInitialized) {
+          await dataSource.destroy();
+          this.logger.log(`[DB] Closed connection to ${name}`);
+        }
+      } catch (error) {
+        this.logger.warn(`[DB] Error closing ${name}: ${error.message}`);
+      }
+    }
+    
+    this.dataSources.clear();
   }
 }
 

@@ -7,6 +7,7 @@ import {
   HttpStatus,
   ValidationPipe,
   Query,
+  HttpException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -376,8 +377,8 @@ export class LlmOrchestratorController {
   @Post('analyze-incident')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Analyze system incident',
-    description: 'Phân tích sự cố hệ thống và đưa ra khuyến nghị',
+    summary: 'Analyze system incident / Root Cause Analysis',
+    description: 'Phân tích sự cố hệ thống và đưa ra khuyến nghị (RCA)',
   })
   @ApiBody({
     schema: {
@@ -386,12 +387,22 @@ export class LlmOrchestratorController {
         incident_description: {
           type: 'string',
           example: 'Service payment-svc không phản hồi, timeout sau 30s',
-          description: 'Mô tả sự cố'
+          description: 'Mô tả sự cố (tùy chọn nếu có errorLog)'
+        },
+        errorLog: {
+          type: 'string',
+          example: '[PaymentService] Error: Connection timeout',
+          description: 'Log lỗi hệ thống'
+        },
+        question: {
+          type: 'string',
+          example: 'Tại sao thanh toán bị lỗi?',
+          description: 'Câu hỏi về sự cố (tùy chọn)'
         },
         logs: {
           type: 'string',
           example: 'Error: Connection refused...',
-          description: 'Log hệ thống (tùy chọn)'
+          description: 'Log hệ thống bổ sung (tùy chọn)'
         },
         lang: {
           type: 'string',
@@ -399,7 +410,6 @@ export class LlmOrchestratorController {
           example: 'vi',
         },
       },
-      required: ['incident_description'],
     }
   })
   @ApiResponse({
@@ -408,20 +418,60 @@ export class LlmOrchestratorController {
     schema: {
       type: 'object',
       properties: {
-        severity: { type: 'string', example: 'high' },
-        root_cause: { type: 'string', example: 'Database connection pool exhausted' },
+        severity: { type: 'string', example: 'critical' },
+        analysis: { type: 'string', example: 'Root cause: Database connection pool exhausted...' },
         recommendations: { type: 'array', items: { type: 'string' } },
-        immediate_actions: { type: 'array', items: { type: 'string' } },
+        raw_response: { type: 'string' },
       }
     }
   })
   async analyzeIncident(
-    @Body() body: { incident_description: string; logs?: string; lang?: string },
+    @Body() body: { 
+      incident_description?: string; 
+      errorLog?: string;
+      question?: string;
+      logs?: string; 
+      lang?: string 
+    },
   ) {
-    return this.llmOrchestratorService.analyzeIncident(
-      body.incident_description,
+    // Support both formats: errorLog (from test) and incident_description (from gRPC)
+    const incidentDesc = body.errorLog || body.incident_description;
+    
+    if (!incidentDesc) {
+      throw new HttpException(
+        'Either errorLog or incident_description is required', 
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const result = await this.llmOrchestratorService.analyzeIncident(
+      incidentDesc,
       body.logs,
       body.lang ?? 'vi',
-    );
+    ) as any;
+
+    // Transform gRPC response to frontend format
+    // gRPC returns: { severity, analysis: string, recommendations, raw_response }
+    // Frontend expects: { success, analysis: object, codeContext, error }
+    
+    if (result.raw_response) {
+      try {
+        // Parse the raw_response which contains the structured RCA analysis
+        const parsedAnalysis = JSON.parse(result.raw_response);
+        
+        return {
+          success: true,
+          analysis: parsedAnalysis,
+          codeContext: result.recommendations || [],
+          error: undefined,
+        };
+      } catch (parseError) {
+        // If parsing fails, fall back to legacy format
+        return result;
+      }
+    }
+    
+    // If no raw_response, return as-is (shouldn't happen)
+    return result;
   }
 }
