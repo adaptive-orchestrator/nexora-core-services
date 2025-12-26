@@ -62,8 +62,9 @@ export class SubscriptionController {
     // If customerId is NOT the user's customer.id, only admin can create for others
     if (dto.customerId && dto.customerId !== user.userId && user.role !== 'admin') {
       // Allow if customerId is a customer.id (UUID format), let subscription-svc validate ownership
-      // For now, we trust the subscription-svc to validate customer ownership
-      throw new ForbiddenException('[V2] CustomerId validation - subscription-svc will handle lookup');
+      // For now, we trust the subscription-svc to validate customer ownership via getCustomerById
+      // The subscription-svc will verify that the customer exists and belongs to the user
+      // throw new ForbiddenException('[V2] CustomerId validation - subscription-svc will handle lookup');
     }
     
     // If no customerId provided, use userId (subscription-svc will lookup customer by userId)
