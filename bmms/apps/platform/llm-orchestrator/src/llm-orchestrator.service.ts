@@ -37,50 +37,6 @@ import {
 // INTERFACES (Exported for external use)
 // =============================================================================
 
-**CORE SERVICES (always needed):**
-- AuthService, CustomerService, CRMOrchestratorService
-- APIGatewayService
-- CatalogueService (Product domain)
-- BillingService, PaymentService (Finance domain)
-
-**SERVICE MAPPING:**
-- OrderService -> order-svc (namespace: order, port: 3011)
-- InventoryService -> inventory-svc (namespace: order, port: 3015)
-- SubscriptionService -> subscription-svc (namespace: order, port: 3012)
-- PromotionService -> promotion-svc (namespace: product, port: 3009)
-- CatalogueService -> catalogue-svc (namespace: product, port: 3007)
-- BillingService -> billing-svc (namespace: finance, port: 3003)
-- PaymentService -> payment-svc (namespace: finance, port: 3015)
-- AuthService -> auth-svc (namespace: customer, port: 3000)
-- CustomerService -> customer-svc (namespace: customer, port: 3001)
-- CRMOrchestratorService -> crm-orchestrator (namespace: customer, port: 3002)
-- APIGatewayService -> api-gateway (namespace: platform, port: 3099)
-
-**INTENT TYPES:**
-- "business_model_change": Chuyển đổi từ model này sang model khác
-- "business_model_expansion": Mở rộng để hỗ trợ nhiều models
-- "update": Cập nhật config của services hiện tại
-- "scale": Thay đổi số lượng replicas
-
-**OUTPUT FORMAT:**
-Return ONLY valid JSON in this exact format:
-{
-  "proposal_text": "Detailed explanation in Vietnamese about what changes are needed",
-  "changeset": {
-    "model": "BusinessModel|MultiBusinessModel|SubscriptionPlan|etc",
-    "features": [
-      {"key": "business_model", "value": "retail|subscription|freemium|multi"},
-      {"key": "other_config_key", "value": "config_value"}
-    ],
-    "impacted_services": ["ServiceName1", "ServiceName2", ...]
-  },
-  "metadata": {
-    "intent": "business_model_change|business_model_expansion|update|scale",
-    "confidence": 0.85-0.99,
-    "risk": "low|medium|high",
-    "from_model": "retail|subscription|etc (if applicable)",
-    "to_model": "subscription|multi|etc (if applicable)"
-  }
 export interface ApiKeyState {
   key: string;
   lastUsed: number;
