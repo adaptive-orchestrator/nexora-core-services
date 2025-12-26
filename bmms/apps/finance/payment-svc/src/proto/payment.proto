@@ -15,12 +15,14 @@ service PaymentService {
   // =================== STRIPE OPERATIONS ===================
   rpc CreateCheckoutSession (CreateCheckoutSessionRequest) returns (CheckoutSessionResponse);
   rpc CreateSubscriptionCheckout (CreateSubscriptionCheckoutRequest) returns (CheckoutSessionResponse);
+  rpc CreateSubscriptionPaymentCheckout (CreateSubscriptionPaymentCheckoutRequest) returns (SubscriptionPaymentCheckoutResponse);
   rpc CreatePaymentIntent (CreatePaymentIntentRequest) returns (PaymentIntentResponse);
   rpc CreateRefund (CreateRefundRequest) returns (RefundResponse);
   rpc HandleStripeWebhook (StripeWebhookRequest) returns (StripeWebhookResponse);
   rpc GetOrCreateCustomer (GetOrCreateCustomerRequest) returns (CustomerResponse);
   rpc CreateBillingPortalSession (BillingPortalRequest) returns (BillingPortalResponse);
   rpc CancelStripeSubscription (CancelStripeSubscriptionRequest) returns (CancelSubscriptionResponse);
+  rpc GetStripeSession (GetStripeSessionRequest) returns (GetStripeSessionResponse);
 }
 
 // Common messages
@@ -147,11 +149,27 @@ message CreateSubscriptionCheckoutRequest {
   map<string, string> metadata = 6;
 }
 
+message CreateSubscriptionPaymentCheckoutRequest {
+  string customerId = 1;
+  string email = 2;
+  int64 amount = 3;  // Amount in smallest currency unit (cents)
+  optional string currency = 4;
+  optional string subscriptionId = 5;
+  optional string planName = 6;
+  optional string successUrl = 7;
+  optional string cancelUrl = 8;
+}
+
 message CheckoutSessionResponse {
   string sessionId = 1;
   string checkoutUrl = 2;
   bool success = 3;
   optional string message = 4;
+}
+
+message SubscriptionPaymentCheckoutResponse {
+  string sessionId = 1;
+  string url = 2;
 }
 
 // Payment Intent
@@ -234,4 +252,21 @@ message CancelSubscriptionResponse {
   string status = 2;
   optional string canceledAt = 3;
   optional string message = 4;
+}
+
+// Get Stripe Session
+message GetStripeSessionRequest {
+  string sessionId = 1;
+}
+
+message GetStripeSessionResponse {
+  string id = 1;
+  string paymentStatus = 2;
+  string status = 3;
+  int64 amountTotal = 4;
+  string currency = 5;
+  string customerEmail = 6;
+  string metadata = 7;
+  bool success = 8;
+  optional string message = 9;
 }

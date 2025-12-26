@@ -29,12 +29,14 @@ interface IPaymentGrpcService {
   // Stripe operations
   createCheckoutSession(data: any): any;
   createSubscriptionCheckout(data: any): any;
+  createSubscriptionPaymentCheckout(data: any): any;
   createPaymentIntent(data: any): any;
   createRefund(data: any): any;
   handleStripeWebhook(data: any): any;
   getOrCreateCustomer(data: any): any;
   createBillingPortalSession(data: any): any;
   cancelStripeSubscription(data: any): any;
+  getStripeSession(data: any): any;
 }
 
 @Injectable()
@@ -174,6 +176,25 @@ export class PaymentService implements OnModuleInit {
   }
 
   /**
+   * Create Stripe checkout session for subscription payment (one-time)
+   */
+  async createSubscriptionPaymentCheckout(dto: {
+    customerId: string;
+    email: string;
+    amount: number;
+    currency?: string;
+    subscriptionId?: string;
+    planName?: string;
+    successUrl?: string;
+    cancelUrl?: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createSubscriptionPaymentCheckout(dto)
+    );
+    return response;
+  }
+
+  /**
    * Create PaymentIntent for custom payment flows
    */
   async createPaymentIntent(dto: {
@@ -255,5 +276,31 @@ export class PaymentService implements OnModuleInit {
       this.paymentService.cancelStripeSubscription(dto)
     );
     return response;
+  }
+
+  /**
+   * Get Stripe Checkout Session details
+   */
+  async getStripeSession(sessionId: string) {
+    const response: any = await firstValueFrom(
+      this.paymentService.getStripeSession({ sessionId })
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to get session details');
+    }
+
+    // Parse metadata from JSON string to object
+    const metadata = response.metadata ? JSON.parse(response.metadata) : {};
+
+    return {
+      id: response.id,
+      paymentStatus: response.paymentStatus,
+      status: response.status,
+      amountTotal: response.amountTotal,
+      currency: response.currency,
+      customerEmail: response.customerEmail,
+      metadata,
+    };
   }
 }

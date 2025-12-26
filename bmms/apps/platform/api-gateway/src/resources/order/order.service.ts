@@ -42,22 +42,44 @@ export class OrderService implements OnModuleInit {
       // Handle gRPC errors and convert to HTTP-friendly errors
       const grpcCode = error?.code;
       const details = error?.details || error?.message || 'Unknown error';
-      
+
+      // Check for OUT_OF_STOCK errors (should return 422 Unprocessable Entity)
+      if (details.toLowerCase().includes('out of stock') || details.toLowerCase().includes('out_of_stock')) {
+        // Extract structured error data if available
+        let errorResponse: any = {
+          message: details,
+          error: 'OUT_OF_STOCK',
+        };
+
+        // Try to parse structured error data from gRPC metadata
+        try {
+          const metadata = error?.metadata?.getMap?.();
+          if (metadata && metadata['error-details']) {
+            const errorDetails = JSON.parse(metadata['error-details']);
+            errorResponse = errorDetails;
+          }
+        } catch (parseError) {
+          // If parsing fails, just use the message
+        }
+
+        throw new (require('@nestjs/common').UnprocessableEntityException)(errorResponse);
+      }
+
       // gRPC code 5 = NOT_FOUND
       if (grpcCode === 5 || details.toLowerCase().includes('not found')) {
         throw new (require('@nestjs/common').NotFoundException)(details);
       }
-      
+
       // gRPC code 3 = INVALID_ARGUMENT
       if (grpcCode === 3 || details.toLowerCase().includes('invalid') || details.toLowerCase().includes('insufficient stock')) {
         throw new (require('@nestjs/common').BadRequestException)(details);
       }
-      
+
       // gRPC code 6 = ALREADY_EXISTS
       if (grpcCode === 6 || details.toLowerCase().includes('already exists')) {
         throw new (require('@nestjs/common').ConflictException)(details);
       }
-      
+
       // Default: pass through as Internal Server Error with meaningful message
       console.error('[OrderService] createOrder gRPC error:', error);
       throw new (require('@nestjs/common').InternalServerErrorException)(

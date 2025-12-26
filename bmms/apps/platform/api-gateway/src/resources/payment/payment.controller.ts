@@ -1,9 +1,9 @@
-import { 
-  Controller, 
-  Post, 
-  Get, 
-  Body, 
-  Param, 
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
   Query,
   Req,
   Res,
@@ -20,6 +20,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PaymentService, PaginatedPaymentsResponse } from './payment.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PaymentResponseDto, PaymentStatsDto } from './dto/payment-response.dto';
@@ -37,8 +38,11 @@ interface RawBodyRequest {
 @Controller('payments')
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
-  
-  constructor(private readonly paymentService: PaymentService) {}
+
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly subscriptionService: SubscriptionService,
+  ) {}
 
   // ============ User-specific endpoints ============
 
@@ -261,7 +265,7 @@ export class PaymentController {
   @UseGuards(JwtGuard)
   @ApiBearerAuth('accessToken')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create Stripe subscription checkout',
     description: 'Creates a Stripe checkout session for subscription purchase.'
   })
@@ -277,8 +281,8 @@ export class PaymentController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Subscription checkout session created',
     schema: {
       type: 'object',
@@ -305,6 +309,93 @@ export class PaymentController {
       cancelUrl: dto.cancelUrl,
       trialDays: dto.trialDays,
       metadata: { userId: user.userId },
+    });
+  }
+
+  @Post('stripe/checkout/subscription-payment')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Create Stripe checkout for subscription payment (one-time)',
+    description: 'Creates a Stripe checkout session for subscription payment using one-time payment mode. Use this when you don\'t have a Stripe Price ID and need to charge a specific amount.'
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['email', 'amount'],
+      properties: {
+        email: { type: 'string', example: 'customer@example.com', description: 'Customer email' },
+        amount: { type: 'number', example: 2999, description: 'Amount in cents' },
+        currency: { type: 'string', example: 'usd', default: 'usd', description: 'Currency code' },
+        subscriptionId: { type: 'string', example: 'sub-123', description: 'Associated subscription ID' },
+        planName: { type: 'string', example: 'Premium Plan', description: 'Plan name for display' },
+        successUrl: { type: 'string', example: 'https://yourapp.com/subscription/success?session_id={CHECKOUT_SESSION_ID}' },
+        cancelUrl: { type: 'string', example: 'https://yourapp.com/subscription/cancel' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Subscription payment checkout session created',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string', example: 'cs_test_xxx' },
+        url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_xxx' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User already has an active subscription',
+  })
+  async createSubscriptionPaymentCheckout(
+    @CurrentUser() user: JwtUserPayload,
+    @Body() dto: {
+      email: string;
+      amount: number;
+      currency?: string;
+      subscriptionId?: string;
+      planName?: string;
+      successUrl?: string;
+      cancelUrl?: string;
+    },
+  ) {
+    // Check if user already has an active subscription (only if subscriptionId is not provided)
+    // If subscriptionId is provided, this might be a renewal/reactivation
+    if (!dto.subscriptionId) {
+      try {
+        this.logger.log(`[Payment] Checking subscription status for user ${user.userId} before creating checkout`);
+        const subscriptionStatus: any = await this.subscriptionService.checkSubscriptionStatus(user.userId);
+
+        if (subscriptionStatus && subscriptionStatus.isActive) {
+          this.logger.warn(`[Payment] User ${user.userId} already has an active subscription: ${subscriptionStatus.planName}`);
+          throw new BadRequestException(
+            `Bạn đã có gói ${subscriptionStatus.planName || 'subscription'} đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.`
+          );
+        }
+
+        this.logger.log(`[Payment] No active subscription found, proceeding with checkout`);
+      } catch (error) {
+        // If it's a BadRequestException, re-throw it
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        // For other errors (like subscription service unavailable), log and continue
+        this.logger.warn(`[Payment] Error checking subscription status: ${error.message}`);
+      }
+    }
+
+    return this.paymentService.createSubscriptionPaymentCheckout({
+      customerId: user.userId,
+      email: dto.email,
+      amount: dto.amount,
+      currency: dto.currency,
+      subscriptionId: dto.subscriptionId,
+      planName: dto.planName,
+      successUrl: dto.successUrl,
+      cancelUrl: dto.cancelUrl,
     });
   }
 
@@ -401,16 +492,46 @@ export class PaymentController {
     });
   }
 
+  @Get('stripe/session/:sessionId')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth('accessToken')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Stripe Checkout Session details',
+    description: 'Retrieves details of a Stripe checkout session by session ID.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session details retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        paymentStatus: { type: 'string' },
+        status: { type: 'string' },
+        amountTotal: { type: 'number' },
+        currency: { type: 'string' },
+        customerEmail: { type: 'string' },
+        metadata: { type: 'object' },
+      }
+    }
+  })
+  async getStripeSession(
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.paymentService.getStripeSession(sessionId);
+  }
+
   // =================== WEBHOOK ENDPOINT ===================
   /**
    * Stripe Webhook Handler
-   * 
+   *
    * IMPORTANT: This endpoint receives webhooks from Stripe.
    * Configure in main.ts: app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
    */
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Stripe webhook handler',
     description: 'Receives and processes Stripe webhook events. No authentication required - uses Stripe signature verification.'
   })

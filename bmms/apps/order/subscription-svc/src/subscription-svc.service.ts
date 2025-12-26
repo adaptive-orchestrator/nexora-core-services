@@ -68,6 +68,11 @@ export class subscriptionSvcService implements OnModuleInit {
   async create(dto: CreateSubscriptionDto): Promise<Subscription> {
     debug.log('[SubscriptionSvc.create] START - dto:', JSON.stringify(dto));
 
+    // Validate that customerId (userId) is provided
+    if (!dto.customerId) {
+      throw new BadRequestException('customerId (userId) is required');
+    }
+
     // 1. Get customer by userId (since JWT provides userId, not customerId)
     let customer: any;
     try {
