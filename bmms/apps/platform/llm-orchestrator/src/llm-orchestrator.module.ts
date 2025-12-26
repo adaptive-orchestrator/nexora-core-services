@@ -7,6 +7,7 @@ import { TypeOrmModule, getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { CodeSearchService } from './service/code-search.service';
 import { HelmIntegrationService } from './service/helm-integration.service';
+import { DynamicChangesetService } from './service/dynamic-changeset.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
 import { EventModule } from '@bmms/event';
 import { ModuleRef } from '@nestjs/core';
@@ -52,7 +53,8 @@ export class LlmOrchestratorModule implements OnModuleInit {
       providers: [
         LlmOrchestratorService, 
         CodeSearchService, 
-        HelmIntegrationService, 
+        HelmIntegrationService,
+        DynamicChangesetService,
         LlmOutputValidator,
         MultiDatabaseService,
       ],

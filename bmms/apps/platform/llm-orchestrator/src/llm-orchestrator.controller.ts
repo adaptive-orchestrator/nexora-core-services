@@ -5,6 +5,8 @@ import { LlmOrchestratorService } from './llm-orchestrator.service';
 import type { LlmChatRequest, LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { HelmIntegrationService } from './service/helm-integration.service';
+import { DynamicChangesetService } from './service/dynamic-changeset.service';
+import type { DynamicChangesetGenerationRequest } from './service/dynamic-changeset.service';
 
 
 @Controller()
@@ -13,6 +15,7 @@ export class LlmOrchestratorController {
     private readonly llmOrchestratorService: LlmOrchestratorService,
     private readonly codeSearchService: CodeSearchService,
     private readonly helmIntegrationService: HelmIntegrationService,
+    private readonly dynamicChangesetService: DynamicChangesetService,
   ) { }
 
   // @ts-ignore - NestJS decorator type issue in strict mode
@@ -404,4 +407,59 @@ export class LlmOrchestratorController {
       };
     }
   }
-}
+  /**
+   * NEW API: Generate Dynamic Changeset using RAG
+   * POST /llm-orchestrator/generate-dynamic-changeset
+   * 
+   * Uses RAG to discover services and generate changeset files
+   * WITHOUT executing Helm (for manual review/analysis only)
+   */
+  @Post('generate-dynamic-changeset')
+  async generateDynamicChangeset(
+    @Body() request: DynamicChangesetGenerationRequest,
+  ) {
+    try {
+      console.log('[DynamicChangeset API] Request:', request);
+
+      // Validate input
+      if (!request.user_intent || request.user_intent.trim() === '') {
+        return {
+          success: false,
+          error: 'user_intent is required',
+        };
+      }
+
+      // Generate changeset using RAG
+      const result = await this.dynamicChangesetService.generateDynamicChangeset(request);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error,
+        };
+      }
+
+      // Return paths to generated files
+      return {
+        success: true,
+        message: 'Dynamic changeset generated successfully (FILES ONLY - Helm NOT executed)',
+        data: {
+          changeset: result.changeset,
+          files: {
+            json: result.jsonPath,
+            yaml: result.yamlPath,
+          },
+          discovered_services: result.changeset.discovered_services,
+          risk_level: result.changeset.risk_level,
+          total_services: result.changeset.services.length,
+          enabled_services: result.changeset.services.filter(s => s.enabled).length,
+        },
+      };
+    } catch (error) {
+      console.error('[DynamicChangeset API] Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }}
