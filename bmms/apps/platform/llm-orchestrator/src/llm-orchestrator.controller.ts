@@ -5,6 +5,8 @@ import { LlmOrchestratorService } from './llm-orchestrator.service';
 import type { LlmChatRequest, LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { HelmIntegrationService } from './service/helm-integration.service';
+import { DynamicChangesetService } from './service/dynamic-changeset.service';
+import type { DynamicChangesetGenerationRequest } from './service/dynamic-changeset.service';
 
 
 @Controller()
@@ -13,6 +15,7 @@ export class LlmOrchestratorController {
     private readonly llmOrchestratorService: LlmOrchestratorService,
     private readonly codeSearchService: CodeSearchService,
     private readonly helmIntegrationService: HelmIntegrationService,
+    private readonly dynamicChangesetService: DynamicChangesetService,
   ) { }
 
   // @ts-ignore - NestJS decorator type issue in strict mode
@@ -103,6 +106,69 @@ export class LlmOrchestratorController {
   }
 
   // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'RecommendBusinessModelDetailed')
+  async recommendBusinessModelDetailed(data: {
+    business_description?: string;
+    businessDescription?: string;
+    current_model?: string;
+    currentModel?: string;
+    target_audience?: string;
+    targetAudience?: string;
+    revenue_preference?: string;
+    revenuePreference?: string;
+    lang?: string;
+  }): Promise<{
+    proposal_text: string;
+    changeset: {
+      model: string;
+      features: Array<{ key: string; value: string }>;
+      impacted_services: string[];
+      services_to_enable: string[];
+      services_to_disable: string[];
+      services_to_restart: string[];
+    };
+    metadata: {
+      intent: string;
+      confidence: number;
+      risk: string;
+      from_model: string;
+      to_model: string;
+    };
+  }> {
+    const businessDescription = data.business_description || data.businessDescription;
+    const currentModel = data.current_model || data.currentModel || 'retail';
+    const targetAudience = data.target_audience || data.targetAudience;
+    const revenuePreference = data.revenue_preference || data.revenuePreference;
+    
+    console.log('[RecommendBusinessModelDetailed] Received data:', JSON.stringify(data));
+    
+    if (!businessDescription || typeof businessDescription !== 'string') {
+      throw new Error('business_description is required and must be a string');
+    }
+
+    // Get recommendation first
+    const recommendation = await this.llmOrchestratorService.recommendBusinessModel({
+      business_description: businessDescription,
+      target_audience: targetAudience,
+      revenue_preference: revenuePreference,
+      lang: data.lang,
+    });
+
+    // Generate detailed changeset
+    const detailedChangeset = this.llmOrchestratorService.generateDetailedChangeset(
+      currentModel,
+      recommendation.recommended_model,
+      businessDescription,
+    );
+
+    return {
+      proposal_text: recommendation.why_this_fits || recommendation.recommendation_intro,
+      changeset: detailedChangeset.changeset,
+      metadata: detailedChangeset.metadata,
+    };
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
   @GrpcMethod('LlmOrchestratorService', 'SwitchBusinessModel')
   async switchBusinessModel(data: {
     to_model: string;
@@ -163,6 +229,28 @@ export class LlmOrchestratorController {
     );
     return { query: body.query, results };
   }
+
+  /**
+   * REST API endpoint for RCA (Root Cause Analysis)
+   * POST /rca
+   * Body: { errorLog: string, question?: string }
+   */
+  @Post('/rca')
+  async analyzeError(@Body() body: { errorLog: string; question?: string }) {
+    if (!body.errorLog) {
+      throw new Error('errorLog is required');
+    }
+
+    const result = await this.llmOrchestratorService.analyzeIncident(body.errorLog);
+
+    return {
+      success: result.success,
+      analysis: result.analysis,
+      codeContext: result.codeContext,
+      error: result.error,
+    };
+  }
+
   @Get('/rag/all')
   async ragGetAll(
     @Query('limit') limit?: string,
@@ -240,4 +328,138 @@ export class LlmOrchestratorController {
   getHelmConfiguration() {
     return this.helmIntegrationService.getConfiguration();
   }
-}
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'TextToSql')
+  async textToSql(data: { question: string; lang?: string }) {
+    const { question, lang } = data;
+
+    if (!question || typeof question !== 'string') {
+      throw new Error('question is required and must be a string');
+    }
+
+    try {
+      const result = await this.llmOrchestratorService.handleTextToSql(question);
+      
+      // Convert rawData array to JSON string for gRPC
+      return {
+        success: result.success,
+        question: result.question,
+        sql: result.sql || '',
+        natural_response: result.naturalResponse || '',
+        raw_data: result.rawData ? JSON.stringify(result.rawData) : '',
+        error: result.error || '',
+      };
+    } catch (error) {
+      console.error('[TextToSql gRPC] Error:', error);
+      return {
+        success: false,
+        question,
+        sql: '',
+        natural_response: `Có lỗi xảy ra khi xử lý câu hỏi: ${error.message}`,
+        raw_data: '',
+        error: error.message || 'Unknown error',
+      };
+    }
+  }
+
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'AnalyzeIncident')
+  async analyzeIncident(data: { incident_description: string; logs?: string; lang?: string }) {
+    const { incident_description, logs, lang } = data;
+
+    if (!incident_description || typeof incident_description !== 'string') {
+      throw new Error('incident_description is required and must be a string');
+    }
+
+    try {
+      // Construct error log from incident description and logs
+      const errorLog = `${incident_description}${logs ? `\n\nLogs:\n${logs}` : ''}`;
+
+      // Use dedicated RCA method with proper schema validation
+      const result = await this.llmOrchestratorService.analyzeIncident(errorLog);
+
+      if (!result.success || !result.analysis) {
+        return {
+          severity: 'unknown',
+          analysis: result.error || 'Unable to analyze incident',
+          recommendations: [],
+          raw_response: result.error || '',
+        };
+      }
+
+      // Map RCA output to gRPC response format
+      const analysis = result.analysis;
+      
+      return {
+        severity: analysis.severity || 'medium',
+        analysis: `${analysis.summary}\n\n**Root Cause:** ${analysis.root_cause}\n\n**Affected Component:** ${analysis.affected_component}\n\n**Suggested Fix:**\n${analysis.suggested_fix}\n\n**Prevention:** ${analysis.prevention}`,
+        recommendations: [analysis.suggested_fix, analysis.prevention].filter(Boolean),
+        raw_response: JSON.stringify(analysis),
+      };
+    } catch (error) {
+      console.error('[AnalyzeIncident gRPC] Error:', error);
+      return {
+        severity: 'unknown',
+        analysis: `Có lỗi xảy ra khi phân tích sự cố: ${error.message}`,
+        recommendations: [],
+        raw_response: error.message,
+      };
+    }
+  }
+  /**
+   * NEW API: Generate Dynamic Changeset using RAG
+   * POST /llm-orchestrator/generate-dynamic-changeset
+   * 
+   * Uses RAG to discover services and generate changeset files
+   * WITHOUT executing Helm (for manual review/analysis only)
+   */
+  @Post('generate-dynamic-changeset')
+  async generateDynamicChangeset(
+    @Body() request: DynamicChangesetGenerationRequest,
+  ) {
+    try {
+      console.log('[DynamicChangeset API] Request:', request);
+
+      // Validate input
+      if (!request.user_intent || request.user_intent.trim() === '') {
+        return {
+          success: false,
+          error: 'user_intent is required',
+        };
+      }
+
+      // Generate changeset using RAG
+      const result = await this.dynamicChangesetService.generateDynamicChangeset(request);
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error,
+        };
+      }
+
+      // Return paths to generated files
+      return {
+        success: true,
+        message: 'Dynamic changeset generated successfully (FILES ONLY - Helm NOT executed)',
+        data: {
+          changeset: result.changeset,
+          files: {
+            json: result.jsonPath,
+            yaml: result.yamlPath,
+          },
+          discovered_services: result.changeset.discovered_services,
+          risk_level: result.changeset.risk_level,
+          total_services: result.changeset.services.length,
+          enabled_services: result.changeset.services.filter(s => s.enabled).length,
+        },
+      };
+    } catch (error) {
+      console.error('[DynamicChangeset API] Error:', error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+      };
+    }
+  }}

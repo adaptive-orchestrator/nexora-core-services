@@ -1,0 +1,25 @@
+{
+  "proposal_text": "Đề xuất chuyển đổi nhóm sản phẩm 'A' từ mô hình hiện tại sang mô hình đăng ký định kỳ theo tháng. Việc này sẽ yêu cầu kích hoạt và cấu hình các dịch vụ hỗ trợ mô hình Subscription, cập nhật quy trình thanh toán để hỗ trợ thanh toán định kỳ, và tích hợp vào hệ thống quản lý sản phẩm để hiển thị các gói đăng ký.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "billing_frequency", "value": "monthly"},
+      {"key": "product_group_name", "value": "A"}
+    ],
+    "impacted_services": [
+      "SubscriptionService",
+      "PromotionService",
+      "BillingService",
+      "PaymentService",
+      "CatalogueService"
+    ]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.98,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

@@ -10,7 +10,7 @@ interface AuthGrpcService {
   signup(data: SignupDto): any;
   requestPasswordReset(data: { email: string }): any;
   resetPassword(data: ResetPasswordDto): any;
-  getUserById(data: { userId: number }): any;
+  getUserById(data: { userId: string }): any;
 }
 
 @Injectable()
@@ -115,7 +115,7 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  async getUserById(userId: number) {
+  async getUserById(userId: string) {
     try {
       const response = await firstValueFrom(
         this.authGrpcService.getUserById({ userId }).pipe(

@@ -74,6 +74,13 @@ export class Subscription {
   @Column({ nullable: true })
   cancellationReason?: string;
 
+  // Stripe Integration
+  @Column({ nullable: true })
+  stripeSubscriptionId?: string;
+
+  @Column({ nullable: true })
+  stripeCustomerId?: string;
+
   // Metadata
   @Column({ type: 'json', nullable: true })
   metadata?: Record<string, any>;

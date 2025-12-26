@@ -20,7 +20,7 @@ export class CatalogueController {
   @Get('products/my')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get my products', description: 'Retrieve products owned by current user' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
@@ -39,7 +39,7 @@ export class CatalogueController {
   @Get('products/my/:id')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get my product by ID', description: 'Retrieve a specific product owned by current user' })
   @ApiOkResponse({ description: 'Product retrieved successfully' })
   @ApiNotFoundResponse({ description: 'Product not found' })
@@ -61,7 +61,7 @@ export class CatalogueController {
   @Post('products')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create product', description: 'Create a new product in catalogue' })
   @ApiCreatedResponse({ description: 'Product created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })
@@ -76,7 +76,7 @@ export class CatalogueController {
   @Get('products')
   @UseGuards(JwtGuard, AdminGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Get all products (Admin)', description: 'Retrieve all products from catalogue with pagination - Admin only' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
@@ -91,31 +91,23 @@ export class CatalogueController {
   }
 
   @Get('products/:id')
-  @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get product by ID', description: 'Retrieve a specific product' })
+  @ApiOperation({ summary: 'Get product by ID', description: 'Retrieve a specific product (public access)' })
   @ApiOkResponse({ description: 'Product retrieved successfully' })
   @ApiNotFoundResponse({ description: 'Product not found' })
   async getProductById(
-    @CurrentUser() user: JwtUserPayload,
     @Param('id') id: string,
   ) {
-    const result = await this.catalogueService.getProductById(id) as { product?: { id: string; ownerId?: string } };
-    const ownerId = String(getUserIdAsCustomerId(user));
-    
-    // Check ownership (allow if no ownerId set or user owns it)
-    if (result?.product?.ownerId && result.product.ownerId !== ownerId && user.role !== 'admin') {
-      throw new ForbiddenException('You do not have access to this product');
-    }
-    
+    // Public access - no ownership check needed for viewing
+    // Products are publicly viewable for browsing
+    const result = await this.catalogueService.getProductById(id);
     return result;
   }
 
   @Put('products/:id')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Update product', description: 'Update an existing product' })
   @ApiOkResponse({ description: 'Product updated successfully' })
   @ApiNotFoundResponse({ description: 'Product not found' })
@@ -139,7 +131,7 @@ export class CatalogueController {
   @Post('plans')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create plan', description: 'Create a new subscription plan' })
   @ApiCreatedResponse({ description: 'Plan created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })
@@ -168,7 +160,7 @@ export class CatalogueController {
   @Post('features')
   @UseGuards(JwtGuard)
   @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
+  @ApiBearerAuth('accessToken')
   @ApiOperation({ summary: 'Create feature', description: 'Create a new feature' })
   @ApiCreatedResponse({ description: 'Feature created successfully' })
   @ApiBadRequestResponse({ description: 'Validation error' })

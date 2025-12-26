@@ -1,0 +1,30 @@
+{
+  "proposal_text": "Đề xuất chuyển đổi nhóm sản phẩm 'A' sang mô hình thanh toán thuê bao theo tháng.",
+  "changeset": {
+    "model": "product_group",
+    "features": [
+      {
+        "key": "product_group_name",
+        "value": "A"
+      },
+      {
+        "key": "billing_model",
+        "value": "subscription"
+      },
+      {
+        "key": "billing_term",
+        "value": "monthly"
+      }
+    ],
+    "impacted_services": [
+      "billing",
+      "subscription_management",
+      "product_catalog"
+    ]
+  },
+  "metadata": {
+    "intent": "change_billing_model",
+    "confidence": 1.0,
+    "risk": "low"
+  }
+}

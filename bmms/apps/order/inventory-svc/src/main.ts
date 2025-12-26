@@ -3,6 +3,7 @@ import { InventorySvcModule } from './inventory-svc.module';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
+import { GrpcExceptionFilter } from './filters/grpc-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(InventorySvcModule, { logger: ['error', 'warn'] });
@@ -34,10 +35,13 @@ async function bootstrap() {
     },
   });
 
+  // Apply global exception filter for gRPC
+  app.useGlobalFilters(new GrpcExceptionFilter());
+
   await app.startAllMicroservices();
 
   // Start HTTP server for health checks
-  const port = configService.get<number>('PORT') || 3015;
+  const port = configService.get<number>('PORT') || 3014;
   await app.listen(port);
 
   console.log(`✅ Inventory Service | HTTP: ${port} | gRPC: ${grpcUrl} | Kafka: listening`);

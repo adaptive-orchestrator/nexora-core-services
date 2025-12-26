@@ -16,10 +16,26 @@ interface LlmOrchestratorGrpcService {
     revenue_preference?: string;
     lang?: string;
   }): any;
+  recommendBusinessModelDetailed(data: {
+    business_description: string;
+    current_model: string;
+    target_audience?: string;
+    revenue_preference?: string;
+    lang?: string;
+  }): any;
   switchBusinessModel(data: {
     to_model: string;
     tenant_id: string;
     dry_run: boolean;
+  }): any;
+  textToSql(data: {
+    question: string;
+    lang?: string;
+  }): any;
+  analyzeIncident(data: {
+    incident_description: string;
+    logs?: string;
+    lang?: string;
   }): any;
 }
 
@@ -102,6 +118,96 @@ export class LlmOrchestratorService implements OnModuleInit {
         throw error;
       }
       this.logger.error(`[ASK-ERROR] Service unavailable: ${error.message}`, error.stack);
+      throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Tư vấn mô hình kinh doanh với detailed changeset
+   */
+  async recommendBusinessModelDetailed(
+    business_description: string,
+    current_model: string,
+    target_audience?: string,
+    revenue_preference?: string,
+    lang: string = 'vi',
+  ): Promise<{
+    proposal_text: string;
+    changeset: {
+      model: string;
+      features: Array<{ key: string; value: string }>;
+      impacted_services: string[];
+      services_to_enable: string[];
+      services_to_disable: string[];
+      services_to_restart: string[];
+    };
+    metadata: {
+      intent: string;
+      confidence: number;
+      risk: 'low' | 'medium' | 'high';
+      from_model: string;
+      to_model: string;
+    };
+  }> {
+    if (!business_description) {
+      throw new BadRequestException('business_description is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[RECOMMEND-DETAILED] business="${business_description.substring(0, 50)}..." | current=${current_model}`);
+
+    // Build gRPC request payload
+    const grpcPayload = {
+      business_description: business_description,
+      businessDescription: business_description,
+      current_model: current_model,
+      currentModel: current_model,
+      target_audience: target_audience,
+      targetAudience: target_audience,
+      revenue_preference: revenue_preference,
+      revenuePreference: revenue_preference,
+      lang: lang,
+    };
+    
+    this.logger.log(`[RECOMMEND-DETAILED] Sending gRPC payload: ${JSON.stringify(grpcPayload)}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.recommendBusinessModelDetailed(grpcPayload).pipe(
+          catchError(error => {
+            this.logger.error(`[RECOMMEND-DETAILED-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(error.details || 'Detailed recommendation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      ) as {
+        proposal_text: string;
+        changeset: {
+          model: string;
+          features: Array<{ key: string; value: string }>;
+          impacted_services: string[];
+          services_to_enable: string[];
+          services_to_disable: string[];
+          services_to_restart: string[];
+        };
+        metadata: {
+          intent: string;
+          confidence: number;
+          risk: 'low' | 'medium' | 'high';
+          from_model: string;
+          to_model: string;
+        };
+      };
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[RECOMMEND-DETAILED-DONE] took ${elapsed}ms | ${response.metadata?.from_model} → ${response.metadata?.to_model}`);
+      this.logger.log(`[RECOMMEND-DETAILED] Response: ${JSON.stringify(response, null, 2)}`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[RECOMMEND-DETAILED-ERROR] Service unavailable: ${error.message}`, error.stack);
       throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
     }
   }
@@ -199,6 +305,81 @@ export class LlmOrchestratorService implements OnModuleInit {
         throw error;
       }
       this.logger.error(`[SWITCH-ERROR] Service unavailable: ${error.message}`, error.stack);
+      throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Text-to-SQL: Natural language to SQL query
+   */
+  async textToSql(question: string, lang: string = 'vi') {
+    if (!question || typeof question !== 'string') {
+      throw new BadRequestException('question is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[TEXT-TO-SQL] question="${question.substring(0, 50)}..." | lang=${lang}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.textToSql({
+          question,
+          lang,
+        }).pipe(
+          catchError(error => {
+            this.logger.error(`[TEXT-TO-SQL-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(error.details || 'Text-to-SQL failed', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[TEXT-TO-SQL-DONE] took ${elapsed}ms`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[TEXT-TO-SQL-ERROR] Service unavailable: ${error.message}`, error.stack);
+      throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Analyze system incident
+   */
+  async analyzeIncident(incident_description: string, logs?: string, lang: string = 'vi') {
+    if (!incident_description || typeof incident_description !== 'string') {
+      throw new BadRequestException('incident_description is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[ANALYZE-INCIDENT] incident="${incident_description.substring(0, 50)}..." | lang=${lang}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.analyzeIncident({
+          incident_description,
+          logs,
+          lang,
+        }).pipe(
+          catchError(error => {
+            this.logger.error(`[ANALYZE-INCIDENT-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(error.details || 'Incident analysis failed', HttpStatus.INTERNAL_SERVER_ERROR);
+          }),
+        ),
+      );
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[ANALYZE-INCIDENT-DONE] took ${elapsed}ms`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[ANALYZE-INCIDENT-ERROR] Service unavailable: ${error.message}`, error.stack);
       throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
     }
   }

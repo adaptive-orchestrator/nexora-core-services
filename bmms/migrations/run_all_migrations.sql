@@ -6,9 +6,10 @@
 -- =============================================
 
 -- ============================================
--- 1. AUTH SERVICE MIGRATIONS (auth_db)
+-- 1. AUTH SERVICE MIGRATIONS (customer_db)
 -- ============================================
-USE auth_db;
+USE customer_db;
+SOURCE migrations/auth/000_create_users_table.sql;
 SOURCE migrations/auth/001_add_business_model_and_seed_admin.sql;
 
 -- ============================================

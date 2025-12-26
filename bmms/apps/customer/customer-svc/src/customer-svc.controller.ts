@@ -1,4 +1,4 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, NotFoundException } from '@nestjs/common';
 import { GrpcMethod, RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { CustomerSvcService } from './customer-svc.service';
@@ -70,8 +70,23 @@ export class CustomerSvcController {
   @GrpcMethod('CustomerService', 'GetCustomerByUserId')
   async getCustomerByUserId(data: { userId: string }) {
     this.logger.log(`GetCustomerByUserId called with userId: ${data.userId}`);
-    const customer = await this.service.findByUserId(data.userId);
-    return { customer };
+    try {
+      const customer = await this.service.findByUserId(data.userId);
+      this.logger.log(`GetCustomerByUserId found customer: ${customer.id}`);
+      return { customer };
+    } catch (error) {
+      this.logger.error(`GetCustomerByUserId error for userId ${data.userId}:`, error);
+      if (error instanceof NotFoundException) {
+        throw new RpcException({
+          code: status.NOT_FOUND,
+          message: `Customer with userId ${data.userId} not found`,
+        });
+      }
+      throw new RpcException({
+        code: status.INTERNAL,
+        message: error.message || 'Internal server error',
+      });
+    }
   }
 
   @GrpcMethod('CustomerService', 'UpdateCustomer')
@@ -90,8 +105,8 @@ export class CustomerSvcController {
   }
 
   @GrpcMethod('CustomerService', 'CreateCustomerInternal')
-  async createCustomerInternal(data: { name: string; email: string }) {
-    this.logger.log(`CreateCustomerInternal called for email: ${data.email}`);
+  async createCustomerInternal(data: { name: string; email: string; userId?: string; phone?: string; address?: string }) {
+    this.logger.log(`CreateCustomerInternal called for email: ${data.email}, userId: ${data.userId}`);
     const customer = await this.service.create(data);
     return { customer };
   }

@@ -1,0 +1,19 @@
+{
+  "proposal_text": "Hệ thống sẽ được mở rộng để hỗ trợ mô hình kinh doanh đa dạng, bao gồm 2 sản phẩm bán lẻ (retail) và 1 gói dịch vụ đăng ký định kỳ (subscription). Các dịch vụ liên quan sẽ được triển khai hoặc cấu hình lại để đáp ứng các yêu cầu này. Cụ thể, hệ thống sẽ bao gồm OrderService và InventoryService cho phần retail, và SubscriptionService cùng PromotionService cho phần subscription. Tất cả các dịch vụ cốt lõi như Authentication, Customer, CRM, API Gateway, Catalogue, Billing, và Payment sẽ được đảm bảo hoạt động tương thích với mô hình mới.",
+  "changeset": {
+    "model": "MultiBusinessModel",
+    "features": [
+      {"key": "business_model", "value": "multi"},
+      {"key": "supported_models", "value": "retail,subscription"},
+      {"key": "retail_products_count", "value": 2},
+      {"key": "subscription_plans_count", "value": 1}
+    ],
+    "impacted_services": ["OrderService", "InventoryService", "SubscriptionService", "PromotionService", "CatalogueService", "BillingService", "PaymentService", "AuthService", "CustomerService", "CRMOrchestratorService", "APIGatewayService"]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.95,
+    "risk": "medium",
+    "to_model": "multi"
+  }
+}

@@ -26,6 +26,15 @@ interface IPaymentGrpcService {
   getPaymentsByInvoice(data: any): any;
   getPaymentStats(data: any): any;
   processPayment(data: any): any;
+  // Stripe operations
+  createCheckoutSession(data: any): any;
+  createSubscriptionCheckout(data: any): any;
+  createPaymentIntent(data: any): any;
+  createRefund(data: any): any;
+  handleStripeWebhook(data: any): any;
+  getOrCreateCustomer(data: any): any;
+  createBillingPortalSession(data: any): any;
+  cancelStripeSubscription(data: any): any;
 }
 
 @Injectable()
@@ -117,6 +126,134 @@ export class PaymentService implements OnModuleInit {
 
   async processPayment(dto: { invoiceId: string; amount: number; paymentMethod: string }) {
     const response: any = await firstValueFrom(this.paymentService.processPayment(dto));
+    return response;
+  }
+
+  // =================== STRIPE OPERATIONS ===================
+
+  /**
+   * Create Stripe checkout session for one-time payment
+   */
+  async createCheckoutSession(dto: {
+    customerId: string;
+    orderId: string;
+    items: Array<{
+      productId: string;
+      name: string;
+      price: number;
+      quantity: number;
+      description?: string;
+      imageUrl?: string;
+    }>;
+    successUrl: string;
+    cancelUrl: string;
+    currency?: string;
+    metadata?: Record<string, string>;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createCheckoutSession(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Create Stripe checkout session for subscription
+   */
+  async createSubscriptionCheckout(dto: {
+    customerId: string;
+    priceId: string;
+    successUrl: string;
+    cancelUrl: string;
+    trialDays?: number;
+    metadata?: Record<string, string>;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createSubscriptionCheckout(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Create PaymentIntent for custom payment flows
+   */
+  async createPaymentIntent(dto: {
+    amount: number;
+    currency: string;
+    customerId?: string;
+    orderId?: string;
+    metadata?: Record<string, string>;
+    paymentMethodType?: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createPaymentIntent(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Create refund for a payment
+   */
+  async createRefund(dto: {
+    paymentIntentId: string;
+    amount?: number;
+    reason?: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createRefund(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Handle Stripe webhook - forward raw body to payment-svc
+   */
+  async handleStripeWebhook(rawBody: Buffer, signature: string) {
+    const response: any = await firstValueFrom(
+      this.paymentService.handleStripeWebhook({
+        rawBody,
+        signature,
+      })
+    );
+    return response;
+  }
+
+  /**
+   * Get or create Stripe customer
+   */
+  async getOrCreateCustomer(dto: {
+    userId: string;
+    email: string;
+    name?: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.getOrCreateCustomer(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Create billing portal session for customer self-service
+   */
+  async createBillingPortalSession(dto: {
+    stripeCustomerId: string;
+    returnUrl: string;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.createBillingPortalSession(dto)
+    );
+    return response;
+  }
+
+  /**
+   * Cancel Stripe subscription
+   */
+  async cancelStripeSubscription(dto: {
+    stripeSubscriptionId: string;
+    cancelAtPeriodEnd?: boolean;
+  }) {
+    const response: any = await firstValueFrom(
+      this.paymentService.cancelStripeSubscription(dto)
+    );
     return response;
   }
 }

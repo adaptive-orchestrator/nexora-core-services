@@ -270,17 +270,35 @@ export class OrderSvcService implements OnModuleInit {
     return validatedItems;
   }
 
-  async listByCustomer(customerId: string): Promise<Order[]> {
+  async listByCustomer(customerId: string, page = 1, limit = 20): Promise<Order[]> {
+    // Optimized query with pagination and index usage
+    // Uses idx_orders_customer_created index for fast lookup
+    const skip = (page - 1) * limit;
+    
     return this.orderRepo.find({
       where: { customerId },
       relations: ['items'],
       order: { createdAt: 'DESC' },
+      take: limit,
+      skip: skip,
+      // Select specific fields to reduce data transfer
+      select: {
+        id: true,
+        customerId: true,
+        status: true,
+        paymentStatus: true,
+        totalAmount: true,
+        notes: true,
+        shippingAddress: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
   // Alias for gRPC compatibility
   async getByCustomerId(customerId: string, page?: number, limit?: number): Promise<Order[]> {
-    return this.listByCustomer(customerId);
+    return this.listByCustomer(customerId, page, limit);
   }
 
   async getById(id: string): Promise<Order> {

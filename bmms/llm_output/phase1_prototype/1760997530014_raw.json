@@ -1,0 +1,26 @@
+{
+  "proposal_text": "Chuyển nhóm sản phẩm 'Abcd' sang mô hình đăng ký theo tháng.",
+  "changeset": {
+    "model": "ProductGroup",
+    "features": [
+      {
+        "key": "product_group_name",
+        "value": "Abcd"
+      },
+      {
+        "key": "billing_period",
+        "value": "monthly"
+      }
+    ],
+    "impacted_services": [
+      "Billing",
+      "SubscriptionManagement",
+      "ProductCatalog"
+    ]
+  },
+  "metadata": {
+    "intent": "ChangeSubscriptionModel",
+    "confidence": 0.95,
+    "risk": "low"
+  }
+}

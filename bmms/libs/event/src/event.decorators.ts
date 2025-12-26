@@ -57,6 +57,8 @@ export const EventTopics = {
   INVENTORY_ADJUSTED: 'inventory.adjusted',
   INVENTORY_RESERVED: 'inventory.reserved',
   INVENTORY_RELEASED: 'inventory.released',
+  INVENTORY_RESERVE_FAILED: 'inventory.reserve_failed',
+  INVENTORY_RELEASE_REQUEST: 'inventory.release_request',
   INVENTORY_LOW_STOCK: 'inventory.low_stock',
 
   // Subscription events

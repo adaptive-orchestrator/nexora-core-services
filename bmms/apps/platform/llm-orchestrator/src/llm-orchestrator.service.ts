@@ -1,64 +1,41 @@
-﻿import { Injectable } from '@nestjs/common';
+﻿import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, readFile, readdir } from 'fs/promises';
 import * as path from 'path';
-import { z } from 'zod';
+import { DataSource } from 'typeorm';
 import { LlmChatResponse } from './llm-orchestrator/llm-orchestrator.interface';
 import { CodeSearchService } from './service/code-search.service';
 import { LlmOutputValidator } from './validators/llm-output.validator';
 import { HelmIntegrationService } from './service/helm-integration.service';
-import { debug } from '@bmms/common';
+import { MultiDatabaseService } from './service/multi-database.service';
 
-const LLMReplySchema = z.object({
-  proposal_text: z.string(),
-  changeset: z.object({
-    model: z.string(),
-    features: z.array(
-      z.object({
-        key: z.string(),
-        value: z.union([z.string(), z.number(), z.boolean()]),
-      }),
-    ),
-    impacted_services: z.array(z.string()),
-  }),
-  metadata: z.object({
-    intent: z.string(),
-    confidence: z.number(),
-    risk: z.enum(['low', 'medium', 'high']),
-  }),
-});
 
-type LLMReply = z.infer<typeof LLMReplySchema>;
+// Import prompts and schemas
+import {
+  RCA_SYSTEM_PROMPT,
+  TEXT_TO_SQL_GEN_PROMPT,
+  DATA_REPORTER_PROMPT,
+  BUSINESS_MODEL_SYSTEM_PROMPT,
+  AI_ASSISTANT_PROMPT,
+  GENERAL_ASSISTANT_PROMPT,
+  CODE_GENERATION_PROMPT,
+  fillPromptTemplate,
+} from './prompts/llm.prompts';
 
-const SYSTEM_PROMPT = `You are an expert business analyst that converts Vietnamese business model requests into JSON ChangeSet for Kubernetes deployment automation.
+import {
+  LLMReplySchema,
+  RCAOutputSchema,
+  TextToSQLOutputSchema,
+  RCAOutput,
+  TextToSQLOutput,
+  cleanLLMJsonResponse,
+  safeParseJSON,
+  validateSQLReadOnly,
+} from './schemas/llm-output.schema';
 
-**BUSINESS MODELS:**
-1. **Retail Model**: One-time purchase, inventory management
-   - Required services: OrderService, InventoryService
-   - BillingService mode: ONETIME
-   - Note: 1 OrderService handles ALL retail products via database (product_id)
-   
-2. **Subscription Model**: Recurring payment, subscription plans
-   - Required services: SubscriptionService, PromotionService
-   - BillingService mode: RECURRING
-   - Note: 1 SubscriptionService handles ALL subscription plans via database
-   
-3. **Freemium Model**: Free tier with optional paid add-ons
-   - Required services: SubscriptionService (with is_free=true), PromotionService
-   - BillingService mode: FREEMIUM (free base + pay for add-ons)
-   - Add-ons: Extra storage, premium features, etc. (charged separately)
-   - Note: Same SubscriptionService handles free users + add-on purchases
-   
-4. **Freemium + Add-on Model**: Free base plan with purchasable add-ons
-   - Base plan: Free (no billing)
-   - Add-ons: Paid features billed separately (e.g., extra storage, AI features)
-   - BillingService mode: ADDON (only bill for add-ons, not base subscription)
-   
-5. **Multi-Model**: Support multiple models simultaneously
-   - Required services: ALL of the above
-   - BillingService mode: HYBRID (handle all billing types)
-   - Note: SHARED SERVICE PATTERN - Each service type deploys ONCE, not per product
-   - Example: 2 retail products + 1 subscription -> Still only 1 OrderService, 1 SubscriptionService
+// =============================================================================
+// INTERFACES (Exported for external use)
+// =============================================================================
 
 **CORE SERVICES (always needed):**
 - AuthService, CustomerService, CRMOrchestratorService
@@ -104,87 +81,269 @@ Return ONLY valid JSON in this exact format:
     "from_model": "retail|subscription|etc (if applicable)",
     "to_model": "subscription|multi|etc (if applicable)"
   }
+export interface ApiKeyState {
+  key: string;
+  lastUsed: number;
+  errorCount: number;
+  isRateLimited: boolean;
+  rateLimitResetTime?: number;
 }
 
-**EXAMPLES:**
-
-Example 1 - Retail to Subscription:
-Input: "Chuyển sản phẩm Premium Plan sang subscription 199k/tháng"
-Output: {
-  "changeset": {
-    "model": "BusinessModel",
-    "features": [
-      {"key": "business_model", "value": "subscription"},
-      {"key": "subscription_price", "value": 199000}
-    ],
-    "impacted_services": ["SubscriptionService", "PromotionService", "BillingService", "PaymentService", "CatalogueService"]
-  },
-  "metadata": {
-    "intent": "business_model_change",
-    "from_model": "retail",
-    "to_model": "subscription"
-  }
+export interface TextToSQLResult {
+  success: boolean;
+  question: string;
+  sql?: string;
+  rawData?: any[];
+  naturalResponse: string;
+  error?: string;
 }
 
-Example 2 - Multi-Model with multiple products:
-Input: "Hỗ trợ 2 retail products, 1 subscription, và 1 freemium"
-Output: {
-  "changeset": {
-    "model": "MultiBusinessModel",
-    "features": [
-      {"key": "business_model", "value": "multi"},
-      {"key": "supported_models", "value": "retail,subscription,freemium"},
-      {"key": "retail_products_count", "value": 2},
-      {"key": "subscription_plans_count", "value": 1},
-      {"key": "freemium_enabled", "value": true}
-    ],
-    "impacted_services": ["OrderService", "InventoryService", "SubscriptionService", "PromotionService", "CatalogueService", "BillingService", "PaymentService", "APIGatewayService", "AuthService"]
-  },
-  "metadata": {
-    "intent": "business_model_expansion",
-    "to_model": "multi",
-    "note": "SHARED SERVICE PATTERN: Each service in impacted_services list will be deployed ONCE (e.g., 1 OrderService handles both retail products, 1 SubscriptionService handles subscription + freemium)"
-  }
+export interface RCAResult {
+  success: boolean;
+  analysis: RCAOutput | null;
+  codeContext: string[];
+  error?: string;
 }
 
-Example 3 - Freemium with Add-ons:
-Input: "Tạo gói Freemium miễn phí với 3 add-on tính phí: Extra Storage (50k/tháng), AI Assistant (100k/tháng), Priority Support (30k/tháng)"
-Output: {
-  "changeset": {
-    "model": "FreemiumWithAddons",
-    "features": [
-      {"key": "business_model", "value": "freemium"},
-      {"key": "base_plan_price", "value": 0},
-      {"key": "addons_enabled", "value": true},
-      {"key": "addon_extra_storage_price", "value": 50000},
-      {"key": "addon_ai_assistant_price", "value": 100000},
-      {"key": "addon_priority_support_price", "value": 30000}
-    ],
-    "impacted_services": ["SubscriptionService", "BillingService", "PaymentService", "CatalogueService", "AuthService"]
-  },
-  "metadata": {
-    "intent": "business_model_change",
-    "to_model": "freemium_addon",
-    "billing_mode": "addon_only"
-  }
+export interface KeyPoolStatus {
+  total: number;
+  available: number;
+  rateLimited: number;
 }
 
-Return ONLY the JSON, no markdown code blocks, no additional text.`;
+// Type alias for LLM Reply schema
+type LLMReply = import('./schemas/llm-output.schema').LLMReply;
 
 @Injectable()
-export class LlmOrchestratorService {
-  [x: string]: any;
-  private geminiClient: GoogleGenerativeAI;
-  private useRAG = process.env.USE_RAG === 'true'; // Feature flag
+export class LlmOrchestratorService implements OnModuleDestroy {
+  private readonly logger = new Logger(LlmOrchestratorService.name);
+  
+  // API Key Pool for Round-Robin rotation
+  private apiKeys: ApiKeyState[] = [];
+  private currentKeyIndex = 0;
+  
+  // Gemini client (lazy initialized with current key)
+  private geminiClient!: GoogleGenerativeAI;
+  private useRAG = process.env.USE_RAG === 'true';
+
+  // Entity files path pattern for Text-to-SQL
+  private readonly entityFilesPattern = '**/*.entity.ts';
+  private entitySchemaCache: string | null = null;
+  private entitySchemaCacheTime = 0;
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  // Optional DataSource for Text-to-SQL
+  private dataSource?: DataSource;
+  private dataSources: Map<string, DataSource> = new Map();
 
   constructor(
-    private codeSearchService: CodeSearchService,
-    private validator: LlmOutputValidator,
-    private helmIntegrationService: HelmIntegrationService,
+    private readonly codeSearchService: CodeSearchService,
+    private readonly validator: LlmOutputValidator,
+    private readonly helmIntegrationService: HelmIntegrationService,
+    private readonly multiDbService: MultiDatabaseService,
   ) {
-    this.geminiClient = new GoogleGenerativeAI(
-      process.env.GEMINI_API_KEY || '',
-    );
+    this.initializeApiKeyPool();
+  }
+
+  /**
+   * Set DataSource for Text-to-SQL feature (called externally or via module)
+   */
+  setDataSource(dataSource: DataSource): void {
+    this.dataSource = dataSource;
+  }
+
+  /**
+   * Set multiple DataSources for multi-database Text-to-SQL
+   */
+  setDataSources(dataSources: Map<string, DataSource>): void {
+    this.dataSources = dataSources;
+    dataSources.forEach((ds, name) => {
+      this.multiDbService.registerDataSource(name, ds);
+    });
+    this.logger.log(`[LLM Service] Registered ${dataSources.size} database connection(s)`);
+  }
+
+  /**
+   * Initialize database connections programmatically
+   * This works better in standalone mode compared to TypeOrmModule
+   */
+  async initializeDatabaseConnections(): Promise<void> {
+    const databases = [
+      { name: 'billing', port: 3314, database: 'billing_db' },
+      { name: 'payment', port: 3315, database: 'payment_db' },
+      { name: 'order', port: 3311, database: 'order_db' },
+      { name: 'customer', port: 3306, database: 'customer_db' },
+      { name: 'catalogue', port: 3308, database: 'catalogue_db' },
+      { name: 'subscription', port: 3312, database: 'subscription_db' },
+      { name: 'inventory', port: 3313, database: 'inventory_db' },
+    ];
+
+    const host = process.env.DB_HOST || 'localhost';
+    const username = process.env.DB_USERNAME || 'bmms_user';
+    const password = process.env.DB_PASSWORD || 'bmms_password';
+    const logging = process.env.DB_LOGGING === 'true';
+
+    for (const dbConfig of databases) {
+      try {
+        const dataSource = new DataSource({
+          type: 'mysql',
+          host,
+          port: dbConfig.port,
+          username,
+          password,
+          database: dbConfig.database,
+          synchronize: false,
+          logging,
+          entities: [], // No entities needed for raw queries
+          connectTimeout: 5000, // 5 second timeout
+        });
+
+        await dataSource.initialize();
+        
+        this.dataSources.set(dbConfig.name, dataSource);
+        this.multiDbService.registerDataSource(dbConfig.name, dataSource);
+        
+        this.logger.log(`[DB] ✅ Connected to ${dbConfig.name} (${dbConfig.database}:${dbConfig.port})`);
+      } catch (error) {
+        this.logger.warn(`[DB] ⚠️  Failed to connect to ${dbConfig.name}: ${error.message}`);
+      }
+    }
+
+    if (this.dataSources.size > 0) {
+      this.logger.log(`[DB] ✅ Initialized ${this.dataSources.size}/${databases.length} database connection(s)`);
+    } else {
+      this.logger.error('[DB] ❌ No database connections available - Text-to-SQL will not work');
+      this.logger.error('[DB] Make sure Docker containers are running: docker-compose up -d');
+    }
+  }
+
+  /**
+   * Remove database prefix from SQL query
+   * Converts: `database`.`table` → `table`
+   * Converts: database.table → `table`
+   */
+  private cleanDatabasePrefix(sql: string): string {
+    // Pattern 1: `database`.`table` → `table`
+    let cleaned = sql.replace(/`[a-zA-Z0-9_]+`\.`([a-zA-Z0-9_]+)`/g, '`$1`');
+    
+    // Pattern 2: database.table → `table`
+    cleaned = cleaned.replace(/\b[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)\b/g, '`$1`');
+    
+    // Pattern 3: `database`.table → `table`
+    cleaned = cleaned.replace(/`[a-zA-Z0-9_]+`\.([a-zA-Z0-9_]+)\b/g, '`$1`');
+    
+    // Pattern 4: database.`table` → `table`
+    cleaned = cleaned.replace(/\b[a-zA-Z0-9_]+\.`([a-zA-Z0-9_]+)`/g, '`$1`');
+    
+    return cleaned;
+  }
+
+  // =============================================================================
+  // API KEY ROTATION STRATEGY
+  // =============================================================================
+
+  /**
+   * Initialize API key pool from environment variables
+   * Supports GEMINI_API_KEYS (comma-separated) or fallback to GEMINI_API_KEY
+   */
+  private initializeApiKeyPool(): void {
+    const keysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
+    
+    const keys = keysString
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    if (keys.length === 0) {
+      this.logger.warn('[LLM] No API keys found! Set GEMINI_API_KEYS or GEMINI_API_KEY');
+      return;
+    }
+
+    this.apiKeys = keys.map(key => ({
+      key,
+      lastUsed: 0,
+      errorCount: 0,
+      isRateLimited: false,
+    }));
+
+    this.logger.log(`[LLM] Initialized API key pool with ${this.apiKeys.length} key(s)`);
+    
+    // Initialize Gemini client with first key
+    this.geminiClient = new GoogleGenerativeAI(this.apiKeys[0].key);
+  }
+
+  /**
+   * Get current active API key
+   */
+  private getCurrentKey(): ApiKeyState | null {
+    if (this.apiKeys.length === 0) return null;
+    return this.apiKeys[this.currentKeyIndex];
+  }
+
+  /**
+   * Rotate to next available API key (Round-Robin)
+   * @returns true if successfully rotated, false if all keys are rate-limited
+   */
+  private rotateKey(): boolean {
+    if (this.apiKeys.length <= 1) {
+      this.logger.warn('[LLM] Only one API key available, cannot rotate');
+      return false;
+    }
+
+    const startIndex = this.currentKeyIndex;
+    let attempts = 0;
+
+    do {
+      this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+      attempts++;
+
+      const key = this.apiKeys[this.currentKeyIndex];
+      
+      // Check if rate limit has reset
+      if (key.isRateLimited && key.rateLimitResetTime) {
+        if (Date.now() > key.rateLimitResetTime) {
+          key.isRateLimited = false;
+          key.errorCount = 0;
+          this.logger.log(`[LLM] Key #${this.currentKeyIndex} rate limit reset`);
+        }
+      }
+
+      // Use this key if not rate-limited
+      if (!key.isRateLimited) {
+        this.geminiClient = new GoogleGenerativeAI(key.key);
+        this.logger.log(`[LLM] Rotated to API key #${this.currentKeyIndex}`);
+        return true;
+      }
+    } while (this.currentKeyIndex !== startIndex && attempts < this.apiKeys.length);
+
+    this.logger.error('[LLM] All API keys are rate-limited!');
+    return false;
+  }
+
+  /**
+   * Mark current key as rate-limited
+   */
+  private markCurrentKeyRateLimited(): void {
+    const key = this.getCurrentKey();
+    if (key) {
+      key.isRateLimited = true;
+      key.errorCount++;
+      // Reset after 60 seconds (Gemini free tier resets per minute)
+      key.rateLimitResetTime = Date.now() + 60 * 1000;
+      this.logger.warn(`[LLM] Key #${this.currentKeyIndex} marked as rate-limited`);
+    }
+  }
+
+  /**
+   * Get API key pool status (for monitoring)
+   */
+  getKeyPoolStatus(): KeyPoolStatus {
+    const rateLimited = this.apiKeys.filter(k => k.isRateLimited).length;
+    return {
+      total: this.apiKeys.length,
+      available: this.apiKeys.length - rateLimited,
+      rateLimited,
+    };
   }
 
   async ask(
@@ -193,20 +352,37 @@ export class LlmOrchestratorService {
     role: string = 'guest',
     lang: 'vi' | 'en' = 'vi',
   ): Promise<LlmChatResponse> {
+    this.logger.log(`[ASK] ==================== NEW REQUEST ====================`);
+    this.logger.log(`[ASK] Message: "${message.substring(0, 100)}..."`);
+    this.logger.log(`[ASK] Tenant: ${tenant}, Role: ${role}, Lang: ${lang}`);
+    this.logger.log(`[ASK] USE_RAG flag: ${this.useRAG}`);
+    
      // RAG: Tìm code liên quan
     let codeContext = '';
     if (this.useRAG) {
-      const relevantCode = await this.codeSearchService.searchRelevantCode(message, 3);
+      this.logger.log(`[RAG] ✅ Enabled - Searching for relevant code...`);
+      const relevantCode = await this.codeSearchService.searchRelevantCode(message, 5);
       
       if (relevantCode.length > 0) {
-        codeContext = '\n\n=== RELEVANT CODE CONTEXT ===\n';
+        this.logger.log(`[RAG] Found ${relevantCode.length} relevant code snippets`);
+        codeContext = '\n\n=== CODE CONTEXT FROM YOUR SYSTEM ===\n';
+        codeContext += 'The following code snippets are from your actual codebase, retrieved using RAG:\n\n';
+        
         relevantCode.forEach((code, idx) => {
-          codeContext += `\n[${idx + 1}] ${code.file_path} (${code.chunk_type}${code.name ? `: ${code.name}` : ''})\n`;
-          codeContext += `Score: ${code.score.toFixed(3)}\n`;
-          codeContext += '```\n' + code.content.substring(0, 1000) + '\n```\n';
+          codeContext += `\n【Snippet ${idx + 1}/${relevantCode.length}】\n`;
+          codeContext += `📁 File: ${code.file_path}\n`;
+          codeContext += `📍 Lines: ${code.start_line}-${code.end_line}\n`;
+          codeContext += `🏷️  Type: ${code.chunk_type}${code.name ? ` (${code.name})` : ''}\n`;
+          codeContext += `🎯 Relevance: ${(code.score * 100).toFixed(1)}%\n`;
+          codeContext += `\`\`\`typescript\n${code.content.substring(0, 1200)}\n\`\`\`\n`;
         });
-        codeContext += '=== END CONTEXT ===\n';
+        codeContext += '\n=== END CODE CONTEXT ===\n';
+        codeContext += 'Use this context to describe how the actual system works, not generic theory.\n';
+      } else {
+        this.logger.warn(`[RAG] No relevant code found for query: "${message.substring(0, 50)}..."`);
       }
+    } else {
+      this.logger.warn(`[RAG] Disabled (USE_RAG=${process.env.USE_RAG})`);
     }
 
     const content = await this.callGemini(message, tenant, role, lang, codeContext);
@@ -232,9 +408,9 @@ export class LlmOrchestratorService {
       await mkdir(dir, { recursive: true });
       const outputPath = path.join(dir, `${Date.now()}_raw.json`);
       await writeFile(outputPath, cleaned, 'utf8');
-      debug.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
+      console.log(`[LLM] Wrote clean JSON to: ${outputPath}`);
     } catch (err) {
-      debug.error('[LLM] Failed to write output file:', err);
+      console.error('[LLM] Failed to write output file:', err);
     }
 
     // Parse and validate JSON
@@ -260,12 +436,12 @@ export class LlmOrchestratorService {
     
     // Log warnings if any
     if (validationResult.warnings.length > 0) {
-      debug.log('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
+        console.log('[LLM Validator] Warnings:', validationResult.warnings.join('; '));
     }
     
     // Log metadata
     if (validationResult.metadata) {
-      debug.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
+      console.log('[LLM Validator] Metadata:', JSON.stringify(validationResult.metadata, null, 2));
     }
 
     // Convert value to string for gRPC (proto expects string)
@@ -293,27 +469,99 @@ export class LlmOrchestratorService {
         this.helmIntegrationService.triggerDeployment(response, dryRunDefault)
           .then((result) => {
             if (result.success) {
-              debug.log('[LLM] Helm changeset generated:', result.changesetPath);
+              console.log('[LLM] Helm changeset generated:', result.changesetPath);
               if (result.deployed) {
-                debug.log('[LLM] Helm deployment completed successfully');
+                console.log('[LLM] Helm deployment completed successfully');
               }
             }
           })
           .catch(err => {
-            debug.error('[LLM] Failed to trigger Helm deployment:', err.message);
+            console.error('[LLM] Failed to trigger Helm deployment:', err.message);
           });
       }
     } catch (error) {
       // Don't fail the LLM request if deployment trigger fails
-      debug.error('[LLM] Error triggering Helm deployment:', error instanceof Error ? error.message : String(error));
+      console.error('[LLM] Error triggering Helm deployment:', error instanceof Error ? error.message : String(error));
     }
 
     return response;
   }
 
   // -------------------------------
-  // Gemini (Google API)
+  // Gemini (Google API) with Retry & Key Rotation
   // -------------------------------
+  
+  /**
+   * Call Gemini API with automatic retry and key rotation on rate limit
+   */
+  private async callGeminiWithRetry(
+    prompt: string,
+    systemPrompt: string,
+    maxRetries?: number,
+  ): Promise<string> {
+    const retries = maxRetries ?? this.apiKeys.length;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const modelName = process.env.LLM_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+        
+        const model = this.geminiClient.getGenerativeModel({
+          model: modelName,
+          systemInstruction: systemPrompt,
+        });
+
+        const chat = model.startChat();
+        const result = await chat.sendMessage(prompt);
+        
+        // Update key usage stats
+        const currentKey = this.getCurrentKey();
+        if (currentKey) {
+          currentKey.lastUsed = Date.now();
+          currentKey.errorCount = 0; // Reset on success
+        }
+
+        return result.response.text() || '{}';
+        
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check if it's a rate limit error (HTTP 429)
+        const isRateLimitError = 
+          error?.status === 429 ||
+          error?.message?.includes('429') ||
+          error?.message?.toLowerCase().includes('rate limit') ||
+          error?.message?.toLowerCase().includes('quota exceeded') ||
+          error?.message?.toLowerCase().includes('resource exhausted');
+
+        if (isRateLimitError) {
+          this.logger.warn(`[LLM] Rate limit hit on attempt ${attempt + 1}/${retries}`);
+          this.markCurrentKeyRateLimited();
+          
+          // Try to rotate to next key
+          const rotated = this.rotateKey();
+          if (!rotated) {
+            // All keys exhausted, wait before retry
+            this.logger.warn('[LLM] All keys rate-limited. Waiting 5 seconds...');
+            await this.sleep(5000);
+          } else {
+            // Small delay before retry with new key
+            await this.sleep(1000);
+          }
+        } else {
+          // Non-rate-limit error, don't retry
+          this.logger.error(`[LLM] API error: ${error.message}`);
+          throw error;
+        }
+      }
+    }
+
+    throw lastError || new Error('All API retry attempts exhausted');
+  }
+
+  /**
+   * Legacy callGemini method - now uses retry pattern
+   */
   private async callGemini(
     message: string,
     tenant: string,
@@ -321,28 +569,125 @@ export class LlmOrchestratorService {
     lang: string,
     codeContext: string = '',
   ): Promise<string> {
-    // Use LLM_MODEL from env, default to gemini-2.0-flash-exp
-    const modelName = process.env.LLM_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
-    
-    // 1. Cấu hình model với System Prompt
-    const model = this.geminiClient.getGenerativeModel({
-      model: modelName,
-      systemInstruction: SYSTEM_PROMPT, // <-- Chỉ dẫn hệ thống đặt ở đây
-    });
-
-    // 2. Bắt đầu chat (không cần history vì đây là 1 shot)
-    const chat = model.startChat();
-
-    // 3. Tạo nội dung của User
-     const userPrompt = `tenant_id=${tenant}; role=${role}; lang=${lang};
+    const userPrompt = `tenant_id=${tenant}; role=${role}; lang=${lang};
 ${codeContext}
 
 Yêu cầu: ${message}`;
 
-    // 4. Gửi tin nhắn của User
-    const result = await chat.sendMessage(userPrompt);
+    // Detect câu hỏi tổng quát về hệ thống (user-facing questions)
+    const isGeneralSystemQuestion = this.isGeneralSystemQuestion(message);
+    const selectedPrompt = isGeneralSystemQuestion ? GENERAL_ASSISTANT_PROMPT : AI_ASSISTANT_PROMPT;
+    
+    if (isGeneralSystemQuestion) {
+      this.logger.log(`[LLM] 🎯 Detected general system question - using GENERAL_ASSISTANT_PROMPT`);
+    }
 
-    return result.response.text() || '{}';
+    return this.callGeminiWithRetry(userPrompt, selectedPrompt);
+  }
+
+  /**
+   * Check if the message is a general user-facing question about the system
+   */
+  private isGeneralSystemQuestion(message: string): boolean {
+    const generalPatterns = [
+      // Việt - câu hỏi về identity
+      /bạn là (ai|gì)/i,
+      /bạn là ai/i,
+      /là ai\??$/i,
+      // Việt - câu hỏi về hệ thống
+      /hệ thống.*(làm được|có thể|hỗ trợ|cung cấp|làm gì)/i,
+      /làm được gì/i,
+      /có thể làm gì/i,
+      /nexora.*(là|làm)/i,
+      /giới thiệu.*(hệ thống|bản thân|nexora)/i,
+      /mô tả.*(hệ thống|tổng quan|kiến trúc)/i,
+      /có những (tính năng|chức năng|khả năng)/i,
+      /tính năng.*(gì|nào)/i,
+      /chức năng.*(gì|nào)/i,
+      // RAG questions
+      /sử dụng.*rag/i,
+      /rag.*là gì/i,
+      /có.*rag/i,
+      // English
+      /who are you/i,
+      /what (can|do) you/i,
+      /what is (this|nexora|the) system/i,
+      /describe.*(system|yourself|architecture)/i,
+      /introduce.*(yourself|nexora|system)/i,
+      /what features/i,
+      /how does.*(system|rag|nexora) work/i,
+    ];
+
+    const matched = generalPatterns.some(pattern => pattern.test(message));
+    
+    // Debug logging
+    this.logger.log(`[PROMPT-DETECT] Message: "${message.substring(0, 50)}..."`);
+    this.logger.log(`[PROMPT-DETECT] Is general question: ${matched}`);
+    
+    return matched;
+  }
+
+  /**
+   * Generic chat method for Gemini with retry
+   */
+  private async callGeminiChat(
+    prompt: string,
+    context: any[],
+    systemPrompt: string,
+  ): Promise<string> {
+    // For chat with history, we need a slightly different approach
+    const modelName = process.env.LLM_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+    const maxRetries = this.apiKeys.length;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const model = this.geminiClient.getGenerativeModel({
+          model: modelName,
+          systemInstruction: systemPrompt,
+        });
+
+        // Build conversation history for Gemini
+        const history = context.map((msg: any) => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        }));
+
+        const chat = model.startChat({ history });
+        const result = await chat.sendMessage(prompt);
+
+        return result.response.text() || '';
+        
+      } catch (error: any) {
+        lastError = error;
+        
+        const isRateLimitError = 
+          error?.status === 429 ||
+          error?.message?.includes('429') ||
+          error?.message?.toLowerCase().includes('rate limit');
+
+        if (isRateLimitError) {
+          this.markCurrentKeyRateLimited();
+          const rotated = this.rotateKey();
+          if (!rotated) {
+            await this.sleep(5000);
+          } else {
+            await this.sleep(1000);
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError || new Error('All API retry attempts exhausted');
+  }
+
+  /**
+   * Sleep helper
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // -------------------------------
@@ -351,45 +696,78 @@ Yêu cầu: ${message}`;
   
   /**
    * Generate text response for AI chat
+   * Includes RAG context when enabled
    */
   async generateText(prompt: string, context: any[]): Promise<string> {
     try {
-      return await this.callGeminiChat(prompt, context, 'You are a helpful AI assistant. Provide clear, concise, and helpful responses.');
+      // Detect loại câu hỏi để chọn prompt phù hợp
+      const isGeneralQuestion = this.isGeneralSystemQuestion(prompt);
+      const selectedPrompt = isGeneralQuestion ? GENERAL_ASSISTANT_PROMPT : AI_ASSISTANT_PROMPT;
+      
+      if (isGeneralQuestion) {
+        this.logger.log(`[generateText] 🎯 Detected GENERAL system question - using GENERAL_ASSISTANT_PROMPT`);
+      } else {
+        this.logger.log(`[generateText] 🔧 Detected TECHNICAL question - using AI_ASSISTANT_PROMPT`);
+      }
+
+      // RAG: Tìm code liên quan
+      let codeContext = '';
+      if (this.useRAG) {
+        this.logger.log(`[generateText] RAG enabled - searching for relevant code...`);
+        const relevantCode = await this.codeSearchService.searchRelevantCode(prompt, 5);
+        
+        if (relevantCode.length > 0) {
+          this.logger.log(`[generateText] Found ${relevantCode.length} relevant code snippets`);
+          codeContext = this.codeSearchService.formatCodeContext(relevantCode);
+        }
+      }
+      
+      const enrichedPrompt = codeContext 
+        ? `${prompt}\n\n${codeContext}`
+        : prompt;
+      
+      return await this.callGeminiChat(enrichedPrompt, context, selectedPrompt);
     } catch (error) {
-      debug.error('[AI Chat] Error:', error);
+      console.error('[AI Chat] Error:', error);
       return 'I apologize, but I encountered an error processing your request. Please try again.';
     }
   }
 
   /**
    * Generate code based on prompt
+   * Includes RAG context for referencing existing codebase patterns
    */
   async generateCode(prompt: string, context: any[]): Promise<{ code: string; language: string; explanation: string }> {
-    const codeSystemPrompt = `You are an expert programmer. Generate clean, well-documented code based on user requests. 
-Always respond in JSON format:
-{
-  "code": "the generated code here",
-  "language": "programming language (e.g., python, javascript, typescript)",
-  "explanation": "brief explanation of what the code does"
-}`;
-
     try {
-      const responseText = await this.callGeminiChat(prompt, context, codeSystemPrompt);
+      // RAG: Tìm code patterns liên quan trong codebase
+      let codeContext = '';
+      if (this.useRAG) {
+        this.logger.log(`[generateCode] RAG enabled - searching for relevant code patterns...`);
+        const relevantCode = await this.codeSearchService.searchRelevantCode(prompt, 5);
+        
+        if (relevantCode.length > 0) {
+          this.logger.log(`[generateCode] Found ${relevantCode.length} relevant code snippets`);
+          codeContext = this.codeSearchService.formatCodeContext(relevantCode);
+        }
+      }
+      
+      const enrichedPrompt = codeContext 
+        ? `${prompt}\n\nUse the following code from the existing codebase as reference for patterns and style:\n${codeContext}`
+        : prompt;
+      
+      const responseText = await this.callGeminiChat(enrichedPrompt, context, CODE_GENERATION_PROMPT);
 
       // Parse JSON response
-      let cleaned = responseText.trim();
-      if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
-      }
-
+      const cleaned = cleanLLMJsonResponse(responseText);
       const parsed = JSON.parse(cleaned);
+      
       return {
         code: parsed.code || '',
         language: parsed.language || 'python',
         explanation: parsed.explanation || 'Code generated successfully'
       };
     } catch (error) {
-      debug.error('[Code Generation] Error:', error);
+      console.error('[Code Generation] Error:', error);
       return {
         code: '// Error generating code',
         language: 'text',
@@ -398,28 +776,446 @@ Always respond in JSON format:
     }
   }
 
+  // =============================================================================
+  // ROOT CAUSE ANALYSIS (RCA)
+  // =============================================================================
+
   /**
-   * Generic chat method for Gemini
+   * Analyze incident/error log and provide Root Cause Analysis
+   * @param errorLog - The error log or stack trace to analyze
+   * @returns RCA result with analysis and suggestions
    */
-  private async callGeminiChat(prompt: string, context: any[], systemPrompt: string): Promise<string> {
-    // Use LLM_MODEL from env, default to gemini-2.0-flash-exp
-    const modelName = process.env.LLM_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+  async analyzeIncident(errorLog: string): Promise<RCAResult> {
+    try {
+      this.logger.log('[RCA] Starting incident analysis...');
+      
+      // Step 1: Extract file names from stack trace using regex
+      const fileNames = this.extractFileNamesFromStackTrace(errorLog);
+      this.logger.log(`[RCA] Extracted ${fileNames.length} file references: ${fileNames.join(', ')}`);
+
+      // Step 2: Search for relevant code using RAG
+      let codeContextResults: any[] = [];
+      
+      if (this.useRAG) {
+        // Priority 1: Search by file names
+        for (const fileName of fileNames.slice(0, 3)) { // Limit to first 3 files
+          const results = await this.codeSearchService.searchRelevantCode(fileName, 2);
+          codeContextResults.push(...results);
+        }
+
+        // Priority 2: If no results, search by error message content
+        if (codeContextResults.length === 0) {
+          const errorKeywords = this.extractErrorKeywords(errorLog);
+          const results = await this.codeSearchService.searchRelevantCode(errorKeywords, 3);
+          codeContextResults.push(...results);
+        }
+      }
+
+      // Step 3: Format code context for LLM
+      const codeContext = codeContextResults.length > 0
+        ? this.codeSearchService.formatCodeContext(codeContextResults)
+        : 'No relevant code found in codebase.';
+
+      // Step 4: Build and send prompt to LLM
+      const prompt = fillPromptTemplate(RCA_SYSTEM_PROMPT, {
+        ERROR_LOG: errorLog,
+        CODE_CONTEXT: codeContext,
+      });
+
+      const response = await this.callGeminiWithRetry(
+        'Analyze this error and provide RCA in JSON format.',
+        prompt,
+      );
+
+      // Step 5: Parse and validate response
+      const parseResult = safeParseJSON(response, RCAOutputSchema);
+      
+      if (!parseResult.success) {
+        this.logger.warn(`[RCA] Failed to parse LLM response: ${parseResult.error}`);
+        return {
+          success: false,
+          analysis: null,
+          codeContext: codeContextResults.map(c => c.file_path),
+          error: `Failed to parse analysis: ${parseResult.error}`,
+        };
+      }
+
+      this.logger.log('[RCA] Analysis completed successfully');
+      
+      return {
+        success: true,
+        analysis: parseResult.data,
+        codeContext: codeContextResults.map(c => c.file_path),
+      };
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[RCA] Error: ${message}`);
+      return {
+        success: false,
+        analysis: null,
+        codeContext: [],
+        error: message,
+      };
+    }
+  }
+
+  /**
+   * Extract file names from stack trace
+   */
+  private extractFileNamesFromStackTrace(stackTrace: string): string[] {
+    const patterns = [
+      // TypeScript/JavaScript: at Function (/path/to/file.ts:123:45)
+      /at\s+.*?\(([^:]+\.(?:ts|js|tsx|jsx)):\d+:\d+\)/gi,
+      // Python: File "/path/to/file.py", line 123
+      /File\s+"([^"]+\.py)"/gi,
+      // Java: at com.example.Class(File.java:123)
+      /at\s+[\w.]+\(([^:]+\.java):\d+\)/gi,
+      // Generic: any .ts/.js/.py file reference
+      /([a-zA-Z0-9_\-./]+\.(?:ts|js|py|java|tsx|jsx))/gi,
+    ];
+
+    const fileNames = new Set<string>();
+
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(stackTrace)) !== null) {
+        const fileName = match[1]?.split('/').pop()?.split('\\').pop();
+        if (fileName) {
+          fileNames.add(fileName);
+        }
+      }
+    }
+
+    return Array.from(fileNames);
+  }
+
+  /**
+   * Extract key error terms for fallback search
+   */
+  private extractErrorKeywords(errorLog: string): string {
+    // Extract error type and message
+    const patterns = [
+      /(?:Error|Exception|TypeError|ReferenceError):\s*(.+?)(?:\n|$)/i,
+      /(?:Cannot|Failed|Unable)\s+(?:to\s+)?(.+?)(?:\n|$)/i,
+      /undefined\s+(.+?)(?:\n|$)/i,
+    ];
+
+    const keywords: string[] = [];
     
-    const model = this.geminiClient.getGenerativeModel({
-      model: modelName,
-      systemInstruction: systemPrompt,
-    });
+    for (const pattern of patterns) {
+      const match = errorLog.match(pattern);
+      if (match) {
+        keywords.push(match[1].substring(0, 100));
+      }
+    }
 
-    // Build conversation history for Gemini
-    const history = context.map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    return keywords.join(' ').substring(0, 200) || errorLog.substring(0, 200);
+  }
 
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(prompt);
+  // =============================================================================
+  // TEXT-TO-SQL & NATURAL RESPONSE
+  // =============================================================================
 
-    return result.response.text() || '';
+  /**
+   * Handle natural language question and return data with natural response
+   * @param question - Natural language question about data
+   * @returns SQL result with natural language response
+   */
+  async handleTextToSql(question: string): Promise<TextToSQLResult> {
+    try {
+      this.logger.log(`[Text-to-SQL] Processing: "${question.substring(0, 50)}..."`);
+
+      // Check if any DataSource is available
+      if (!this.multiDbService.hasAnyDataSource()) {
+        return {
+          success: false,
+          question,
+          naturalResponse: 'Database connection not available. Please configure DataSource.',
+          error: 'DataSource not initialized',
+        };
+      }
+
+      // Detect which database to use based on the question
+      const targetDb = this.multiDbService.detectDatabase(question);
+      const dataSource = this.multiDbService.getDataSource(targetDb);
+      
+      if (!dataSource || !dataSource.isInitialized) {
+        const availableDbs = this.multiDbService.getAvailableDatabases();
+        this.logger.warn(`[Text-to-SQL] Database '${targetDb}' not available. Available: ${availableDbs.join(', ')}`);
+        
+        // Fallback to first available database
+        if (availableDbs.length > 0) {
+          const fallbackDb = availableDbs[0];
+          const fallbackDs = this.multiDbService.getDataSource(fallbackDb);
+          if (fallbackDs && fallbackDs.isInitialized) {
+            this.logger.log(`[Text-to-SQL] Using fallback database: ${fallbackDb}`);
+            return this.executeTextToSqlQuery(question, fallbackDs, fallbackDb);
+          }
+        }
+        
+        return {
+          success: false,
+          question,
+          naturalResponse: `Database '${targetDb}' is not available.`,
+          error: 'Target database not initialized',
+        };
+      }
+
+      this.logger.log(`[Text-to-SQL] Using database: ${targetDb}`);
+      return this.executeTextToSqlQuery(question, dataSource, targetDb);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Text-to-SQL] Error: ${message}`);
+      return {
+        success: false,
+        question,
+        naturalResponse: `Có lỗi xảy ra khi xử lý câu hỏi: ${message}`,
+        error: message,
+      };
+    }
+  }
+
+  /**
+   * Execute Text-to-SQL query on a specific database
+   */
+  private async executeTextToSqlQuery(
+    question: string,
+    dataSource: DataSource,
+    dbName: string,
+    skipRedetection = false
+  ): Promise<TextToSQLResult> {
+    try {
+      // Check if DataSource is available
+      if (!dataSource || !dataSource.isInitialized) {
+        return {
+          success: false,
+          question,
+          naturalResponse: 'Database connection not available. Please configure DataSource.',
+          error: 'DataSource not initialized',
+        };
+      }
+
+      // Step 1: Get entity schema context
+      const schemaContext = await this.loadEntitySchemas();
+      
+      if (!schemaContext) {
+        return {
+          success: false,
+          question,
+          naturalResponse: 'Unable to load database schema. Please check entity files.',
+          error: 'Schema context not available',
+        };
+      }
+
+      // Step 2: Generate SQL from natural language
+      const sqlGenPrompt = fillPromptTemplate(TEXT_TO_SQL_GEN_PROMPT, {
+        SCHEMA_CONTEXT: schemaContext,
+        USER_QUESTION: question,
+        DATABASE_NAME: dbName,
+      });
+
+      const sqlResponse = await this.callGeminiWithRetry(
+        question,
+        sqlGenPrompt,
+      );
+
+      // Parse SQL generation result
+      const sqlParseResult = safeParseJSON(sqlResponse, TextToSQLOutputSchema);
+      
+      if (!sqlParseResult.success) {
+        return {
+          success: false,
+          question,
+          naturalResponse: 'Không thể tạo câu truy vấn từ câu hỏi của bạn. Vui lòng thử lại với câu hỏi rõ ràng hơn.',
+          error: `SQL generation failed: ${sqlParseResult.error}`,
+        };
+      }
+
+      const { sql, params } = sqlParseResult.data;
+      
+      // Step 2.1: FORCE REMOVE database prefix from SQL (LLM sometimes ignores instructions)
+      let cleanedSql = this.cleanDatabasePrefix(sql);
+      
+      this.logger.log(`[Text-to-SQL] Generated SQL for ${dbName}: ${cleanedSql}`);
+
+      // Step 2.5: Re-check database based on SQL query content (only on first attempt)
+      if (!skipRedetection) {
+        const sqlDetectedDb = this.multiDbService.detectDatabaseFromSQL(cleanedSql);
+        if (sqlDetectedDb && sqlDetectedDb !== dbName) {
+          this.logger.warn(`[Text-to-SQL] SQL query uses tables from '${sqlDetectedDb}', switching from '${dbName}'`);
+          const correctDataSource = this.multiDbService.getDataSource(sqlDetectedDb);
+          
+          if (correctDataSource && correctDataSource.isInitialized) {
+            this.logger.log(`[Text-to-SQL] Switched to correct database: ${sqlDetectedDb}`);
+            return this.executeTextToSqlQuery(question, correctDataSource, sqlDetectedDb, true);
+          } else {
+            this.logger.error(`[Text-to-SQL] Detected database '${sqlDetectedDb}' is not available`);
+          }
+        }
+      }
+
+      // Step 3: Validate SQL is read-only
+      if (!validateSQLReadOnly(cleanedSql)) {
+        return {
+          success: false,
+          question,
+          sql: cleanedSql,
+          naturalResponse: 'Chỉ hỗ trợ truy vấn đọc dữ liệu (SELECT). Không thể thực hiện các thao tác thay đổi dữ liệu.',
+          error: 'SQL query is not read-only',
+        };
+      }
+
+      // Step 4: Execute SQL query
+      let rawData: any[];
+      try {
+        rawData = await dataSource.query(cleanedSql, params);
+        this.logger.log(`[Text-to-SQL] Query returned ${rawData.length} rows from ${dbName}`);
+      } catch (dbError: any) {
+        this.logger.error(`[Text-to-SQL] Database error: ${dbError.message}`);
+        return {
+          success: false,
+          question,
+          sql: cleanedSql,
+          naturalResponse: `Lỗi khi truy vấn database: ${dbError.message}`,
+          error: dbError.message,
+        };
+      }
+
+      // Step 5: Generate natural language response
+      // Check if data contains only null values
+      const hasNonNullValue = rawData.some(row => 
+        Object.values(row).some(val => val !== null && val !== undefined)
+      );
+
+      let naturalResponse: string;
+      
+      if (!hasNonNullValue || rawData.length === 0) {
+        naturalResponse = '📊 Không tìm thấy dữ liệu phù hợp với điều kiện tìm kiếm.\n\n' +
+          '💡 **Gợi ý**: Có thể không có dữ liệu trong khoảng thời gian này, hoặc điều kiện lọc quá chặt. ' +
+          'Hãy thử:\n' +
+          '- Kiểm tra lại khoảng thời gian\n' +
+          '- Mở rộng điều kiện tìm kiếm\n' +
+          '- Xem tổng quan dữ liệu có sẵn';
+      } else {
+        const reporterPrompt = fillPromptTemplate(DATA_REPORTER_PROMPT, {
+          USER_QUESTION: question,
+          SQL_QUERY: cleanedSql,
+          SQL_RESULT: JSON.stringify(rawData.slice(0, 50)), // Limit for context size
+        });
+
+        naturalResponse = await this.callGeminiWithRetry(
+          'Generate a natural response in Vietnamese based on the data.',
+          reporterPrompt,
+        );
+      }
+
+      return {
+        success: true,
+        question,
+        sql: cleanedSql,
+        rawData,
+        naturalResponse: naturalResponse.trim(),
+      };
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Text-to-SQL] Error: ${message}`);
+      return {
+        success: false,
+        question,
+        naturalResponse: `Có lỗi xảy ra khi xử lý câu hỏi: ${message}`,
+        error: message,
+      };
+    }
+  }
+
+  /**
+   * Load and cache entity schemas for Text-to-SQL context
+   */
+  /**
+   * Load entity schemas from all available databases
+   * Returns formatted schema context for LLM
+   */
+  private async loadEntitySchemas(): Promise<string | null> {
+    // Check cache
+    const now = Date.now();
+    if (this.entitySchemaCache && (now - this.entitySchemaCacheTime) < this.CACHE_TTL_MS) {
+      return this.entitySchemaCache;
+    }
+
+    try {
+      let schemaContext = '=== AVAILABLE DATABASES AND TABLES ===\n\n';
+      
+      // Build schema from all connected DataSources
+      for (const [dbName, dataSource] of this.dataSources) {
+        if (!dataSource.isInitialized) continue;
+        
+        schemaContext += `📁 DATABASE: ${dbName}\n`;
+        
+        // Add context notes for specific databases
+        if (dbName === 'order') {
+          schemaContext += '   💡 Use this for: REVENUE, SALES, ORDERS, PURCHASES\n';
+        } else if (dbName === 'payment') {
+          schemaContext += '   💡 Use this for: PAYMENT TRANSACTIONS, GATEWAYS\n';
+        } else if (dbName === 'customer') {
+          schemaContext += '   💡 Use this for: CUSTOMERS, USERS, PROFILES\n';
+        }
+        
+        schemaContext += '─'.repeat(50) + '\n';
+        
+        try {
+          // Get all tables from this database
+          const tables = await dataSource.query(`SHOW TABLES`);
+          
+          for (const tableObj of tables.slice(0, 10)) { // Limit tables per DB
+            const tableName = Object.values(tableObj)[0] as string;
+            
+            // Get columns for this table
+            const columns = await dataSource.query(`DESCRIBE \`${tableName}\``);
+            
+            schemaContext += `\n📊 Table: \`${tableName}\`\n`;
+            schemaContext += 'Columns:\n';
+            
+            for (const col of columns) {
+              schemaContext += `  - ${col.Field} (${col.Type})`;
+              if (col.Key === 'PRI') schemaContext += ' [PRIMARY KEY]';
+              if (col.Null === 'YES') schemaContext += ' [nullable]';
+              if (col.Default) schemaContext += ` [default: ${col.Default}]`;
+              schemaContext += '\n';
+            }
+          }
+          
+          schemaContext += '\n';
+        } catch (dbError) {
+          this.logger.warn(`[Schema] Error loading schema for ${dbName}: ${dbError.message}`);
+        }
+      }
+      
+      // Add important notes
+      schemaContext += `\n${'='.repeat(50)}\n`;
+      schemaContext += '⚠️  IMPORTANT SQL WRITING RULES:\n';
+      schemaContext += '─'.repeat(50) + '\n';
+      schemaContext += '1. ✅ Use ONLY table names: FROM `orders`\n';
+      schemaContext += '2. ❌ NEVER use database prefix: FROM `order_db`.`orders`\n';
+      schemaContext += '3. ✅ Always use backticks: `tableName`, `columnName`\n';
+      schemaContext += '4. ✅ Use lowercase for keywords: SELECT, FROM, WHERE\n';
+      schemaContext += '5. ✅ For dates: CURDATE(), NOW(), DATE_FORMAT()\n';
+      schemaContext += '6. ✅ For safety: Always add LIMIT clause\n';
+      schemaContext += `${'='.repeat(50)}\n`;
+
+      // Cache the result
+      this.entitySchemaCache = schemaContext;
+      this.entitySchemaCacheTime = now;
+
+      this.logger.log(`[Schema] Loaded schema from ${this.dataSources.size} database(s)`);
+      return schemaContext;
+
+    } catch (error) {
+      this.logger.error(`[Schema] Error loading entity schemas: ${error.message}`);
+      return null;
+    }
   }
 
   // -------------------------------
@@ -562,6 +1358,134 @@ Hãy tư vấn thật thân thiện, dễ hiểu bằng ${lang === 'vi' ? 'tiế
         closing: 'Bạn có thể thay đổi sang cách khác sau nếu cần nhé!',
       };
     }
+  }
+
+  /**
+   * Generate detailed changeset with impacted services for Human-in-the-loop workflow
+   */
+  generateDetailedChangeset(
+    from_model: string,
+    to_model: string,
+    business_description: string,
+  ): {
+    changeset: {
+      model: string;
+      features: Array<{ key: string; value: string }>;
+      impacted_services: string[];
+      services_to_enable: string[];
+      services_to_disable: string[];
+      services_to_restart: string[];
+    };
+    metadata: {
+      intent: string;
+      confidence: number;
+      risk: 'low' | 'medium' | 'high';
+      from_model: string;
+      to_model: string;
+    };
+  } {
+    // Determine affected services based on Helm SERVICE_PROFILES
+    // These match the actual services enabled/disabled in helm charts
+    const modelSpecificServices: Record<string, string[]> = {
+      retail: ['OrderService', 'InventoryService'],
+      subscription: ['SubscriptionService', 'PromotionService', 'PricingService'],
+      freemium: ['SubscriptionService', 'PromotionService', 'PricingService'],
+      multi: ['OrderService', 'InventoryService', 'SubscriptionService', 'PromotionService', 'PricingService'],
+    };
+
+    // Core services that are ALWAYS running but need restart when model changes (function changes)
+    const coreServicesToRestart = ['BillingService', 'PaymentService', 'CatalogueService'];
+
+    const fromServices = new Set(modelSpecificServices[from_model] || modelSpecificServices.retail);
+    const toServices = new Set(modelSpecificServices[to_model] || modelSpecificServices.retail);
+    
+    // Services to ENABLE (in to_model but NOT in from_model)
+    const servicesToEnable = Array.from(toServices).filter(s => !fromServices.has(s));
+    
+    // Services to DISABLE (in from_model but NOT in to_model)
+    const servicesToDisable = Array.from(fromServices).filter(s => !toServices.has(s));
+    
+    // Services to RESTART (core services that change function)
+    const servicesToRestart = [...coreServicesToRestart];
+    
+    // All impacted services
+    const impacted = [
+      ...servicesToEnable,
+      ...servicesToDisable,
+      ...servicesToRestart,
+    ] as string[];
+
+    // Determine risk level
+    let risk: 'low' | 'medium' | 'high' = 'low';
+    const descLower = business_description.toLowerCase();
+    
+    if (descLower.includes('xóa') || descLower.includes('delete') || descLower.includes('drop') || descLower.includes('remove all')) {
+      risk = 'high';
+    } else if (descLower.includes('giá') || descLower.includes('price') || descLower.includes('billing') || descLower.includes('thanh toán')) {
+      risk = 'medium';
+    } else if (to_model === 'multi') {
+      risk = 'medium'; // Multi model is more complex
+    }
+
+    // Generate features based on target model
+    const features: Array<{ key: string; value: string }> = [
+      { key: 'business_model', value: to_model },
+    ];
+
+    if (to_model === 'subscription') {
+      features.push(
+        { key: 'subscription_frequency', value: 'monthly' },
+        { key: 'billing_mode', value: 'RECURRING' },
+      );
+    } else if (to_model === 'freemium') {
+      features.push(
+        { key: 'free_tier_enabled', value: 'true' },
+        { key: 'premium_features', value: 'advanced_analytics,priority_support' },
+      );
+    } else if (to_model === 'multi') {
+      features.push(
+        { key: 'retail_enabled', value: 'true' },
+        { key: 'subscription_enabled', value: 'true' },
+      );
+    }
+
+    return {
+      changeset: {
+        model: 'BusinessModel',
+        features,
+        impacted_services: impacted,
+        services_to_enable: servicesToEnable,
+        services_to_disable: servicesToDisable,
+        services_to_restart: servicesToRestart,
+      },
+      metadata: {
+        intent: 'business_model_change',
+        confidence: risk === 'high' ? 0.75 : risk === 'medium' ? 0.85 : 0.95,
+        risk,
+        from_model,
+        to_model,
+      },
+    };
+  }
+
+  /**
+   * Cleanup database connections when module is destroyed
+   */
+  async onModuleDestroy() {
+    this.logger.log('[DB] Closing database connections...');
+    
+    for (const [name, dataSource] of this.dataSources) {
+      try {
+        if (dataSource.isInitialized) {
+          await dataSource.destroy();
+          this.logger.log(`[DB] Closed connection to ${name}`);
+        }
+      } catch (error) {
+        this.logger.warn(`[DB] Error closing ${name}: ${error.message}`);
+      }
+    }
+    
+    this.dataSources.clear();
   }
 }
 

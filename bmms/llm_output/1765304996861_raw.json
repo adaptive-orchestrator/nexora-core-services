@@ -1,0 +1,17 @@
+{
+  "proposal_text": "Để hỗ trợ bán lẻ sản phẩm B, hệ thống cần kích hoạt mô hình kinh doanh bán lẻ. Điều này sẽ yêu cầu triển khai hoặc cấu hình các dịch vụ như OrderService để quản lý đơn hàng và InventoryService để quản lý tồn kho của sản phẩm B. CatalogueService sẽ được cập nhật để hiển thị sản phẩm B. BillingService sẽ được cấu hình ở chế độ ONETIME và PaymentService sẽ xử lý các giao dịch thanh toán. Các dịch vụ lõi như AuthService, CustomerService, CRMOrchestratorService và APIGatewayService cũng sẽ đảm bảo hoạt động thông suốt.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "retail"},
+      {"key": "product_name", "value": "B"}
+    ],
+    "impacted_services": ["OrderService", "InventoryService", "BillingService", "PaymentService", "CatalogueService", "AuthService", "CustomerService", "CRMOrchestratorService", "APIGatewayService"]
+  },
+  "metadata": {
+    "intent": "business_model_expansion",
+    "confidence": 0.95,
+    "risk": "low",
+    "to_model": "retail"
+  }
+}

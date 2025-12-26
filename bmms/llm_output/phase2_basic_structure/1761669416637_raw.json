@@ -1,0 +1,19 @@
+{
+  "proposal_text": "Yêu cầu này sẽ chuyển đổi nhóm sản phẩm 'A' sang mô hình kinh doanh đăng ký (subscription) hàng tháng. Điều này yêu cầu cấu hình và có thể triển khai các dịch vụ hỗ trợ mô hình subscription, cũng như cập nhật thông tin sản phẩm trong hệ thống.",
+  "changeset": {
+    "model": "BusinessModel",
+    "features": [
+      {"key": "business_model", "value": "subscription"},
+      {"key": "subscription_period", "value": "monthly"},
+      {"key": "product_group", "value": "A"}
+    ],
+    "impacted_services": ["SubscriptionService", "PromotionService", "CatalogueService", "BillingService", "PaymentService", "AuthService", "CustomerService", "CRMOrchestratorService", "APIGatewayService"]
+  },
+  "metadata": {
+    "intent": "business_model_change",
+    "confidence": 0.98,
+    "risk": "medium",
+    "from_model": "retail",
+    "to_model": "subscription"
+  }
+}

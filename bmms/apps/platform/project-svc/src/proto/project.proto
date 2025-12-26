@@ -15,6 +15,11 @@ service ProjectService {
   rpc UpdateTask (UpdateTaskRequest) returns (TaskResponse);
   rpc DeleteTask (DeleteTaskRequest) returns (DeleteResponse);
   rpc GetProjectAnalytics (GetProjectByIdRequest) returns (AnalyticsResponse);
+  
+  // =================== QUOTA CHECKING ===================
+  // Count user projects for quota enforcement
+  rpc GetProjectCount (GetProjectCountRequest) returns (ProjectCountResponse);
+  rpc CheckProjectQuota (CheckProjectQuotaRequest) returns (QuotaCheckResponse);
 }
 
 // ====== Project Messages ======
@@ -148,4 +153,28 @@ message TasksByStatus {
 
 message DeleteResponse {
   string message = 1;
+}
+
+// ====== Quota Messages ======
+
+message GetProjectCountRequest {
+  string user_id = 1;
+}
+
+message ProjectCountResponse {
+  int32 count = 1;
+  string user_id = 2;
+}
+
+message CheckProjectQuotaRequest {
+  string user_id = 1;
+}
+
+message QuotaCheckResponse {
+  bool allowed = 1;
+  int32 currentCount = 2;
+  int32 maxAllowed = 3;
+  string planName = 4;
+  string message = 5;
+}
 }

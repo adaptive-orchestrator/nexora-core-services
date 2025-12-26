@@ -19,6 +19,18 @@ service SubscriptionService {
   // Trial management
   rpc CheckTrialExpiry (Empty) returns (TrialExpiryResponse);
   
+  // =================== STRIPE INTEGRATION ===================
+  // Check subscription status and quota (for other services like project-svc)
+  rpc CheckSubscriptionStatus (CheckSubscriptionStatusRequest) returns (SubscriptionStatusResponse);
+  rpc GetPlanLimits (GetPlanLimitsRequest) returns (PlanLimitsResponse);
+  rpc GetActiveSubscription (GetActiveSubscriptionRequest) returns (SubscriptionResponse);
+  
+  // Handle webhook events from payment-svc
+  rpc HandlePaymentSucceeded (PaymentSucceededEvent) returns (WebhookHandleResponse);
+  rpc HandleSubscriptionUpdated (StripeSubscriptionEvent) returns (WebhookHandleResponse);
+  rpc HandleSubscriptionDeleted (StripeSubscriptionEvent) returns (WebhookHandleResponse);
+  rpc HandleInvoicePaid (InvoicePaidEvent) returns (WebhookHandleResponse);
+  
   // Addon operations
   rpc ListAddons (ListAddonsRequest) returns (AddonListResponse);
   rpc GetAddonByKey (AddonByKeyRequest) returns (AddonResponse);
@@ -212,5 +224,80 @@ message SubscriptionStatsResponse {
   double monthlyRevenue = 4;
   double totalRevenue = 5;
   double avgSubscriptionValue = 6;
+}
+
+// =================== STRIPE INTEGRATION MESSAGES ===================
+
+// Check subscription status for quota checking
+message CheckSubscriptionStatusRequest {
+  string customerId = 1;
+}
+
+message SubscriptionStatusResponse {
+  bool isActive = 1;
+  string status = 2;  // active, trial, expired, cancelled
+  string planId = 3;
+  string planName = 4;
+  string currentPeriodEnd = 5;
+  bool cancelAtPeriodEnd = 6;
+  optional string stripeSubscriptionId = 7;
+}
+
+// Get plan limits (for quota checking)
+message GetPlanLimitsRequest {
+  string customerId = 1;
+  optional string planId = 2;
+}
+
+message PlanLimitsResponse {
+  bool isActive = 1;
+  string planId = 2;
+  string planName = 3;
+  int32 maxProjects = 4;
+  int32 maxTeamMembers = 5;
+  int32 maxStorageGb = 6;
+  int32 maxApiCalls = 7;
+  repeated string features = 8;
+  string currentPeriodEnd = 9;
+}
+
+// Get active subscription
+message GetActiveSubscriptionRequest {
+  string customerId = 1;
+}
+
+// Webhook event handlers (called by payment-svc)
+message PaymentSucceededEvent {
+  string paymentId = 1;
+  string customerId = 2;
+  string orderId = 3;
+  double amount = 4;
+  string stripePaymentIntentId = 5;
+  string subscriptionId = 6;
+}
+
+message StripeSubscriptionEvent {
+  string stripeSubscriptionId = 1;
+  string stripeCustomerId = 2;
+  string status = 3;
+  string currentPeriodStart = 4;
+  string currentPeriodEnd = 5;
+  bool cancelAtPeriodEnd = 6;
+  optional string canceledAt = 7;
+  map<string, string> metadata = 8;
+}
+
+message InvoicePaidEvent {
+  string stripeInvoiceId = 1;
+  string stripeSubscriptionId = 2;
+  string stripeCustomerId = 3;
+  double amountPaid = 4;
+  string currency = 5;
+  string paidAt = 6;
+}
+
+message WebhookHandleResponse {
+  bool success = 1;
+  string message = 2;
 }
 

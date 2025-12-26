@@ -20,7 +20,7 @@ import { AiChatService } from './ai-chat.service';
 import { ChatMessageDto, ChatResponseDto, ConversationHistoryDto } from './dto/chat.dto';
 
 @ApiTags('AI Assistant')
-@ApiBearerAuth()
+@ApiBearerAuth('accessToken')
 @UseGuards(JwtGuard)
 @Controller('ai/chat')
 export class AiChatController {
