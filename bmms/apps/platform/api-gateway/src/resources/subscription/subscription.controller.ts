@@ -63,7 +63,7 @@ export class SubscriptionController {
     if (dto.customerId && dto.customerId !== user.userId && user.role !== 'admin') {
       // Allow if customerId is a customer.id (UUID format), let subscription-svc validate ownership
       // For now, we trust the subscription-svc to validate customer ownership
-      // throw new ForbiddenException('You can only create subscriptions for yourself');
+      throw new ForbiddenException('[V2] CustomerId validation - subscription-svc will handle lookup');
     }
     
     // If no customerId provided, use userId (subscription-svc will lookup customer by userId)
