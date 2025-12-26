@@ -68,21 +68,32 @@ export class subscriptionSvcService implements OnModuleInit {
   async create(dto: CreateSubscriptionDto): Promise<Subscription> {
     debug.log('[SubscriptionSvc.create] START - dto:', JSON.stringify(dto));
 
-    // Validate that customerId (userId) is provided
+    // Validate that customerId is provided (can be either customer.id or auth userId)
     if (!dto.customerId) {
-      throw new BadRequestException('customerId (userId) is required');
+      throw new BadRequestException('customerId is required');
     }
 
-    // 1. Get customer by userId (since JWT provides userId, not customerId)
+    // 1. Try to get customer - first by customerId directly, then by userId
     let customer: any;
     try {
-      const customerResponse: any = await firstValueFrom(
-        this.customerService.getCustomerByUserId({ userId: dto.customerId })
+      // First, try to get customer by ID directly (in case customerId is actual customer.id)
+      const customerByIdResponse: any = await firstValueFrom(
+        this.customerService.getCustomerById({ id: dto.customerId })
       );
-      customer = customerResponse.customer;
-      debug.log('[SubscriptionSvc.create] Customer found:', customer.id);
+      customer = customerByIdResponse.customer;
+      debug.log('[SubscriptionSvc.create] Customer found by id:', customer.id);
     } catch (error) {
-      throw new NotFoundException(`Customer with userId ${dto.customerId} not found`);
+      // If not found by ID, try by userId (in case customerId is actually auth userId)
+      debug.log('[SubscriptionSvc.create] Customer not found by id, trying by userId...');
+      try {
+        const customerByUserIdResponse: any = await firstValueFrom(
+          this.customerService.getCustomerByUserId({ userId: dto.customerId })
+        );
+        customer = customerByUserIdResponse.customer;
+        debug.log('[SubscriptionSvc.create] Customer found by userId:', customer.id);
+      } catch (userIdError) {
+        throw new NotFoundException(`Customer with id/userId ${dto.customerId} not found`);
+      }
     }
     
     // Use the actual customer ID for subscription
