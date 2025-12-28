@@ -148,20 +148,38 @@ export class LlmOrchestratorController {
       throw new Error('business_description is required and must be a string');
     }
 
-    // Get recommendation first
+    // ✅ METRIC: Start timing
+    const startTotal = Date.now();
+    
+    // Get recommendation first (includes LLM call)
+    const startLLM = Date.now();
     const recommendation = await this.llmOrchestratorService.recommendBusinessModel({
       business_description: businessDescription,
       target_audience: targetAudience,
       revenue_preference: revenuePreference,
       lang: data.lang,
     });
+    const endLLM = Date.now();
+    const llmTime = endLLM - startLLM;
 
-    // Generate detailed changeset
+    // Generate detailed changeset (includes validation)
+    const startValidation = Date.now();
     const detailedChangeset = this.llmOrchestratorService.generateDetailedChangeset(
       currentModel,
       recommendation.recommended_model,
       businessDescription,
     );
+    const endValidation = Date.now();
+    const validationTime = endValidation - startValidation;
+    
+    const totalTime = Date.now() - startTotal;
+
+    // ✅ METRIC: Log performance metrics
+    console.log('[RecommendBusinessModelDetailed] ⏱️ METRICS:', {
+      total_time_ms: totalTime,
+      llm_generation_time_ms: llmTime,
+      validation_processing_time_ms: validationTime,
+    });
 
     return {
       proposal_text: recommendation.why_this_fits || recommendation.recommendation_intro,
