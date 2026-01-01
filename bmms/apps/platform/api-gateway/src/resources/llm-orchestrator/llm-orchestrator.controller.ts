@@ -311,6 +311,17 @@ export class LlmOrchestratorController {
         changeset_path: { type: 'string', example: '/app/changesets/changeset-subscription-2025-01-01.yaml' },
         deployed: { type: 'boolean', example: true },
         dry_run: { type: 'boolean', example: false },
+        helm_dry_run_results: {
+          type: 'object',
+          description: 'Kết quả Helm dry-run (chỉ có khi dry_run=true)',
+          properties: {
+            validation_passed: { type: 'boolean', example: true },
+            databases_output: { type: 'string', description: 'Rendered database manifests YAML' },
+            services_output: { type: 'string', description: 'Rendered services manifests YAML' },
+            validation_errors: { type: 'array', items: { type: 'string' } },
+            warnings: { type: 'array', items: { type: 'string' } },
+          },
+        },
       },
     },
   })

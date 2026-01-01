@@ -58,6 +58,13 @@ export interface SwitchModelResponse {
   deployed?: boolean;
   dry_run?: boolean;
   error?: string;
+  helm_dry_run_results?: {
+    validation_passed: boolean;
+    databases_output: string;
+    services_output: string;
+    validation_errors: string[];
+    warnings: string[];
+  };
 }
 
 @Injectable()

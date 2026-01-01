@@ -201,6 +201,13 @@ export class LlmOrchestratorController {
     deployed?: boolean;
     dry_run?: boolean;
     error?: string;
+    helm_dry_run_results?: {
+      validation_passed: boolean;
+      databases_output: string;
+      services_output: string;
+      validation_errors: string[];
+      warnings: string[];
+    };
   }> {
     this.logger.log(`[GRPC-SWITCH] Received request: to_model=${data.to_model}, tenant=${data.tenant_id}, dry_run=${data.dry_run}`);
 
@@ -223,7 +230,7 @@ export class LlmOrchestratorController {
     };
 
     this.logger.log(`[GRPC-SWITCH] Calling helmIntegrationService.triggerDeployment...`);
-    // Trigger Helm deployment
+    // Trigger Helm deployment (with dry-run if requested)
     const result = await this.helmIntegrationService.triggerDeployment(
       mockLlmResponse,
       data.dry_run ?? false
@@ -231,6 +238,7 @@ export class LlmOrchestratorController {
 
     this.logger.log(`[GRPC-SWITCH] Deployment result: success=${result.success}, deployed=${result.deployed}, dryRun=${result.dryRun}`);
 
+    // Return response matching proto schema
     return {
       success: result.success,
       message: result.message || (result.success ? `Switched to ${data.to_model} model` : 'Switch failed'),
@@ -238,6 +246,13 @@ export class LlmOrchestratorController {
       deployed: result.deployed,
       dry_run: result.dryRun,
       error: result.error,
+      helm_dry_run_results: result.helmDryRunResults ? {
+        validation_passed: result.helmDryRunResults.validationPassed,
+        databases_output: result.helmDryRunResults.databasesOutput,
+        services_output: result.helmDryRunResults.servicesOutput,
+        validation_errors: result.helmDryRunResults.validationErrors,
+        warnings: result.helmDryRunResults.warnings,
+      } : undefined,
     };
   }
 

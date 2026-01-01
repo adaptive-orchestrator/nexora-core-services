@@ -228,7 +228,7 @@ export class HelmIntegrationService {
   /**
    * Trigger Helm deployment using shell command
    * @param llmResponse - LLM response containing changeset
-   * @param dryRun - If true, only generate files without deploying (uses DEFAULT_DRY_RUN env if not specified)
+   * @param dryRun - If true, execute helm --dry-run to validate without deploying
    */
   async triggerDeployment(llmResponse: any, dryRun?: boolean): Promise<any> {
     // Use provided dryRun value, or fall back to defaultDryRun config
@@ -243,15 +243,74 @@ export class HelmIntegrationService {
       // 2. Save changeset to file
       const changesetPath = await this.saveChangeset(changeset);
 
-      // 3. If dry run, just return the changeset
+      // 3. If dry run, execute Helm --dry-run for validation
       if (isDryRun) {
-        this.logger.log(`[LLM] [DRY-RUN] Changeset generated and saved to: ${changesetPath}`);
+        this.logger.log(`[LLM] [DRY-RUN] Executing Helm dry-run validation...`);
+        
+        const kubeEnv = await this.setupInClusterAuth();
+        const validationErrors: string[] = [];
+        const warnings: string[] = [];
+        
+        // Test databases deployment with --dry-run
+        const dbDryRun = await this.helmUpgrade(
+          'databases',
+          join(this.helmChartsPath, 'databases'),
+          'database',
+          changesetPath,
+          kubeEnv,
+          true, // dryRun = true
+        );
+        
+        // Test services deployment with --dry-run
+        const svcDryRun = await this.helmUpgrade(
+          'dynamic-services',
+          join(this.helmChartsPath, 'dynamic-services'),
+          'business-services',
+          changesetPath,
+          kubeEnv,
+          true, // dryRun = true
+        );
+        
+        // Collect validation errors
+        if (!dbDryRun.success) {
+          validationErrors.push(`Databases validation failed: ${dbDryRun.error}`);
+        }
+        if (!svcDryRun.success) {
+          validationErrors.push(`Services validation failed: ${svcDryRun.error}`);
+        }
+        
+        // Parse warnings from stderr
+        if (dbDryRun.stderr) {
+          const dbWarnings = dbDryRun.stderr.split('\n').filter((line: string) => line.includes('WARNING'));
+          warnings.push(...dbWarnings);
+        }
+        if (svcDryRun.stderr) {
+          const svcWarnings = svcDryRun.stderr.split('\n').filter((line: string) => line.includes('WARNING'));
+          warnings.push(...svcWarnings);
+        }
+        
+        const validationPassed = validationErrors.length === 0;
+        
+        this.logger.log(`[LLM] [DRY-RUN] Validation ${validationPassed ? 'PASSED' : 'FAILED'}`);
+        if (validationErrors.length > 0) {
+          this.logger.error(`[LLM] [DRY-RUN] Errors: ${validationErrors.join('; ')}`);
+        }
+        
         return {
           success: true,
           dryRun: true,
           changeset,
           changesetPath,
-          message: `Changeset generated (dry-run mode). File saved to: ${changesetPath}`,
+          helmDryRunResults: {
+            validationPassed,
+            databasesOutput: dbDryRun.renderedManifests || dbDryRun.output || '',
+            servicesOutput: svcDryRun.renderedManifests || svcDryRun.output || '',
+            validationErrors,
+            warnings,
+          },
+          message: validationPassed 
+            ? 'Helm dry-run validation PASSED. No resources were modified.' 
+            : 'Helm dry-run validation FAILED. See errors for details.',
         };
       }
 
@@ -267,7 +326,7 @@ export class HelmIntegrationService {
         };
       }
 
-      // 5. Execute Helm deployment
+      // 5. Execute Helm deployment (real)
       const deployResult = await this.executeHelmDeployment(changeset, changesetPath);
 
       return {
@@ -431,7 +490,9 @@ users:
     namespace: string,
     valuesFile: string,
     kubeEnv: NodeJS.ProcessEnv,
+    dryRun = false,  // Add dry-run parameter
   ): Promise<any> {
+    const dryRunFlags = dryRun ? '--dry-run --debug' : '--wait --timeout 10m';
     const command = [
       'helm upgrade --install',
       releaseName,
@@ -439,15 +500,14 @@ users:
       `--namespace ${namespace}`,
       '--create-namespace',
       `-f "${valuesFile}"`,
-      '--wait',
-      '--timeout 10m',
+      dryRunFlags,
     ].join(' ');
 
-    this.logger.log(`[LLM] Executing: ${command}`);
+    this.logger.log(`[LLM] ${dryRun ? '[DRY-RUN] ' : ''}Executing: ${command}`);
 
     try {
       const { stdout, stderr } = await execAsync(command, {
-        timeout: 600000, // 10 minutes
+        timeout: dryRun ? 60000 : 600000, // 1 minute for dry-run, 10 minutes for real deploy
         env: kubeEnv,
       });
 
@@ -458,6 +518,8 @@ users:
       return {
         success: true,
         output: stdout,
+        dryRun,
+        renderedManifests: dryRun ? stdout : null, // Contains all rendered YAML in dry-run mode
       };
     } catch (error: any) {
       this.logger.error(`Helm command failed: ${error.message}`);
@@ -465,6 +527,7 @@ users:
         success: false,
         error: error.message,
         stderr: error.stderr,
+        dryRun,
       };
     }
   }

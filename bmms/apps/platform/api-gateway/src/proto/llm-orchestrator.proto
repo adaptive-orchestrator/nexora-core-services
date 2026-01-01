@@ -155,6 +155,16 @@ message SwitchModelResponse {
   bool deployed = 4;                // Đã deploy chưa
   bool dry_run = 5;                 // Có phải dry run không
   string error = 6;                 // Lỗi nếu có
+  HelmDryRunResults helm_dry_run_results = 7; // Kết quả Helm dry-run chi tiết
+}
+
+// Helm Dry-run Results
+message HelmDryRunResults {
+  bool validation_passed = 1;       // Template validation có pass không
+  string databases_output = 2;      // Output của helm dry-run databases
+  string services_output = 3;       // Output của helm dry-run services
+  repeated string validation_errors = 4; // Lỗi validation nếu có
+  repeated string warnings = 5;     // Warnings từ Helm
 }
 
 // ====== Text-to-SQL ======
