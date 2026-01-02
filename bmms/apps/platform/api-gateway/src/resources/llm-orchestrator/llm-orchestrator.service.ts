@@ -37,6 +37,16 @@ interface LlmOrchestratorGrpcService {
     logs?: string;
     lang?: string;
   }): any;
+  generateDynamicChangeset(data: {
+    user_intent: string;
+    current_model?: string;
+    target_model?: string;
+    force_services?: string[];
+    exclude_services?: string[];
+    dry_run?: boolean;
+    deploy_after_validation?: boolean;
+    tenant_id?: string;
+  }): any;
 }
 
 export interface RecommendModelResponse {
@@ -65,6 +75,40 @@ export interface SwitchModelResponse {
     validation_errors: string[];
     warnings: string[];
   };
+}
+
+export interface DynamicChangesetResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+  changeset?: {
+    timestamp: string;
+    intent: string;
+    from_model?: string;
+    to_model?: string;
+    discovered_services: string[];
+    services: Array<{
+      name: string;
+      enabled: boolean;
+      replica_count?: number;
+      needs_restart?: boolean;
+      confidence?: number;
+    }>;
+    risk_level: string;
+    auto_generated: boolean;
+  };
+  json_path?: string;
+  yaml_path?: string;
+  helm_validation?: {
+    validation_passed: boolean;
+    databases_output?: string;
+    services_output?: string;
+    validation_errors: string[];
+    warnings: string[];
+  };
+  deployed?: boolean;
+  fallback_available?: boolean;
+  fallback_models?: string[];
 }
 
 @Injectable()
@@ -388,6 +432,76 @@ export class LlmOrchestratorService implements OnModuleInit {
       }
       this.logger.error(`[ANALYZE-INCIDENT-ERROR] Service unavailable: ${error.message}`, error.stack);
       throw new HttpException('LLM Orchestrator service unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  /**
+   * Generate Dynamic Changeset using AI/RAG (API 2)
+   * With optional Helm validation and automatic deployment
+   */
+  async generateDynamicChangeset(
+    user_intent: string,
+    current_model?: string,
+    target_model?: string,
+    force_services?: string[],
+    exclude_services?: string[],
+    dry_run: boolean = true,
+    deploy_after_validation: boolean = false,
+    tenant_id: string = 'default',
+  ): Promise<DynamicChangesetResponse> {
+    if (!user_intent || typeof user_intent !== 'string') {
+      throw new BadRequestException('user_intent is required');
+    }
+
+    const start = Date.now();
+    this.logger.log(`[DYNAMIC-CHANGESET] intent="${user_intent.substring(0, 50)}..." | dry_run=${dry_run} | deploy=${deploy_after_validation}`);
+
+    try {
+      const response = await firstValueFrom(
+        this.llmGrpcService.generateDynamicChangeset({
+          user_intent,
+          current_model,
+          target_model,
+          force_services: force_services || [],
+          exclude_services: exclude_services || [],
+          dry_run,
+          deploy_after_validation,
+          tenant_id,
+        }).pipe(
+          catchError(error => {
+            this.logger.error(`[DYNAMIC-CHANGESET-ERROR] gRPC error: ${error.details || error.message}`);
+            throw new HttpException(
+              {
+                success: false,
+                message: 'Dynamic changeset generation failed',
+                error: error.details || error.message,
+                fallback_available: true,
+                fallback_models: ['retail', 'subscription', 'freemium', 'multi'],
+              },
+              HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+          }),
+        ),
+      ) as DynamicChangesetResponse;
+
+      const elapsed = Date.now() - start;
+      this.logger.log(`[DYNAMIC-CHANGESET-DONE] took ${elapsed}ms | success=${response.success} | deployed=${response.deployed}`);
+
+      return response;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`[DYNAMIC-CHANGESET-ERROR] Service unavailable: ${error.message}`, error.stack);
+      
+      // Return structured error with fallback options
+      return {
+        success: false,
+        message: 'LLM Orchestrator service unavailable',
+        error: error.message,
+        fallback_available: true,
+        fallback_models: ['retail', 'subscription', 'freemium', 'multi'],
+      };
     }
   }
 }

@@ -3,11 +3,13 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import * as yaml from 'js-yaml';
 import { CodeSearchService } from './code-search.service';
+import { HelmIntegrationService } from './helm-integration.service';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * Dynamic Changeset Generation Service
  * Uses RAG to discover available services and generate custom changesets
- * WITHOUT executing Helm (only generates files for manual review)
+ * WITH optional Helm dry-run validation and deployment
  */
 
 export interface DynamicService {
@@ -35,33 +37,65 @@ export interface DynamicChangesetGenerationRequest {
   target_model?: string;
   force_services?: string[]; // Optional: force include specific services
   exclude_services?: string[]; // Optional: force exclude specific services
+  dry_run?: boolean; // Optional: validate with Helm --dry-run
+  deploy_after_validation?: boolean; // Optional: deploy if validation passes
+  tenant_id?: string; // Optional: tenant ID
+}
+
+/**
+ * Helm validation results
+ */
+export interface HelmValidationResults {
+  validation_passed: boolean;
+  databases_output?: string;
+  services_output?: string;
+  validation_errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Full response including validation and deployment status
+ */
+export interface DynamicChangesetFullResponse {
+  success: boolean;
+  changeset?: DynamicChangeset;
+  jsonPath?: string;
+  yamlPath?: string;
+  error?: string;
+  helm_validation?: HelmValidationResults;
+  deployed?: boolean;
+  fallback_available?: boolean;
+  fallback_models?: string[];
 }
 
 @Injectable()
 export class DynamicChangesetService {
   private readonly logger = new Logger(DynamicChangesetService.name);
   private readonly outputDir: string;
+  private readonly helmChartsPath: string;
+  private readonly validModels = ['retail', 'subscription', 'freemium', 'multi'];
 
-  constructor(private readonly codeSearchService: CodeSearchService) {
+  constructor(
+    private readonly codeSearchService: CodeSearchService,
+    private readonly helmIntegrationService: HelmIntegrationService,
+    private readonly configService: ConfigService,
+  ) {
     // Output directory: nexora-core-services/bmms/llm_output/dynamic_changesets/
     this.outputDir = join(process.cwd(), 'llm_output', 'dynamic_changesets');
+    this.helmChartsPath = this.configService.get<string>('HELM_CHARTS_PATH', '/app/helm-charts');
   }
 
   /**
    * Generate dynamic changeset based on user intent and RAG discovery
    * This is the main entry point for dynamic generation
+   * Now supports Helm validation and automatic deployment
    */
   async generateDynamicChangeset(
     request: DynamicChangesetGenerationRequest,
-  ): Promise<{
-    success: boolean;
-    changeset?: DynamicChangeset;
-    jsonPath?: string;
-    yamlPath?: string;
-    error?: string;
-  }> {
+  ): Promise<DynamicChangesetFullResponse> {
     try {
       this.logger.log(`[DynamicChangeset] Starting generation for: "${request.user_intent}"`);
+      this.logger.log(`[DynamicChangeset] Options: dry_run=${request.dry_run}, deploy_after_validation=${request.deploy_after_validation}`);
 
       // Step 1: Use RAG to discover all available services in codebase
       const discoveredServices = await this.discoverServicesViaRAG(request.user_intent);
@@ -97,11 +131,63 @@ export class DynamicChangesetService {
       this.logger.log(`[DynamicChangeset]    JSON: ${jsonPath}`);
       this.logger.log(`[DynamicChangeset]    YAML: ${yamlPath}`);
 
+      // Step 6: Helm validation (if dry_run requested)
+      let helmValidation: HelmValidationResults | undefined;
+      let deployed = false;
+
+      if (request.dry_run === true) {
+        this.logger.log(`[DynamicChangeset] 🔍 Running Helm dry-run validation...`);
+        helmValidation = await this.validateWithHelm(changeset, yamlPath);
+        
+        if (!helmValidation.validation_passed) {
+          this.logger.warn(`[DynamicChangeset] ❌ Helm validation FAILED`);
+          return {
+            success: false,
+            changeset,
+            jsonPath,
+            yamlPath,
+            error: `Helm validation failed: ${helmValidation.validation_errors.join('; ')}`,
+            helm_validation: helmValidation,
+            deployed: false,
+            fallback_available: true,
+            fallback_models: this.validModels,
+          };
+        }
+
+        this.logger.log(`[DynamicChangeset] ✅ Helm validation PASSED`);
+
+        // Step 7: Deploy if validation passed and deploy_after_validation is true
+        if (request.deploy_after_validation === true) {
+          this.logger.log(`[DynamicChangeset] 🚀 Deploying to K8s cluster...`);
+          try {
+            deployed = await this.deployChangeset(changeset, yamlPath);
+            this.logger.log(`[DynamicChangeset] ✅ Deployment ${deployed ? 'SUCCEEDED' : 'FAILED'}`);
+          } catch (deployError: any) {
+            this.logger.error(`[DynamicChangeset] ❌ Deployment failed: ${deployError.message}`);
+            return {
+              success: false,
+              changeset,
+              jsonPath,
+              yamlPath,
+              error: `Deployment failed: ${deployError.message}`,
+              helm_validation: helmValidation,
+              deployed: false,
+              fallback_available: true,
+              fallback_models: this.validModels,
+            };
+          }
+        }
+      }
+
       return {
         success: true,
         changeset,
         jsonPath,
         yamlPath,
+        helm_validation: helmValidation,
+        deployed,
+        fallback_available: !deployed && helmValidation?.validation_passed !== true,
+        fallback_models: this.validModels,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -109,8 +195,148 @@ export class DynamicChangesetService {
       return {
         success: false,
         error: message,
+        fallback_available: true,
+        fallback_models: this.validModels,
       };
     }
+  }
+
+  /**
+   * Validate changeset with Helm --dry-run
+   * Reuses logic from HelmIntegrationService
+   */
+  async validateWithHelm(
+    changeset: DynamicChangeset,
+    yamlPath: string,
+  ): Promise<HelmValidationResults> {
+    try {
+      this.logger.log(`[DynamicChangeset] Validating with Helm dry-run...`);
+      
+      // Convert DynamicChangeset to HelmChangeset format
+      const helmChangeset = this.convertToHelmFormat(changeset);
+      
+      // Save in helm format for validation
+      const helmYamlPath = await this.saveHelmFormatYaml(helmChangeset, yamlPath);
+      
+      // Use HelmIntegrationService to run dry-run
+      // Create mock LLM response with the changeset
+      const mockLlmResponse = {
+        metadata: {
+          to_model: changeset.to_model || 'custom',
+        },
+        changeset: {
+          features: [
+            { key: 'business_model', value: changeset.to_model || 'custom' },
+          ],
+        },
+      };
+      
+      const result = await this.helmIntegrationService.triggerDeployment(mockLlmResponse, true);
+      
+      return {
+        validation_passed: result.helmDryRunResults?.validationPassed ?? false,
+        databases_output: result.helmDryRunResults?.databasesOutput || '',
+        services_output: result.helmDryRunResults?.servicesOutput || '',
+        validation_errors: result.helmDryRunResults?.validationErrors || [],
+        warnings: result.helmDryRunResults?.warnings || [],
+      };
+    } catch (error: any) {
+      this.logger.error(`[DynamicChangeset] Helm validation error: ${error.message}`);
+      return {
+        validation_passed: false,
+        validation_errors: [error.message],
+        warnings: [],
+      };
+    }
+  }
+
+  /**
+   * Deploy changeset to K8s cluster
+   */
+  async deployChangeset(
+    changeset: DynamicChangeset,
+    yamlPath: string,
+  ): Promise<boolean> {
+    try {
+      this.logger.log(`[DynamicChangeset] Deploying changeset...`);
+      
+      // Create mock LLM response with the changeset
+      const mockLlmResponse = {
+        metadata: {
+          to_model: changeset.to_model || 'custom',
+        },
+        changeset: {
+          features: [
+            { key: 'business_model', value: changeset.to_model || 'custom' },
+          ],
+        },
+      };
+      
+      // Deploy using HelmIntegrationService (dry_run = false)
+      const result = await this.helmIntegrationService.triggerDeployment(mockLlmResponse, false);
+      
+      return result.deployed === true;
+    } catch (error: any) {
+      this.logger.error(`[DynamicChangeset] Deployment error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Convert DynamicChangeset to Helm-compatible format
+   */
+  private convertToHelmFormat(changeset: DynamicChangeset): any {
+    const helmFormat: any = {
+      global: {
+        businessModel: changeset.to_model || 'custom',
+      },
+      services: {},
+      databases: {},
+    };
+
+    // Map services
+    const serviceMap: Record<string, string> = {
+      orderservice: 'order',
+      inventoryservice: 'inventory',
+      subscriptionservice: 'subscription',
+      promotionservice: 'promotion',
+      pricingservice: 'pricing',
+      billingservice: 'billing',
+      paymentservice: 'payment',
+    };
+
+    for (const service of changeset.services) {
+      const normalizedName = service.name.toLowerCase().replace('service', '');
+      const helmName = serviceMap[service.name.toLowerCase()] || normalizedName;
+      
+      helmFormat.services[helmName] = {
+        enabled: service.enabled,
+        ...(service.replicaCount && { replicaCount: service.replicaCount }),
+      };
+
+      // Auto-create database entry
+      if (service.enabled) {
+        helmFormat.databases[`${helmName}db`] = {
+          enabled: true,
+        };
+      }
+    }
+
+    return helmFormat;
+  }
+
+  /**
+   * Save Helm-format YAML for validation
+   */
+  private async saveHelmFormatYaml(helmChangeset: any, originalPath: string): Promise<string> {
+    const helmPath = originalPath.replace('.yaml', '-helm.yaml');
+    const yamlContent = yaml.dump(helmChangeset, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+    });
+    await writeFile(helmPath, yamlContent, 'utf8');
+    return helmPath;
   }
 
   /**
@@ -165,7 +391,7 @@ export class DynamicChangesetService {
           const appName = pathParts[appIndex + 1];
           const serviceName = appName
             .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
             .join('') + 'Service';
           serviceNames.add(serviceName);
         }

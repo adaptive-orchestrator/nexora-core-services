@@ -27,6 +27,9 @@ service LlmOrchestratorService {
   
   // Analyze system incident
   rpc AnalyzeIncident (AnalyzeIncidentRequest) returns (AnalyzeIncidentResponse);
+  
+  // Generate Dynamic Changeset using RAG (API 2 - AI-powered discovery)
+  rpc GenerateDynamicChangeset (DynamicChangesetRequest) returns (DynamicChangesetResponse);
 }
 
 // ====== Request & Response ======
@@ -196,4 +199,49 @@ message AnalyzeIncidentResponse {
   string analysis = 2;              // Phân tích chi tiết
   repeated string recommendations = 3; // Khuyến nghị
   string raw_response = 4;          // Raw response từ LLM
+}
+
+// ====== Dynamic Changeset (API 2 - AI Discovery) ======
+
+message DynamicChangesetRequest {
+  string user_intent = 1;           // User intent / business description
+  string current_model = 2;         // Current business model (optional)
+  string target_model = 3;          // Target business model (optional)
+  repeated string force_services = 4; // Force include these services
+  repeated string exclude_services = 5; // Force exclude these services
+  bool dry_run = 6;                 // If true, only validate with Helm --dry-run
+  bool deploy_after_validation = 7; // If true and dry_run passes, deploy automatically
+  string tenant_id = 8;             // Tenant ID
+}
+
+message DynamicService {
+  string name = 1;                  // Service name
+  bool enabled = 2;                 // Is service enabled
+  int32 replica_count = 3;          // Replica count
+  bool needs_restart = 4;           // Needs restart flag
+  double confidence = 5;            // RAG confidence score (0-1)
+}
+
+message DynamicChangesetData {
+  string timestamp = 1;             // Generation timestamp
+  string intent = 2;                // User intent
+  string from_model = 3;            // Current model
+  string to_model = 4;              // Target model
+  repeated string discovered_services = 5; // All discovered services
+  repeated DynamicService services = 6; // Analyzed services
+  string risk_level = 7;            // Risk level: low, medium, high
+  bool auto_generated = 8;          // Was auto-generated
+}
+
+message DynamicChangesetResponse {
+  bool success = 1;                 // Success flag
+  string message = 2;               // Status message
+  string error = 3;                 // Error message if failed
+  DynamicChangesetData changeset = 4; // Generated changeset data
+  string json_path = 5;             // Path to JSON file
+  string yaml_path = 6;             // Path to YAML file
+  HelmDryRunResults helm_validation = 7; // Helm dry-run results (if dry_run=true)
+  bool deployed = 8;                // Was deployed (if deploy_after_validation=true)
+  bool fallback_available = 9;      // If failed, can fallback to switch-model API
+  repeated string fallback_models = 10; // Available models for fallback
 }

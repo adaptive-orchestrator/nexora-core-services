@@ -82,4 +82,11 @@ export const EventTopics = {
   PROMOTION_CREATED: 'promotion.created',
   PROMOTION_APPLIED: 'promotion.applied',
   PROMOTION_EXPIRED: 'promotion.expired',
+
+  // Dynamic Changeset events (LLM/AI)
+  DYNAMIC_CHANGESET_GENERATED: 'dynamic.changeset.generated',
+  DYNAMIC_CHANGESET_VALIDATED: 'dynamic.changeset.validated',
+  DYNAMIC_CHANGESET_DEPLOYED: 'dynamic.changeset.deployed',
+  DYNAMIC_CHANGESET_FAILED: 'dynamic.changeset.failed',
+  DYNAMIC_CHANGESET_FALLBACK: 'dynamic.changeset.fallback',
 } as const;

@@ -453,7 +453,7 @@ export class LlmOrchestratorController {
    * POST /llm-orchestrator/generate-dynamic-changeset
    * 
    * Uses RAG to discover services and generate changeset files
-   * WITHOUT executing Helm (for manual review/analysis only)
+   * WITH optional Helm validation and deployment
    */
   @Post('generate-dynamic-changeset')
   async generateDynamicChangeset(
@@ -470,37 +470,189 @@ export class LlmOrchestratorController {
         };
       }
 
-      // Generate changeset using RAG
+      // Generate changeset using RAG (with optional validation and deployment)
       const result = await this.dynamicChangesetService.generateDynamicChangeset(request);
 
       if (!result.success) {
         return {
           success: false,
           error: result.error,
+          helm_validation: result.helm_validation,
+          fallback_available: result.fallback_available,
+          fallback_models: result.fallback_models,
         };
       }
 
       // Return paths to generated files
       return {
         success: true,
-        message: 'Dynamic changeset generated successfully (FILES ONLY - Helm NOT executed)',
+        message: result.deployed 
+          ? 'Dynamic changeset generated, validated, and deployed successfully'
+          : result.helm_validation?.validation_passed
+            ? 'Dynamic changeset generated and validated successfully (Helm dry-run PASSED)'
+            : 'Dynamic changeset generated successfully (FILES ONLY - Helm NOT executed)',
         data: {
           changeset: result.changeset,
           files: {
             json: result.jsonPath,
             yaml: result.yamlPath,
           },
-          discovered_services: result.changeset.discovered_services,
-          risk_level: result.changeset.risk_level,
-          total_services: result.changeset.services.length,
-          enabled_services: result.changeset.services.filter(s => s.enabled).length,
+          discovered_services: result.changeset?.discovered_services || [],
+          risk_level: result.changeset?.risk_level || 'unknown',
+          total_services: result.changeset?.services.length || 0,
+          enabled_services: result.changeset?.services.filter(s => s.enabled).length || 0,
         },
+        helm_validation: result.helm_validation,
+        deployed: result.deployed,
+        fallback_available: result.fallback_available,
+        fallback_models: result.fallback_models,
       };
     } catch (error) {
       console.error('[DynamicChangeset API] Error:', error);
       return {
         success: false,
         error: error.message || 'Unknown error',
+        fallback_available: true,
+        fallback_models: ['retail', 'subscription', 'freemium', 'multi'],
       };
     }
-  }}
+  }
+
+  /**
+   * gRPC Method: GenerateDynamicChangeset
+   * Generate dynamic changeset with RAG, optional Helm validation and deployment
+   */
+  // @ts-ignore - NestJS decorator type issue in strict mode
+  @GrpcMethod('LlmOrchestratorService', 'GenerateDynamicChangeset')
+  async generateDynamicChangesetGrpc(data: {
+    user_intent: string;
+    current_model?: string;
+    target_model?: string;
+    force_services?: string[];
+    exclude_services?: string[];
+    dry_run?: boolean;
+    deploy_after_validation?: boolean;
+    tenant_id?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+    changeset?: {
+      timestamp: string;
+      intent: string;
+      from_model?: string;
+      to_model?: string;
+      discovered_services: string[];
+      services: Array<{
+        name: string;
+        enabled: boolean;
+        replica_count?: number;
+        needs_restart?: boolean;
+        confidence?: number;
+      }>;
+      risk_level: string;
+      auto_generated: boolean;
+    };
+    json_path?: string;
+    yaml_path?: string;
+    helm_validation?: {
+      validation_passed: boolean;
+      databases_output?: string;
+      services_output?: string;
+      validation_errors: string[];
+      warnings: string[];
+    };
+    deployed?: boolean;
+    fallback_available?: boolean;
+    fallback_models?: string[];
+  }> {
+    this.logger.log(`[GRPC-DynamicChangeset] Received request: intent="${data.user_intent?.substring(0, 50)}..."`);
+    this.logger.log(`[GRPC-DynamicChangeset] Options: dry_run=${data.dry_run}, deploy=${data.deploy_after_validation}`);
+
+    if (!data.user_intent || data.user_intent.trim() === '') {
+      return {
+        success: false,
+        message: 'Validation failed',
+        error: 'user_intent is required',
+        fallback_available: true,
+        fallback_models: ['retail', 'subscription', 'freemium', 'multi'],
+      };
+    }
+
+    try {
+      const result = await this.dynamicChangesetService.generateDynamicChangeset({
+        user_intent: data.user_intent,
+        current_model: data.current_model,
+        target_model: data.target_model,
+        force_services: data.force_services || [],
+        exclude_services: data.exclude_services || [],
+        dry_run: data.dry_run ?? true,
+        deploy_after_validation: data.deploy_after_validation ?? false,
+        tenant_id: data.tenant_id || 'default',
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          message: 'Generation failed',
+          error: result.error,
+          helm_validation: result.helm_validation ? {
+            validation_passed: result.helm_validation.validation_passed,
+            databases_output: result.helm_validation.databases_output,
+            services_output: result.helm_validation.services_output,
+            validation_errors: result.helm_validation.validation_errors,
+            warnings: result.helm_validation.warnings,
+          } : undefined,
+          fallback_available: result.fallback_available,
+          fallback_models: result.fallback_models,
+        };
+      }
+
+      return {
+        success: true,
+        message: result.deployed
+          ? 'Dynamic changeset generated, validated, and deployed'
+          : result.helm_validation?.validation_passed
+            ? 'Dynamic changeset generated and validated (dry-run passed)'
+            : 'Dynamic changeset generated (files only)',
+        changeset: result.changeset ? {
+          timestamp: result.changeset.timestamp,
+          intent: result.changeset.intent,
+          from_model: result.changeset.from_model,
+          to_model: result.changeset.to_model,
+          discovered_services: result.changeset.discovered_services,
+          services: result.changeset.services.map(s => ({
+            name: s.name,
+            enabled: s.enabled,
+            replica_count: s.replicaCount,
+            needs_restart: s.needsRestart,
+            confidence: s.confidence,
+          })),
+          risk_level: result.changeset.risk_level,
+          auto_generated: result.changeset.auto_generated,
+        } : undefined,
+        json_path: result.jsonPath,
+        yaml_path: result.yamlPath,
+        helm_validation: result.helm_validation ? {
+          validation_passed: result.helm_validation.validation_passed,
+          databases_output: result.helm_validation.databases_output,
+          services_output: result.helm_validation.services_output,
+          validation_errors: result.helm_validation.validation_errors,
+          warnings: result.helm_validation.warnings,
+        } : undefined,
+        deployed: result.deployed,
+        fallback_available: result.fallback_available,
+        fallback_models: result.fallback_models,
+      };
+    } catch (error: any) {
+      this.logger.error(`[GRPC-DynamicChangeset] Error: ${error.message}`);
+      return {
+        success: false,
+        message: 'Internal error',
+        error: error.message,
+        fallback_available: true,
+        fallback_models: ['retail', 'subscription', 'freemium', 'multi'],
+      };
+    }
+  }
+}

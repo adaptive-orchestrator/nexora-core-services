@@ -564,6 +564,78 @@ export interface PromotionExpiredEvent extends BaseEvent {
 }
 
 /**
+ * Dynamic Changeset Events (LLM/AI)
+ */
+export interface DynamicChangesetGeneratedEvent extends BaseEvent {
+  eventType: 'dynamic.changeset.generated';
+  data: {
+    changesetId: string;
+    intent: string;
+    fromModel?: string;
+    toModel?: string;
+    discoveredServices: string[];
+    enabledServices: string[];
+    riskLevel: 'low' | 'medium' | 'high';
+    jsonPath: string;
+    yamlPath: string;
+    tenantId: string;
+    generatedAt: Date;
+  };
+}
+
+export interface DynamicChangesetValidatedEvent extends BaseEvent {
+  eventType: 'dynamic.changeset.validated';
+  data: {
+    changesetId: string;
+    validationPassed: boolean;
+    validationErrors: string[];
+    warnings: string[];
+    databasesOutput?: string;
+    servicesOutput?: string;
+    tenantId: string;
+    validatedAt: Date;
+  };
+}
+
+export interface DynamicChangesetDeployedEvent extends BaseEvent {
+  eventType: 'dynamic.changeset.deployed';
+  data: {
+    changesetId: string;
+    toModel: string;
+    deployedServices: string[];
+    deployedDatabases: string[];
+    tenantId: string;
+    deployedAt: Date;
+  };
+}
+
+export interface DynamicChangesetFailedEvent extends BaseEvent {
+  eventType: 'dynamic.changeset.failed';
+  data: {
+    changesetId?: string;
+    intent: string;
+    error: string;
+    phase: 'generation' | 'validation' | 'deployment';
+    fallbackAvailable: boolean;
+    fallbackModels: string[];
+    tenantId: string;
+    failedAt: Date;
+  };
+}
+
+export interface DynamicChangesetFallbackEvent extends BaseEvent {
+  eventType: 'dynamic.changeset.fallback';
+  data: {
+    originalIntent: string;
+    fallbackModel: string;
+    reason: string;
+    originalError?: string;
+    tenantId: string;
+    fallbackAt: Date;
+  };
+}
+
+/**
  * Helper function để tạo base event
  */
 export function createBaseEvent(

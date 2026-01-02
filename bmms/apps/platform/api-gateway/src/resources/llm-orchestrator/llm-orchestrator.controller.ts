@@ -26,6 +26,12 @@ import {
   LlmChatResponseDto,
   LlmErrorResponseDto,
 } from './dto/response.dto';
+import { 
+  DynamicChangesetRequestDto, 
+  DynamicChangesetResponseDto,
+  validateDynamicChangesetRequest,
+  VALID_BUSINESS_MODELS,
+} from './dto/dynamic-changeset.dto';
 import { LlmOrchestratorService } from './llm-orchestrator.service';
 
 @ApiTags('LLM Orchestrator')
@@ -484,5 +490,310 @@ export class LlmOrchestratorController {
     
     // If no raw_response, return as-is (shouldn't happen)
     return result;
+  }
+
+  @Post('generate-dynamic-changeset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Generate Dynamic Changeset using AI/RAG',
+    description: `
+API 2: AI-powered service discovery and changeset generation.
+- Uses RAG to discover services from codebase
+- Generates custom changeset based on user intent
+- Supports Helm dry-run validation
+- Can auto-deploy if validation passes
+- Falls back to switch-model API (4 fixed profiles) if AI fails
+
+Workflow:
+1. AI generates changeset → 2. Helm dry-run validates → 3. Auto-deploy OR user chooses fallback
+    `,
+  })
+  @ApiBody({ type: DynamicChangesetRequestDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Dynamic changeset generation result',
+    type: DynamicChangesetResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid request - user_intent is required',
+  })
+  async generateDynamicChangeset(
+    @Body(new ValidationPipe({ whitelist: true, transform: true }))
+    body: DynamicChangesetRequestDto,
+  ) {
+    // Validate with Zod for extra safety
+    const validation = validateDynamicChangesetRequest(body);
+    if (!validation.success) {
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Validation failed',
+          errors: validation.errors?.issues.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+          fallback_available: true,
+          fallback_models: VALID_BUSINESS_MODELS,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return this.llmOrchestratorService.generateDynamicChangeset(
+      body.user_intent,
+      body.current_model,
+      body.target_model,
+      body.force_services,
+      body.exclude_services,
+      body.dry_run ?? true,
+      body.deploy_after_validation ?? false,
+      body.tenant_id ?? 'default',
+    );
+  }
+
+  @Post('smart-switch')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Smart Model Switch - Try API 2 first, fallback to API 1',
+    description: `
+Intelligent business model switching workflow:
+1. Try AI-powered dynamic changeset (API 2) with Helm dry-run
+2. If validation passes AND deploy_after_validation=true → Auto-deploy
+3. If validation fails → Return options to use API 1 (switch-model with 4 fixed profiles)
+
+This is the recommended endpoint for production use.
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        user_intent: {
+          type: 'string',
+          example: 'Chuyển sang mô hình subscription với thanh toán định kỳ hàng tháng',
+          description: 'User intent for AI analysis',
+        },
+        current_model: {
+          type: 'string',
+          enum: ['retail', 'subscription', 'freemium', 'multi'],
+          example: 'retail',
+        },
+        target_model: {
+          type: 'string',
+          enum: ['retail', 'subscription', 'freemium', 'multi'],
+          example: 'subscription',
+        },
+        auto_deploy: {
+          type: 'boolean',
+          example: false,
+          description: 'If true, deploy automatically when validation passes',
+        },
+        use_fallback_on_failure: {
+          type: 'boolean',
+          example: true,
+          description: 'If true, automatically use API 1 when API 2 fails',
+        },
+        tenant_id: {
+          type: 'string',
+          example: 'tenant-123',
+        },
+      },
+      required: ['user_intent'],
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Smart switch result',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        api_used: { type: 'string', enum: ['dynamic-changeset', 'switch-model'] },
+        message: { type: 'string' },
+        changeset: { type: 'object' },
+        helm_validation: { type: 'object' },
+        deployed: { type: 'boolean' },
+        fallback_options: {
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            models: { type: 'array', items: { type: 'string' } },
+            recommendation: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  async smartSwitch(
+    @Body() body: {
+      user_intent: string;
+      current_model?: string;
+      target_model?: string;
+      auto_deploy?: boolean;
+      use_fallback_on_failure?: boolean;
+      tenant_id?: string;
+    },
+  ) {
+    const { 
+      user_intent, 
+      current_model, 
+      target_model, 
+      auto_deploy = false, 
+      use_fallback_on_failure = true,
+      tenant_id = 'default',
+    } = body;
+
+    if (!user_intent || user_intent.trim() === '') {
+      throw new HttpException('user_intent is required', HttpStatus.BAD_REQUEST);
+    }
+
+    // Step 1: Try API 2 (Dynamic Changeset with AI)
+    this.llmOrchestratorService['logger'].log(
+      `[SMART-SWITCH] Trying API 2 (dynamic-changeset) first...`
+    );
+
+    const api2Result = await this.llmOrchestratorService.generateDynamicChangeset(
+      user_intent,
+      current_model,
+      target_model,
+      undefined, // force_services
+      undefined, // exclude_services
+      true, // dry_run = true for validation
+      auto_deploy, // deploy_after_validation
+      tenant_id,
+    );
+
+    // If API 2 succeeds with validation passed
+    if (api2Result.success && api2Result.helm_validation?.validation_passed) {
+      return {
+        success: true,
+        api_used: 'dynamic-changeset',
+        message: api2Result.deployed 
+          ? 'AI-generated changeset deployed successfully'
+          : 'AI-generated changeset validated successfully (ready to deploy)',
+        changeset: api2Result.changeset,
+        helm_validation: api2Result.helm_validation,
+        deployed: api2Result.deployed,
+        files: {
+          json: api2Result.json_path,
+          yaml: api2Result.yaml_path,
+        },
+        fallback_options: {
+          available: !api2Result.deployed,
+          models: VALID_BUSINESS_MODELS,
+          recommendation: api2Result.deployed 
+            ? null 
+            : `Changeset validated. Call switch-model with to_model="${target_model || api2Result.changeset?.to_model}" to deploy.`,
+        },
+      };
+    }
+
+    // Step 2: API 2 failed - check if should use fallback
+    this.llmOrchestratorService['logger'].warn(
+      `[SMART-SWITCH] API 2 failed: ${api2Result.error}`
+    );
+
+    if (!use_fallback_on_failure) {
+      return {
+        success: false,
+        api_used: 'dynamic-changeset',
+        message: 'AI-generated changeset failed validation',
+        error: api2Result.error,
+        helm_validation: api2Result.helm_validation,
+        deployed: false,
+        fallback_options: {
+          available: true,
+          models: VALID_BUSINESS_MODELS,
+          recommendation: `Use POST /llm-orchestrator/switch-model with one of: ${VALID_BUSINESS_MODELS.join(', ')}`,
+        },
+      };
+    }
+
+    // Step 3: Use fallback (API 1) if target_model is valid
+    if (target_model && VALID_BUSINESS_MODELS.includes(target_model as any)) {
+      this.llmOrchestratorService['logger'].log(
+        `[SMART-SWITCH] Falling back to API 1 (switch-model) with target_model="${target_model}"`
+      );
+
+      const api1Result = await this.llmOrchestratorService.switchBusinessModel(
+        target_model,
+        tenant_id,
+        true, // dry_run first
+      );
+
+      if (api1Result.success && api1Result.helm_dry_run_results?.validation_passed) {
+        // If auto_deploy is true, do actual deployment
+        if (auto_deploy) {
+          const deployResult = await this.llmOrchestratorService.switchBusinessModel(
+            target_model,
+            tenant_id,
+            false, // actual deploy
+          );
+
+          return {
+            success: deployResult.success,
+            api_used: 'switch-model',
+            message: `Fallback to fixed profile "${target_model}" - deployed successfully`,
+            changeset_path: deployResult.changeset_path,
+            helm_validation: api1Result.helm_dry_run_results,
+            deployed: deployResult.deployed,
+            fallback_options: {
+              available: false,
+              models: [],
+              recommendation: null,
+            },
+            note: 'Used API 1 (switch-model) after API 2 (dynamic-changeset) failed',
+          };
+        }
+
+        return {
+          success: true,
+          api_used: 'switch-model',
+          message: `Fallback to fixed profile "${target_model}" validated successfully`,
+          changeset_path: api1Result.changeset_path,
+          helm_validation: api1Result.helm_dry_run_results,
+          deployed: false,
+          fallback_options: {
+            available: true,
+            models: VALID_BUSINESS_MODELS,
+            recommendation: `Call switch-model with dry_run=false to deploy "${target_model}"`,
+          },
+          note: 'Used API 1 (switch-model) after API 2 (dynamic-changeset) failed',
+        };
+      }
+
+      // API 1 also failed
+      return {
+        success: false,
+        api_used: 'switch-model',
+        message: 'Both API 2 and API 1 failed validation',
+        errors: {
+          api2_error: api2Result.error,
+          api1_error: api1Result.error,
+          api1_validation_errors: api1Result.helm_dry_run_results?.validation_errors,
+        },
+        deployed: false,
+        fallback_options: {
+          available: true,
+          models: VALID_BUSINESS_MODELS,
+          recommendation: 'Check Helm charts configuration and K8s cluster status',
+        },
+      };
+    }
+
+    // No valid target_model for fallback
+    return {
+      success: false,
+      api_used: 'dynamic-changeset',
+      message: 'AI-generated changeset failed, no valid target_model for fallback',
+      error: api2Result.error,
+      helm_validation: api2Result.helm_validation,
+      deployed: false,
+      fallback_options: {
+        available: true,
+        models: VALID_BUSINESS_MODELS,
+        recommendation: `Specify target_model as one of: ${VALID_BUSINESS_MODELS.join(', ')} to enable fallback`,
+      },
+    };
   }
 }
